@@ -9,7 +9,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from hashmal_lib.core.stack import Stack
-from hashmal_lib.gui_utils import monospace_font
+from hashmal_lib.gui_utils import monospace_font, floated_buttons
 from base import BaseDock
 
 
@@ -116,11 +116,7 @@ class StackEval(BaseDock):
         form.addRow('Stack log:', self.stack_log)
         form.addRow(self.stack_result)
 
-        btn_hbox = QHBoxLayout()
-        btn_hbox.addWidget(self.step_button)
-        btn_hbox.addWidget(self.reset_button)
-        btn_hbox.addWidget(self.do_button)
-        btn_hbox.addStretch(1)
+        btn_hbox = floated_buttons([self.step_button, self.reset_button, self.do_button], left=True)
         form.addRow(btn_hbox)
         return form
 

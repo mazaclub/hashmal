@@ -1,6 +1,7 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import QSettings, QSize, QVariant
 
+from gui_utils import floated_buttons
 
 class SettingsDialog(QDialog):
     """Shows info about tools and manages their layout."""
@@ -30,9 +31,7 @@ class SettingsDialog(QDialog):
 
         close_button = QPushButton('Close')
         close_button.clicked.connect(self.close)
-        close_box = QHBoxLayout()
-        close_box.addStretch(1)
-        close_box.addWidget(close_button)
+        close_box = floated_buttons([close_button])
 
         vbox.addWidget(tabs)
         vbox.addLayout(close_box)

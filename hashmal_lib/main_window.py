@@ -9,7 +9,7 @@ from dock_handler import DockHandler
 from settings_dialog import SettingsDialog
 from scriptedit import ScriptEditor
 from help_widgets import QuickTips, ToolInfo
-from gui_utils import script_file_filter, hashmal_style
+from gui_utils import script_file_filter, hashmal_style, floated_buttons
 
 class HashmalMain(QMainWindow):
 
@@ -178,11 +178,9 @@ class HashmalMain(QMainWindow):
 
         about_label.setText(txt)
 
-        btn_box = QHBoxLayout()
         close_button = QPushButton('Close')
         close_button.clicked.connect(d.close)
-        btn_box.addStretch(1)
-        btn_box.addWidget(close_button)
+        btn_box = floated_buttons([close_button])
 
         vbox.addWidget(about_label)
         vbox.addLayout(btn_box)

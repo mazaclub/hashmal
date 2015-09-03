@@ -1,6 +1,8 @@
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
+from gui_utils import floated_buttons
+
 class QuickTips(QDialog):
     def __init__(self, main_window):
         super(QuickTips, self).__init__(main_window)
@@ -29,9 +31,7 @@ class QuickTips(QDialog):
 
         close_button = QPushButton('Close')
         close_button.clicked.connect(self.close)
-        btn_hbox = QHBoxLayout()
-        btn_hbox.addStretch(1)
-        btn_hbox.addWidget(close_button)
+        btn_hbox = floated_buttons([close_button])
         vbox.addLayout(btn_hbox)
 
         self.setLayout(vbox)
@@ -73,9 +73,7 @@ class ToolInfo(QDialog):
         hbox.addWidget(QLabel('Tool:'))
         hbox.addWidget(tool_combo, stretch=1)
 
-        btn_hbox = QHBoxLayout()
-        btn_hbox.addStretch(1)
-        btn_hbox.addWidget(close_button)
+        btn_hbox = floated_buttons([close_button])
 
         vbox.addLayout(hbox)
         vbox.addWidget(QLabel('Info:'))

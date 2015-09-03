@@ -5,7 +5,7 @@ from PyQt4.QtGui import *
 
 from base import BaseDock
 from hashmal_lib.core.utils import push_script
-from hashmal_lib.gui_utils import monospace_font
+from hashmal_lib.gui_utils import monospace_font, floated_buttons
 
 class ScriptTemplate(QWidget):
     """Template for a script.
@@ -142,9 +142,7 @@ class ScriptGenerator(BaseDock):
         vbox.addWidget(QLabel('Generated script:'))
         vbox.addWidget(self.script_output)
 
-        btn_hbox = QHBoxLayout()
-        btn_hbox.addStretch(1)
-        btn_hbox.addWidget(self.generate_button)
+        btn_hbox = floated_buttons([self.generate_button])
         vbox.addLayout(btn_hbox)
 
         return vbox

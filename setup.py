@@ -6,7 +6,8 @@ setup(
     version = '0.1',
     description='Bitcoin transaction script IDE.',
     install_requires=[
-        'python-bitcoinlib'
+        'python-bitcoinlib',
+        'pyparsing'
     ],
     author='Tyler Willis, mazaclub',
     author_email='kefkius@maza.club',

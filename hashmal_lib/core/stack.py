@@ -18,30 +18,35 @@ class Stack(object):
     def __init__(self):
         super(Stack, self).__init__()
         self.tx_script = None
+        self.txTo = None
+        self.inIdx = 0
+        self.flags = ()
+        self.init_stack = []
 
-    def set_script(self, tx_script):
+    def set_script(self, tx_script, txTo=None, inIdx=0, flags=None):
         self.tx_script = tx_script
-
-#    def evaluate(self, my_stack=None):
-#        if my_stack is None: my_stack = []
-#        tx = CMutableTransaction([], [self.tx_script])
-#        try:
-#            res = EvalScript(my_stack, self.tx_script, tx, 0)
-#            return res
-#        except Exception as e:
-#            return str(e)
+        self.txTo = txTo
+        self.inIdx = inIdx
+        if flags is None:
+            flags = ()
+        self.flags = flags
+        if txTo is None:
+            self.init_stack = []
+        else:
+            scriptSig = txTo.vin[inIdx].scriptSig
+            self.init_stack = [i for i in scriptSig]
 
     def step(self, init_stack=None):
         """Generator for evaluating a script.
 
         Re-implemented _EvalScript from python-bitcoinlib for stack log.
         """
-        if init_stack is None: init_stack = []
+        if init_stack is None: init_stack = self.init_stack
         stack = init_stack
         scriptIn = self.tx_script
-        txTo = CMutableTransaction([], [self.tx_script])
-        inIdx = 0
-        flags = ()
+        txTo = self.txTo
+        inIdx = self.inIdx
+        flags = self.flags
         if len(scriptIn) > MAX_SCRIPT_SIZE:
             raise EvalScriptError('script too large; got %d bytes; maximum %d bytes' %
                                             (len(scriptIn), MAX_SCRIPT_SIZE),
@@ -199,7 +204,12 @@ class Stack(object):
                         else:
                             stack.append(b"\x00")
                         # TODO implement
-                        err_raiser(EvalScriptError, 'CHECKSIG opcodes are not implemented as they require a complete transaction.')
+                        if txTo is None:
+                            err_raiser(EvalScriptError, 'CHECKSIG opcodes require a spending transaction.')
+                        else:
+                            last1 = '%s was pushed to the stack' % e(stack[-1])
+                            last2 = 'after %s %s.' % ('CHECKSIG' if sop == OP_CHECKSIG else 'CHECKSIGVERIFY', 'passed' if ok else 'failed')
+                            last = ' '.join([last1, last2])
 
                 elif sop == OP_CODESEPARATOR:
                     pbegincodehash = sop_pc

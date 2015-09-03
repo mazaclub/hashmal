@@ -1,14 +1,15 @@
 from setuptools import setup
 
+with open('requirements.txt') as f:
+    requirements = f.readlines()
+requirements = [i.replace('\n', '') for i in requirements]
+
 
 setup(
     name='Hashmal',
     version = '0.1',
     description='Bitcoin transaction script IDE.',
-    install_requires=[
-        'python-bitcoinlib',
-        'pyparsing'
-    ],
+    install_requires=requirements,
     author='Tyler Willis, mazaclub',
     author_email='kefkius@maza.club',
     keywords=[

@@ -33,8 +33,6 @@ class StackEval(BaseDock):
         self.step_counter = -1
         self.tx = None
         self.inIdx = 0
-        # height recorded before showing the "Spending transacton" section.
-#        self.height_pre_tx = self.sizeHint().height()
 
     def reset_step_counter(self):
         self.step_counter = -1
@@ -71,7 +69,6 @@ class StackEval(BaseDock):
         self.tx_frame = QFrame()
         tx_layout = QVBoxLayout()
         tx_layout.addWidget(self.tx_edit)
-#        tx_layout.addWidget(self.input_idx)
         tx_layout.addLayout(in_idx_box)
         self.tx_frame.setLayout(tx_layout)
         self.tx_frame.setVisible(False)
@@ -122,11 +119,9 @@ class StackEval(BaseDock):
     def set_show_tx(self, do_show):
         do_show = True if do_show else False
         if do_show:
-#            self.height_pre_tx = self.handler.gui.height()
             self.tx_frame.setVisible(True)
         else:
             self.tx_frame.setVisible(False)
-#            self.handler.gui.resize(self.handler.gui.width(), self.height_pre_tx)
 
     def set_spending_tx(self, txt):
         """Called from other tools to set the spending transaction."""

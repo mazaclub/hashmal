@@ -1,0 +1,63 @@
+= Hashmal Usage
+
+This document provides details on how to use Hashmal. Particularly, it contains details about
+Hashmal's more complex tools.
+
+== Script Editor
+
+The script editor is the primary tool that Hashmal uses. Unlike other tools, it can't
+be closed. This document assumes that one is using the default format, "Human," for the script
+editor. The other format, "Hex," is more intuitive due to its limited nature.
+
+=== Data Entry
+
+To enter hex data into the editor, prefix the data with `0x`. If `0x` is not present, Hashmal
+may interpret the data as hex anyway, but this behavior shouldn't be relied on.
+
+To enter ASCII data into the editor, surround the data with quotation marks. For example, this
+human-readable script:
+
+`OP_RETURN "a b c"`
+
+is equivalent to the following hex-encoded script:
+
+`6a056120622063`
+
+=== Opcode Entry
+
+When entering opcodes, an opcode can be entered with or without its `OP_` prefix.
+
+NOTE: The opcodes `OP_1, OP_2, ...OP_16` must have the `OP_` prefix to be interpreted as opcodes.
+Otherwise, they will be interpreted as hex digits.
+
+== Stack Evaluator
+
+The Stack Evaluator is a tool that one can use to step through transaction scripts, or evaluate them
+in full.
+
+It's possible to specify a transaction being spent by the script via checking the 'Specify transaction
+being spent' checkbox and entering the raw transaction into the widget that appears.
+If a spending transaction is specified, you can also select the input which you want to be
+put onto the stack before executing the script.
+
+The "Stack" area provides a visual representation of the stack during script execution. The "Stack log"
+area provides a log of script operations with context about them.
+
+Clicking "Step" will advance the script execution by one operation. Clicking "Reset" will reset the
+steps that have been executed. Clicking "Evaluate" will execute the entire script at once, logging
+the results as if the "Step" button had been clicked for each operation.
+
+== Example Scripts
+
+====
+This script will push `02` and `05` onto the stack, then add them, resulting in `07`.
+
+`0x02 0x05 OP_ADD`
+====
+
+====
+This script will push '07' to the stack twice. Then it will push the number of stack
+items (2) to the stack.
+
+`0x07 OP_DUP OP_DEPTH`
+====

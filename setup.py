@@ -7,14 +7,17 @@ requirements = [i.replace('\n', '') for i in requirements]
 
 setup(
     name='Hashmal',
-    version = '0.1',
+    version = '0.1.0a',
     description='Bitcoin transaction script IDE.',
+    url='https://github.com/mazaclub/hashmal',
     install_requires=requirements,
     author='Tyler Willis, mazaclub',
     author_email='kefkius@maza.club',
     keywords=[
         'bitcoin',
-        'transaction'
+        'transaction',
+        'script',
+        'ide'
     ],
     scripts=['hashmal'],
     py_modules=[

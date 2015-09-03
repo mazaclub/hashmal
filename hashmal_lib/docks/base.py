@@ -8,6 +8,7 @@ class BaseDock(QDockWidget):
     statusMessage = QtCore.pyqtSignal(str, bool, name='statusMessage')
     def __init__(self, handler):
         super(BaseDock, self).__init__('', handler)
+        self.handler = handler
         self.tool_name = ''
         self.description = ''
 

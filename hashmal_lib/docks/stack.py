@@ -19,7 +19,6 @@ class StackEval(BaseDock):
         super(StackEval, self).__init__(handler)
         self.widget().setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         self.has_spending_tx.setChecked(False)
-        self.handler = handler
 
     def init_metadata(self):
         self.tool_name = 'Stack View'
@@ -128,6 +127,13 @@ class StackEval(BaseDock):
         else:
             self.tx_frame.setVisible(False)
 #            self.handler.gui.resize(self.handler.gui.width(), self.height_pre_tx)
+
+    def set_spending_tx(self, txt):
+        """Called from other tools to set the spending transaction."""
+        if not txt:
+            return
+        self.has_spending_tx.setChecked(True)
+        self.tx_edit.setPlainText(txt)
 
     def set_tx(self):
         """Set the spending transaction and (en|dis)able the input index box."""

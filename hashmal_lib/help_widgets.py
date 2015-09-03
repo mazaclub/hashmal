@@ -10,9 +10,10 @@ class QuickTips(QDialog):
         tips_text = '''
 <ul>
 <li>See <i>Help > Tool Info</i> in the menubar for details on what each tool does.</li>
-<li> You can manage tool layouts via <i>Tools > Settings</i> in the menubar.</li>
-<li> When typing opcodes, you can omit the "OP_" prefix for opcodes other than OP_1, OP_2, ...OP_16. For example, "DUP" and "OP_DUP" do the same thing.</li>
-<li> You can quickly evaluate the script you\'re working on via <i>Script > Evaluate</i> in the menubar.</li>
+<li>You can manage tool layouts via <i>Tools > Settings</i> in the menubar.</li>
+<li>When typing opcodes, you can omit the "OP_" prefix for opcodes other than OP_1, OP_2, ...OP_16. For example, "DUP" and "OP_DUP" do the same thing.</li>
+<li>You can quickly evaluate the script you\'re working on via <i>Script > Evaluate</i> in the menubar.</li>
+<li>Put text in double quotation marks to ensure that it\'s treated as text that needs to be hex-encoded.</li>
 </ul>
 '''
         tips = QLabel(tips_text)

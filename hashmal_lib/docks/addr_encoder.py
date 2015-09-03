@@ -5,7 +5,7 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
 from base import BaseDock
-from hashmal_lib.gui_utils import monospace_font
+from hashmal_lib.gui_utils import monospace_font, Separator
 
 class AddrEncoder(BaseDock):
     def __init__(self, handler):
@@ -47,11 +47,10 @@ class AddrEncoder(BaseDock):
         version_box.addWidget(self.addr_version)
         version_box.addWidget(self.encode_button)
 
-        separator = QFrame()
-        separator.setFrameShape(QFrame.HLine)
+        sep = Separator()
 
         form.addRow('Address:', addr_box)
-        form.addRow(separator)
+        form.addRow(sep)
         form.addRow('Hash160:', self.hash_line)
         form.addRow(version_box)
 

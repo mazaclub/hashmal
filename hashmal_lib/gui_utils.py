@@ -1,4 +1,5 @@
-from PyQt4.QtGui import QFont, QHBoxLayout
+from PyQt4.QtGui import QFont, QHBoxLayout, QFrame
+from PyQt4 import QtCore
 
 monospace_font = QFont('Monospace')
 monospace_font.setStyleHint(QFont.TypeWriter)
@@ -15,6 +16,17 @@ def floated_buttons(btns, left=False):
     else:
         hbox.insertStretch(0, 1)
     return hbox
+
+class Separator(QFrame):
+    def __init__(self, parent=None):
+        super(Separator, self).__init__(parent)
+        self.setFrameShape(QFrame.HLine)
+        self.setFrameShadow(QFrame.Raised)
+        self.setLineWidth(6)
+        self.setMidLineWidth(2)
+
+    def sizeHint(self):
+        return QtCore.QSize(6, 8)
 
 hashmal_style = '''
 

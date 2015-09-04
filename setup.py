@@ -37,6 +37,7 @@ setup(
         'hashmal_lib.docks.base',
         'hashmal_lib.docks.script_gen',
         'hashmal_lib.docks.stack',
+        'hashmal_lib.docks.tx_deserializer',
         'hashmal_lib.docks.variables'
     ]
 )

@@ -24,4 +24,4 @@ Use at own risk!
 
 ## To-Do
 
-- When evaluating scripts, `OP_CHECKSIG`/`OP_CHECKSIGVERIFY` cannot be used because they require a transaction in addition to the script.
+- Implement the ability to download transactions by their Tx IDs for stack evaluation purposes.

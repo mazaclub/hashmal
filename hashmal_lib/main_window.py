@@ -28,7 +28,7 @@ class HashmalMain(QMainWindow):
         self.dock_handler.create_docks()
         self.dock_handler.do_default_layout()
 
-        self.script_editor = ScriptEditor()
+        self.script_editor = ScriptEditor(self)
         self.script_editor.changesSaved.connect(self.on_changes_saved)
         self.setCentralWidget(self.script_editor)
 

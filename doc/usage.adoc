@@ -47,6 +47,29 @@ Clicking "Step" will advance the script execution by one operation. Clicking "Re
 steps that have been executed. Clicking "Evaluate" will execute the entire script at once, logging
 the results as if the "Step" button had been clicked for each operation.
 
+== Variables
+
+The Variables tool allows one to store arbitrary values.
+
+The Variables tool can interact with the script editor. If the variable "abc" has the stored value
+"0x05", then the following script:
+
+`$abc OP_DUP`
+
+is equivalent to:
+
+`0x05 OP_DUP`
+
+As the above example illustrates, variables can be inserted into a script by entering the variable
+named prefixed with '$'.
+
+The rule about quotation marks also works for variables. If the variable "def" has the stored value
+"Hello World", then the following two scripts are equivalent:
+
+`$def`
+
+`"Hello World"`
+
 == Example Scripts
 
 ====
@@ -61,3 +84,4 @@ items (2) to the stack.
 
 `0x07 OP_DUP OP_DEPTH`
 ====
+

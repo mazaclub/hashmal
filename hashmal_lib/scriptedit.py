@@ -11,25 +11,38 @@ from core.script import Script
 from docks.base import BaseDock
 from gui_utils import monospace_font
 
-def transform_human(text):
-    """Transform user input into something Script can read."""
+def transform_human(text, main_window):
+    """Transform user input into something Script can read.
+
+    Main window is needed for tool integration."""
     # these are parseActions for pyparsing.
     def str_literal_to_hex(s, loc, toks):
         for i, t in enumerate(toks):
             toks[i] = ''.join(['0x', t.encode('hex')])
         return toks
+    def var_name_to_value(s, loc, toks):
+        for i, t in enumerate(toks):
+            val = main_window.dock_handler.variables.get_key(t.strip('$'))
+            if val:
+                toks[i] = val
+        return toks
     # ^ parseActions for pyparsing end here.
     str_literal = QuotedString('"')
     str_literal.setParseAction(str_literal_to_hex)
+    var_name = pyparsing.Combine(Word('$') + Word(pyparsing.alphas))
+    var_name.setParseAction(var_name_to_value)
 
-    transformer = ZeroOrMore( str_literal )
-    return transformer.transformString(text)
+    s = text
+    s = var_name.transformString(s)
+    s = str_literal.transformString(s)
+    return s
 
 known_script_formats = ['Human', 'Hex']
 
 class MyScriptEdit(QPlainTextEdit):
-    def __init__(self, parent=None):
-        super(MyScriptEdit, self).__init__(parent)
+    def __init__(self, editor=None):
+        super(MyScriptEdit, self).__init__(editor)
+        self.editor = editor
         self.current_format = known_script_formats[0]
         self.script = Script()
         self.textChanged.connect(self.on_text_changed)
@@ -60,7 +73,7 @@ class MyScriptEdit(QPlainTextEdit):
             except Exception:
                 pass
         elif fmt == 'Human':
-            txt = transform_human(text)
+            txt = transform_human(text, self.editor.gui)
             script = Script.from_human(txt)
         self.script = script
 
@@ -76,8 +89,9 @@ class MyScriptEdit(QPlainTextEdit):
 
 class ScriptEditor(QWidget):
     changesSaved = QtCore.pyqtSignal(bool, name='changesSaved')
-    def __init__(self):
+    def __init__(self, main_window):
         super(ScriptEditor, self).__init__()
+        self.gui = main_window
 
         self.filename = ''
         self.last_saved = ''
@@ -89,7 +103,7 @@ class ScriptEditor(QWidget):
         vbox = QVBoxLayout()
         self.format_combo = QComboBox()
         self.format_combo.addItems(known_script_formats)
-        self.script_edit = MyScriptEdit()
+        self.script_edit = MyScriptEdit(self)
         self.script_edit.textChanged.connect(self.on_text_changed)
 
         self.format_combo.currentIndexChanged.connect(lambda index: self.script_edit.set_format(known_script_formats[index]))

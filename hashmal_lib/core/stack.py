@@ -36,6 +36,14 @@ class Stack(object):
             scriptSig = txTo.vin[inIdx].scriptSig
             self.init_stack = [i for i in scriptSig]
 
+    def evaluate(self):
+        iterator = self.step()
+        while 1:
+            try:
+                stack, _ = iterator.next()
+            except StopIteration:
+                break
+        return stack
 
     def step(self):
         """Generator for evaluating a script.

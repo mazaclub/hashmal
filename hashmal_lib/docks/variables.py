@@ -5,17 +5,20 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
 from base import BaseDock
+from hashmal_lib.gui_utils import floated_buttons
 
 class Variables(BaseDock):
     def __init__(self, handler):
         super(Variables, self).__init__(handler)
+        self.needsUpdate.emit()
 
     def init_metadata(self):
         self.tool_name = 'Variables'
         self.description = 'Variables records data for later access.'
 
     def init_data(self):
-        self.data = OrderedDict()
+        data = self.config.get_option('variables', {})
+        self.data = OrderedDict(data)
 
     def create_layout(self):
         form = QFormLayout()
@@ -25,6 +28,7 @@ class Variables(BaseDock):
         self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
         self.table.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.context_menu)
+        self.table.setSizePolicy(QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding))
 
         form.addRow(self.table)
 
@@ -45,8 +49,13 @@ class Variables(BaseDock):
         del_var_hbox.addWidget(self.del_var_key)
         del_var_hbox.addWidget(del_var_button)
 
+        self.save_button = QPushButton('Save')
+        self.save_button.clicked.connect(self.save_variables)
+        self.save_button.setToolTip('Save variables to config file')
+
         form.addRow('Add:', add_var_hbox)
         form.addRow('Delete:', del_var_hbox)
+        form.addRow(floated_buttons([self.save_button]))
         return form
 
     def is_valid_key(self, key):
@@ -69,6 +78,10 @@ class Variables(BaseDock):
         if self.data.get(key):
             del self.data[key]
         self.needsUpdate.emit()
+
+    def save_variables(self):
+        self.config.set_option('variables', self.data)
+        self.status_message('Saved variables to config file.')
 
     def context_menu(self, position):
         menu = QMenu()

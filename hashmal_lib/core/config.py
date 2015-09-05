@@ -52,8 +52,10 @@ class Config(object):
         if isinstance(value, unicode): value = str(value)
         return value
 
-    def set_option(self, key, value):
+    def set_option(self, key, value, do_save=True):
         self.options[key] = value
+        if do_save:
+            self.save()
 
 # http://stackoverflow.com/questions/956867/how-to-get-string-objects-instead-of-unicode-ones-from-json-in-python
 def byteify(input):

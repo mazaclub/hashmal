@@ -208,11 +208,12 @@ class Stack(object):
                         if txTo is None:
                             err_raiser(EvalScriptError, 'CHECKSIG opcodes require a spending transaction.')
                         else:
-                            last1 = '%s was pushed to the stack' % e(stack[-1])
-                            last2 = 'after %s %s.' % ('CHECKSIG' if sop == OP_CHECKSIG else 'CHECKSIGVERIFY', 'passed' if ok else 'failed')
+                            last1 = 'After %s %s,' % ('CHECKSIG' if sop == OP_CHECKSIG else 'CHECKSIGVERIFY', 'passed' if ok else 'failed')
+                            last2 = '%s was pushed to the stack.' % e(stack[-1])
                             last = ' '.join([last1, last2])
 
                 elif sop == OP_CODESEPARATOR:
+                    last = '(code separator)'
                     pbegincodehash = sop_pc
 
                 elif sop == OP_DEPTH:
@@ -237,6 +238,7 @@ class Stack(object):
                     vfExec[-1] = not vfExec[-1]
 
                 elif sop == OP_ENDIF:
+                    last = 'End of IF statement.'
                     if len(vfExec) == 0:
                         err_raiser(EvalScriptError, 'ENDIF found without prior IF')
                     vfExec.pop()
@@ -250,7 +252,8 @@ class Stack(object):
                         stack.append(b"\x01")
                     else:
                         stack.append(b"\x00")
-                    last = '%s (the result of %s == %s) was pushed to the stack.' % e(stack[-1], v1, v2)
+                    last = '%s EQUALSIGN %s, so %s was pushed to the stack.' % e(v1, v2, stack[-1])
+                    last = last.replace('EQUALSIGN', '==' if v1 == v2 else '!=')
 
                 elif sop == OP_EQUALVERIFY:
                     check_args(2)
@@ -260,7 +263,7 @@ class Stack(object):
                     if v1 == v2:
                         last1 = stack.pop()
                         last2 = stack.pop()
-                        last = '%s and %s were dropped after EQUALVERIFY passed.' % e(last1, last2)
+                        last = 'EQUALVERIFY passed so %s and %s were dropped.' % e(last1, last2)
                     else:
                         err_raiser(VerifyOpFailedError, sop)
 
@@ -293,6 +296,10 @@ class Stack(object):
                         if sop == OP_NOTIF:
                             val = not val
 
+                    if val:
+                        last = 'Entered IF statement.'
+                    else:
+                        last = 'Skipped IF statement.'
                     vfExec.append(val)
 
 
@@ -301,6 +308,9 @@ class Stack(object):
                     vch = stack[-1]
                     if _CastToBool(vch):
                         stack.append(vch)
+                        last = 'The top stack item %s was duplicated.' % e(stack[-1])
+                    else:
+                        last = 'The top stack item %s was not duplicated.' % e(stack[-1])
 
                 elif sop == OP_NIP:
                     check_args(2)

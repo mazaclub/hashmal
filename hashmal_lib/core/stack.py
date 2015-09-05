@@ -36,12 +36,13 @@ class Stack(object):
             scriptSig = txTo.vin[inIdx].scriptSig
             self.init_stack = [i for i in scriptSig]
 
-    def step(self, init_stack=None):
+
+    def step(self):
         """Generator for evaluating a script.
 
         Re-implemented _EvalScript from python-bitcoinlib for stack log.
         """
-        if init_stack is None: init_stack = self.init_stack
+        init_stack = self.init_stack
         stack = init_stack
         scriptIn = self.tx_script
         txTo = self.txTo

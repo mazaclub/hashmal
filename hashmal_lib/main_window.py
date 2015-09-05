@@ -5,6 +5,7 @@ import time
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
+from core.config import Config
 from dock_handler import DockHandler
 from settings_dialog import SettingsDialog
 from scriptedit import ScriptEditor
@@ -19,9 +20,12 @@ class HashmalMain(QMainWindow):
         self.app.setStyleSheet(hashmal_style)
         self.changes_saved = True
 
+        self.config = Config()
+        self.config.load()
+
         QtCore.QCoreApplication.setOrganizationName('mazaclub')
         QtCore.QCoreApplication.setApplicationName('hashmal')
-        self.settings = QtCore.QSettings()
+        self.qt_settings = QtCore.QSettings()
 
         self.setDockNestingEnabled(True)
         self.dock_handler = DockHandler(self)
@@ -37,9 +41,9 @@ class HashmalMain(QMainWindow):
         self.statusBar().setVisible(True)
         self.statusBar().messageChanged.connect(self.change_status_bar)
 
-        self.restoreState(self.settings.value('toolLayout/default').toByteArray())
+        self.restoreState(self.qt_settings.value('toolLayout/default').toByteArray())
 
-        if self.settings.value('quickTipsOnStart', defaultValue=QtCore.QVariant(True)).toBool():
+        if self.qt_settings.value('quickTipsOnStart', defaultValue=QtCore.QVariant(True)).toBool():
             QtCore.QTimer.singleShot(500, self.do_quick_tips)
 
     def sizeHint(self):
@@ -100,8 +104,8 @@ class HashmalMain(QMainWindow):
 
     def closeEvent(self, event):
         # Save layout if configured to.
-        if self.settings.value('saveLayoutOnExit', defaultValue=QtCore.QVariant(False)).toBool():
-            self.settings.setValue('toolLayout/default', self.saveState())
+        if self.qt_settings.value('saveLayoutOnExit', defaultValue=QtCore.QVariant(False)).toBool():
+            self.qt_settings.setValue('toolLayout/default', self.saveState())
 
         if self.changes_saved or (not self.script_editor.filename and not str(self.script_editor.script_edit.toPlainText())):
             event.accept()

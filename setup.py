@@ -29,6 +29,7 @@ setup(
         'hashmal_lib.scriptedit',
         'hashmal_lib.settings_dialog',
         'hashmal_lib.core.__init__',
+        'hashmal_lib.core.config',
         'hashmal_lib.core.script',
         'hashmal_lib.core.stack',
         'hashmal_lib.core.utils',

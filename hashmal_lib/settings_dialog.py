@@ -8,14 +8,15 @@ class SettingsDialog(QDialog):
     def __init__(self, main_window):
         super(SettingsDialog, self).__init__(main_window)
         self.gui = main_window
-        self.settings = main_window.settings
-        if not self.settings.contains('/'.join(['toolLayout', 'default'])):
+        self.config = main_window.config
+        self.qt_settings = main_window.qt_settings
+        if not self.qt_settings.contains('/'.join(['toolLayout', 'default'])):
             self.save_layout()
 
         # load saved layouts
-        self.settings.beginGroup('toolLayout')
-        self.layout_names = self.settings.childKeys()
-        self.settings.endGroup()
+        self.qt_settings.beginGroup('toolLayout')
+        self.layout_names = self.qt_settings.childKeys()
+        self.qt_settings.endGroup()
 
         self.setup_layout()
         self.setWindowTitle('Settings')
@@ -26,8 +27,8 @@ class SettingsDialog(QDialog):
     def setup_layout(self):
         vbox = QVBoxLayout()
         tabs = QTabWidget()
-        layouts_tab = self.create_layouts_tab()
-        tabs.addTab(layouts_tab, 'Tool Layouts')
+        qt_tab = self.create_qt_tab()
+        tabs.addTab(qt_tab, 'Window Settings')
 
         close_button = QPushButton('Close')
         close_button.clicked.connect(self.close)
@@ -37,7 +38,7 @@ class SettingsDialog(QDialog):
         vbox.addLayout(close_box)
         self.setLayout(vbox)
 
-    def create_layouts_tab(self):
+    def create_qt_tab(self):
         # QComboBox for loading/deleting a layout
         layout_combo = QComboBox()
         layout_combo.addItems(self.layout_names)
@@ -76,8 +77,8 @@ class SettingsDialog(QDialog):
         form.addRow('Save current layout as:', hbox)
 
         save_on_quit = QCheckBox('Save the current layout as default when quitting Hashmal.')
-        save_on_quit.setChecked(self.settings.value('saveLayoutOnExit', defaultValue=QVariant(False)).toBool())
-        save_on_quit.stateChanged.connect(lambda checked: self.settings.setValue('saveLayoutOnExit', True if checked else False))
+        save_on_quit.setChecked(self.qt_settings.value('saveLayoutOnExit', defaultValue=QVariant(False)).toBool())
+        save_on_quit.stateChanged.connect(lambda checked: self.qt_settings.setValue('saveLayoutOnExit', True if checked else False))
         form.addRow(save_on_quit)
 
         w = QWidget()
@@ -86,12 +87,12 @@ class SettingsDialog(QDialog):
 
     def save_layout(self, name='default'):
         key = '/'.join(['toolLayout', name])
-        self.settings.setValue(key, self.gui.saveState())
+        self.qt_settings.setValue(key, self.gui.saveState())
         self.gui.show_status_message('Saved layout "{}".'.format(name))
 
     def load_layout(self, name='default'):
         key = '/'.join(['toolLayout', name])
-        self.gui.restoreState(self.settings.value(key).toByteArray())
+        self.gui.restoreState(self.qt_settings.value(key).toByteArray())
         self.gui.show_status_message('Loaded layout "{}".'.format(name))
 
     def delete_layout(self, name):
@@ -99,5 +100,6 @@ class SettingsDialog(QDialog):
             self.gui.show_status_message('Cannot delete the default layout.', True)
             return
         key = '/'.join(['toolLayout', name])
-        self.settings.remove(key)
+        self.qt_settings.remove(key)
         self.gui.show_status_message('Deleted layout "{}".'.format(name))
+

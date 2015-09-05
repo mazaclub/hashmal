@@ -7,7 +7,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from base import BaseDock
-from hashmal_lib.gui_utils import monospace_font, floated_buttons, Separator
+from hashmal_lib.gui_utils import monospace_font, floated_buttons, Separator, Amount
 from hashmal_lib.core.script import Script
 
 
@@ -26,7 +26,7 @@ class TxDeserializer(BaseDock):
 
     def create_layout(self):
         form = QFormLayout()
-        form.setRowWrapPolicy(QFormLayout.WrapAllRows)
+        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
 
         self.raw_tx_edit = QPlainTextEdit()
         self.raw_tx_edit.setFont(monospace_font)
@@ -43,6 +43,7 @@ class TxDeserializer(BaseDock):
         self.inputs_tree = inputs = QTreeWidget()
         inputs.setColumnCount(3)
         inputs.setHeaderLabels(['Prev Output', 'scriptSig', 'Sequence'])
+        inputs.setAlternatingRowColors(True)
         inputs.header().setResizeMode(0, QHeaderView.Interactive)
         inputs.header().setResizeMode(0, QHeaderView.Stretch)
         inputs.header().setResizeMode(0, QHeaderView.Interactive)
@@ -50,6 +51,7 @@ class TxDeserializer(BaseDock):
         self.outputs_tree = outputs = QTreeWidget()
         outputs.setColumnCount(2)
         outputs.setHeaderLabels(['Value', 'scriptPubKey'])
+        outputs.setAlternatingRowColors(True)
         outputs.header().setResizeMode(0, QHeaderView.Interactive)
         outputs.header().setResizeMode(1, QHeaderView.Stretch)
 
@@ -111,9 +113,9 @@ class TxDeserializer(BaseDock):
 
         for o in tx.vout:
             out_script = Script(o.scriptPubKey)
-            value = float(o.nValue) / 100000000
+            value = Amount(o.nValue)
             item = QTreeWidgetItem([
-                str(value),
+                value.get_str(),
                 out_script.get_human()
             ])
             self.outputs_tree.addTopLevelItem(item)
@@ -121,3 +123,6 @@ class TxDeserializer(BaseDock):
         self.locktime_edit.setText(str(tx.nLockTime))
 
         self.status_message('Deserialized transaction {}'.format(bitcoin.core.b2lx(tx.GetHash())))
+
+    def refresh_data(self):
+        self.deserialize()

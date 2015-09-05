@@ -1,5 +1,9 @@
+from decimal import Decimal
+
 from PyQt4.QtGui import QFont, QHBoxLayout, QFrame
 from PyQt4 import QtCore
+
+from hashmal_lib.core import config
 
 monospace_font = QFont('Monospace')
 monospace_font.setStyleHint(QFont.TypeWriter)
@@ -27,6 +31,28 @@ class Separator(QFrame):
 
     def sizeHint(self):
         return QtCore.QSize(6, 8)
+
+class Amount(object):
+    def __init__(self, satoshis=0):
+        super(Amount, self).__init__()
+        self.satoshis = satoshis
+        self.config = config.get_config()
+        self.fmt = self.config.get_option('amount_format', 'satoshis')
+
+    @staticmethod
+    def known_formats():
+        return ['satoshis', 'coins']
+
+    def get_str(self):
+        value = str(self.satoshis)
+        if self.fmt == 'satoshis':
+            value = str(self.satoshis)
+        elif self.fmt == 'coins':
+            value = '{:.8f}'.format(Decimal(self.satoshis) / pow(10, 8))
+        # fallback to satoshis
+        else:
+            value = str(self.satoshis)
+        return value
 
 hashmal_style = '''
 

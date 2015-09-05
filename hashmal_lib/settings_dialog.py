@@ -1,7 +1,7 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import QSettings, QSize, QVariant
 
-from gui_utils import floated_buttons
+from gui_utils import floated_buttons, Amount
 
 class SettingsDialog(QDialog):
     """Shows info about tools and manages their layout."""
@@ -28,7 +28,9 @@ class SettingsDialog(QDialog):
         vbox = QVBoxLayout()
         tabs = QTabWidget()
         qt_tab = self.create_qt_tab()
+        general_tab = self.create_general_tab()
         tabs.addTab(qt_tab, 'Window Settings')
+        tabs.addTab(general_tab, 'General')
 
         close_button = QPushButton('Close')
         close_button.clicked.connect(self.close)
@@ -80,6 +82,29 @@ class SettingsDialog(QDialog):
         save_on_quit.setChecked(self.qt_settings.value('saveLayoutOnExit', defaultValue=QVariant(False)).toBool())
         save_on_quit.stateChanged.connect(lambda checked: self.qt_settings.setValue('saveLayoutOnExit', True if checked else False))
         form.addRow(save_on_quit)
+
+        w = QWidget()
+        w.setLayout(form)
+        return w
+
+    def create_general_tab(self):
+        form = QFormLayout()
+
+        amnt_format = QComboBox()
+        amnt_format.addItems(Amount.known_formats())
+        current_format = self.config.get_option('amount_format', 'satoshis')
+        try:
+            amnt_format.setCurrentIndex(Amount.known_formats().index(current_format))
+        except Exception:
+            amnt_format.setCurrentIndex(0)
+        def set_amount_format():
+            new_format = str(amnt_format.currentText())
+            self.config.set_option('amount_format', new_format)
+            self.gui.dock_handler.amount_format_changed()
+        amnt_format.currentIndexChanged.connect(set_amount_format)
+        amnt_format.setToolTip('Format that transaction amounts are shown in')
+
+        form.addRow('Amount format:', amnt_format)
 
         w = QWidget()
         w.setLayout(form)

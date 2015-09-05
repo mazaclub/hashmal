@@ -44,6 +44,11 @@ class DockHandler(QWidget):
         """Set the spending transaction in the Stack Evaluator tool."""
         self.stack_eval.set_spending_tx(txt)
 
+    # There may be a better way than this
+    def amount_format_changed(self):
+        """Tell all the Amount instances to update."""
+        self.tx_deserializer.needsUpdate.emit()
+
     def do_default_layout(self):
         self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.variables)
         self.variables.setVisible(False)

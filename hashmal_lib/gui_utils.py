@@ -3,7 +3,7 @@ from decimal import Decimal
 from PyQt4.QtGui import QFont, QHBoxLayout, QFrame
 from PyQt4 import QtCore
 
-from hashmal_lib.core import config
+import config
 
 monospace_font = QFont('Monospace')
 monospace_font.setStyleHint(QFont.TypeWriter)

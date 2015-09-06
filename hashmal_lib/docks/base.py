@@ -1,7 +1,7 @@
 from PyQt4.QtGui import QDockWidget, QWidget, QVBoxLayout
 from PyQt4 import QtCore
 
-from hashmal_lib.core import config
+from hashmal_lib import config
 
 class BaseDock(QDockWidget):
     """Base class for docks."""

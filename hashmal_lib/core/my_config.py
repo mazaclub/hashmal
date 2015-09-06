@@ -1,24 +1,11 @@
 import os
 import json
 
-# Singleton of config object
-hashmal_config = None
-
-def get_config():
-    """Get the singleton Config instance."""
-    return hashmal_config
-
-def set_config(config):
-    """Set the singleton Config instance."""
-    global hashmal_config
-    hashmal_config = config
-
 class Config(object):
     """Configuration state."""
     def __init__(self):
         super(Config, self).__init__()
         self.options = {}
-        set_config(self)
 
     def load(self, filename=None):
         if not filename:

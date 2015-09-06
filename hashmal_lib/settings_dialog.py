@@ -100,7 +100,6 @@ class SettingsDialog(QDialog):
         def set_amount_format():
             new_format = str(amnt_format.currentText())
             self.config.set_option('amount_format', new_format)
-            self.gui.dock_handler.amount_format_changed()
         amnt_format.currentIndexChanged.connect(set_amount_format)
         amnt_format.setToolTip('Format that transaction amounts are shown in')
 

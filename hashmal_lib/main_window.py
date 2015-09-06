@@ -5,7 +5,7 @@ import time
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from core.config import Config
+from config import Config
 from dock_handler import DockHandler
 from settings_dialog import SettingsDialog
 from scriptedit import ScriptEditor
@@ -21,7 +21,6 @@ class HashmalMain(QMainWindow):
         self.changes_saved = True
 
         self.config = Config()
-        self.config.load()
 
         QtCore.QCoreApplication.setOrganizationName('mazaclub')
         QtCore.QCoreApplication.setApplicationName('hashmal')

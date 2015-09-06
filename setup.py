@@ -22,6 +22,7 @@ setup(
     scripts=['hashmal'],
     py_modules=[
         'hashmal_lib.__init__',
+        'hashmal_lib.config',
         'hashmal_lib.dock_handler',
         'hashmal_lib.gui_utils',
         'hashmal_lib.help_widgets',
@@ -29,7 +30,7 @@ setup(
         'hashmal_lib.scriptedit',
         'hashmal_lib.settings_dialog',
         'hashmal_lib.core.__init__',
-        'hashmal_lib.core.config',
+        'hashmal_lib.core.my_config',
         'hashmal_lib.core.script',
         'hashmal_lib.core.stack',
         'hashmal_lib.core.utils',

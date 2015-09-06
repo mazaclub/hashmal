@@ -22,6 +22,7 @@ class BaseDock(QDockWidget):
         self.needsUpdate.connect(self.refresh_data)
         self.setWidget(self.main_widget)
 
+        self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
         self.setFeatures(QDockWidget.DockWidgetClosable | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
         self.setObjectName(self.tool_name)
         self.setWindowTitle(self.tool_name)

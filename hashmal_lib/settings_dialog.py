@@ -120,9 +120,6 @@ class SettingsDialog(QDialog):
         self.gui.show_status_message('Loaded layout "{}".'.format(name))
 
     def delete_layout(self, name):
-        if name == 'default':
-            self.gui.show_status_message('Cannot delete the default layout.', True)
-            return
         key = '/'.join(['toolLayout', name])
         self.qt_settings.remove(key)
         self.gui.show_status_message('Deleted layout "{}".'.format(name))

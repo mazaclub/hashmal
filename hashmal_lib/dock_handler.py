@@ -45,13 +45,20 @@ class DockHandler(QWidget):
         self.stack_eval.set_spending_tx(txt)
 
     def do_default_layout(self):
-        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.variables)
-        self.variables.setVisible(False)
-        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.stack_eval)
+        # Generally, small widgets go to the right.
 
-        self.gui.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.addr_encoder)
-        self.addr_encoder.setVisible(False)
         self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.script_generator)
+        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.variables)
+        self.gui.tabifyDockWidget(self.script_generator, self.variables)
+        self.variables.setVisible(False)
 
+        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.addr_encoder)
+        self.gui.tabifyDockWidget(self.variables, self.addr_encoder)
+        self.addr_encoder.setVisible(False)
+
+        # Large widgets generally go to the bottom.
+
+        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.stack_eval)
         self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.tx_deserializer)
+        self.gui.tabifyDockWidget(self.stack_eval, self.tx_deserializer)
         self.tx_deserializer.setVisible(False)

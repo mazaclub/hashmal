@@ -45,9 +45,10 @@ class TxDeserializer(BaseDock):
         inputs.setColumnCount(3)
         inputs.setHeaderLabels(['Prev Output', 'scriptSig', 'Sequence'])
         inputs.setAlternatingRowColors(True)
+        inputs.header().setStretchLastSection(False)
         inputs.header().setResizeMode(0, QHeaderView.Interactive)
-        inputs.header().setResizeMode(0, QHeaderView.Stretch)
-        inputs.header().setResizeMode(0, QHeaderView.Interactive)
+        inputs.header().setResizeMode(1, QHeaderView.Stretch)
+        inputs.header().setResizeMode(2, QHeaderView.Interactive)
 
         self.outputs_tree = outputs = QTreeWidget()
         outputs.setColumnCount(2)

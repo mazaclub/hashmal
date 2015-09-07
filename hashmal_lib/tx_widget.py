@@ -1,9 +1,11 @@
+import datetime
+
 import bitcoin
 from bitcoin.core import COutPoint, CTxIn, CTxOut, lx
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from gui_utils import Amount, monospace_font
+from gui_utils import Amount, monospace_font, HBox
 from hashmal_lib.core.script import Script
 
 class InputsTree(QTreeWidget):
@@ -118,6 +120,32 @@ class OutputsTree(QTreeWidget):
             vout.append(i_output)
         return vout
 
+class LockTimeWidget(QWidget):
+    """Displays a transaction's locktime."""
+    def __init__(self, parent=None):
+        super(LockTimeWidget, self).__init__(parent)
+        self.locktime_raw = QLineEdit()
+        self.locktime_human = QLineEdit()
+        for i in [self.locktime_raw, self.locktime_human]:
+            i.setReadOnly(True)
+        hbox = HBox(self.locktime_raw, self.locktime_human)
+        hbox.setContentsMargins(0, 6, 0, 0)
+        self.setLayout(hbox)
+
+    def clear(self):
+        self.locktime_raw.clear()
+        self.locktime_human.clear()
+
+    def set_locktime(self, locktime):
+        self.locktime_raw.setText(str(locktime))
+        if locktime < 500000000 and locktime > 0:
+            self.locktime_human.setText('Block %d' % locktime)
+        elif locktime >= 500000000:
+            time = datetime.datetime.utcfromtimestamp(locktime)
+            self.locktime_human.setText(' '.join([time.strftime('%Y-%m-%d %H:%M:%S'), 'UTC']))
+        else:
+            self.locktime_human.setText('Not locked.')
+
 class TxWidget(QWidget):
     """Displays the deserialized fields of a transaction."""
     def __init__(self, parent=None):
@@ -134,8 +162,7 @@ class TxWidget(QWidget):
 
         self.outputs_tree = outputs = OutputsTree()
 
-        self.locktime_edit = QLineEdit()
-        self.locktime_edit.setReadOnly(True)
+        self.locktime_edit = LockTimeWidget()
 
         form.addRow('Tx ID:', self.tx_id)
         form.addRow('Version:', self.version_edit)
@@ -154,7 +181,7 @@ class TxWidget(QWidget):
         for o in tx.vout:
             self.add_output(o)
 
-        self.locktime_edit.setText(str(tx.nLockTime))
+        self.locktime_edit.set_locktime(tx.nLockTime)
 
         self.tx_id.setText(bitcoin.core.b2lx(tx.GetHash()))
 

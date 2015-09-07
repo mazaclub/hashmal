@@ -5,6 +5,7 @@ import pyparsing
 from pyparsing import Word, QuotedString, ZeroOrMore
 
 from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 from PyQt4 import QtCore
 
 from core.script import Script
@@ -22,7 +23,7 @@ def transform_human(text, main_window):
         return toks
     def var_name_to_value(s, loc, toks):
         for i, t in enumerate(toks):
-            val = main_window.dock_handler.variables.get_key(t.strip('$'))
+            val = main_window.dock_handler.variables.get_key(t[1:])
             if val:
                 toks[i] = val
         return toks
@@ -37,6 +38,23 @@ def transform_human(text, main_window):
     s = str_literal.transformString(s)
     return s
 
+class ScriptHighlighter(QSyntaxHighlighter):
+    def __init__(self, gui, script_edit):
+        super(ScriptHighlighter, self).__init__(script_edit)
+        self.gui = gui
+
+    def highlightBlock(self, text):
+        from_index = 0
+        for word in str(text).split():
+            idx = text.indexOf(word, from_index)
+            from_index = idx + len(word)
+            fmt = QTextCharFormat()
+            # Highlight variable names.
+            if word.startswith('$'):
+                if self.gui.dock_handler.variables.get_key(word[1:]):
+                    fmt.setForeground(Qt.darkMagenta)
+            self.setFormat(idx, len(word), fmt)
+
 class MyScriptEdit(QTextEdit):
     def __init__(self, gui=None):
         super(MyScriptEdit, self).__init__(gui)
@@ -45,6 +63,7 @@ class MyScriptEdit(QTextEdit):
         self.script = Script()
         self.textChanged.connect(self.on_text_changed)
         self.setFont(monospace_font)
+        self.highlighter = ScriptHighlighter(self.gui, self.document())
 
     def on_text_changed(self):
         txt = str(self.toPlainText())

@@ -5,6 +5,7 @@ from docks.addr_encoder import AddrEncoder
 from docks.variables import Variables
 from docks.stack import StackEval
 from docks.script_gen import ScriptGenerator
+from docks.tx_builder import TxBuilder
 from docks.tx_deserializer import TxDeserializer
 
 class DockHandler(QWidget):
@@ -19,6 +20,7 @@ class DockHandler(QWidget):
         self.variables = Variables(self)
         self.stack_eval = StackEval(self)
         self.script_generator = ScriptGenerator(self)
+        self.tx_builder = TxBuilder(self)
         self.tx_deserializer = TxDeserializer(self)
 
         self.dock_widgets.extend([
@@ -26,6 +28,7 @@ class DockHandler(QWidget):
                     self.variables,
                     self.stack_eval,
                     self.script_generator,
+                    self.tx_builder,
                     self.tx_deserializer
                     ])
         self.dock_widgets.sort(key = lambda i: i.tool_name)
@@ -59,6 +62,10 @@ class DockHandler(QWidget):
         # Large widgets generally go to the bottom.
 
         self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.stack_eval)
+        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.tx_builder)
+        self.gui.tabifyDockWidget(self.stack_eval, self.tx_builder)
+        self.tx_builder.setVisible(False)
+
         self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.tx_deserializer)
-        self.gui.tabifyDockWidget(self.stack_eval, self.tx_deserializer)
+        self.gui.tabifyDockWidget(self.tx_builder, self.tx_deserializer)
         self.tx_deserializer.setVisible(False)

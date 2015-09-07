@@ -29,6 +29,7 @@ setup(
         'hashmal_lib.main_window',
         'hashmal_lib.scriptedit',
         'hashmal_lib.settings_dialog',
+        'hashmal_lib.tx_widget',
         'hashmal_lib.core.__init__',
         'hashmal_lib.core.my_config',
         'hashmal_lib.core.script',
@@ -39,6 +40,7 @@ setup(
         'hashmal_lib.docks.base',
         'hashmal_lib.docks.script_gen',
         'hashmal_lib.docks.stack',
+        'hashmal_lib.docks.tx_builder',
         'hashmal_lib.docks.tx_deserializer',
         'hashmal_lib.docks.variables'
     ]

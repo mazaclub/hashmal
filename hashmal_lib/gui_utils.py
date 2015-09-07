@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from PyQt4.QtGui import QFont, QHBoxLayout, QFrame
+from PyQt4.QtGui import QFont, QHBoxLayout, QFrame, QLineEdit
 from PyQt4 import QtCore
 
 import config
@@ -54,6 +54,39 @@ class Amount(object):
         else:
             value = str(self.satoshis)
         return value
+
+class AmountEdit(QLineEdit):
+    """QSpinBox does not support a maximum value
+    of 0xffffffff. This class can be used in cases where a
+    maximum value of 0xffffffff is needed."""
+    def __init__(self, max_value=0xffffffff, parent=None):
+        super(AmountEdit, self).__init__(parent)
+        self.max_value = max_value
+        self.textChanged.connect(self.check_text)
+
+    def get_amount(self):
+        txt = str(self.text())
+        if len(txt) == 0:
+            return 0
+        if txt.startswith('0x'):
+            i = int(txt, 16)
+            return i
+        i = int(txt)
+        return i
+
+    def check_text(self):
+        try:
+            i = self.get_amount()
+        except Exception:
+            self.setProperty('hasError', True)
+            return
+        else:
+            if i < 0 or i > self.max_value:
+                self.setProperty('hasError', True)
+                return
+            self.setProperty('hasError', False)
+        finally:
+            self.style().polish(self)
 
 hashmal_style = '''
 

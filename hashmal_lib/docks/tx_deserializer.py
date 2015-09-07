@@ -8,6 +8,7 @@ from PyQt4.QtCore import *
 
 from base import BaseDock
 from hashmal_lib.gui_utils import monospace_font, floated_buttons, Separator, Amount
+from hashmal_lib.tx_widget import TxWidget
 from hashmal_lib.core.script import Script
 
 
@@ -29,6 +30,7 @@ class TxDeserializer(BaseDock):
         form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.WrapLongRows)
 
+
         self.raw_tx_edit = QPlainTextEdit()
         self.raw_tx_edit.setFont(monospace_font)
 
@@ -36,37 +38,12 @@ class TxDeserializer(BaseDock):
         self.deserialize_button.clicked.connect(self.deserialize)
         btn_hbox = floated_buttons([self.deserialize_button])
 
-        # version, inputs, outputs, locktime
-
-        self.version_edit = QLineEdit()
-        self.version_edit.setReadOnly(True)
-
-        self.inputs_tree = inputs = QTreeWidget()
-        inputs.setColumnCount(3)
-        inputs.setHeaderLabels(['Prev Output', 'scriptSig', 'Sequence'])
-        inputs.setAlternatingRowColors(True)
-        inputs.header().setStretchLastSection(False)
-        inputs.header().setResizeMode(0, QHeaderView.Interactive)
-        inputs.header().setResizeMode(1, QHeaderView.Stretch)
-        inputs.header().setResizeMode(2, QHeaderView.Interactive)
-
-        self.outputs_tree = outputs = QTreeWidget()
-        outputs.setColumnCount(2)
-        outputs.setHeaderLabels(['Value', 'scriptPubKey'])
-        outputs.setAlternatingRowColors(True)
-        outputs.header().setResizeMode(0, QHeaderView.Interactive)
-        outputs.header().setResizeMode(1, QHeaderView.Stretch)
-
-        self.locktime_edit = QLineEdit()
-        self.locktime_edit.setReadOnly(True)
+        self.tx_widget = TxWidget()
 
         form.addRow('Raw Tx:', self.raw_tx_edit)
         form.addRow(btn_hbox)
         form.addRow(Separator())
-        form.addRow('Version:', self.version_edit)
-        form.addRow('Inputs:', inputs)
-        form.addRow('Outputs:', outputs)
-        form.addRow('LockTime:', self.locktime_edit)
+        form.addRow(self.tx_widget)
 
         return form
 
@@ -83,10 +60,7 @@ class TxDeserializer(BaseDock):
         self.handler.set_stack_spending_tx(txt)
 
     def clear(self):
-        self.version_edit.clear()
-        self.inputs_tree.clear()
-        self.outputs_tree.clear()
-        self.locktime_edit.clear()
+        self.tx_widget.clear()
 
     def deserialize(self):
         self.clear()
@@ -102,27 +76,7 @@ class TxDeserializer(BaseDock):
             self.status_message('Cannot deserialize transaction.', True)
             return
 
-        self.version_edit.setText(str(tx.nVersion))
-
-        for i in tx.vin:
-            in_script = Script(i.scriptSig)
-            item = QTreeWidgetItem([
-                str(i.prevout),
-                in_script.get_human(),
-                str(i.nSequence)
-            ])
-            self.inputs_tree.addTopLevelItem(item)
-
-        for o in tx.vout:
-            out_script = Script(o.scriptPubKey)
-            value = Amount(o.nValue)
-            item = QTreeWidgetItem([
-                value.get_str(),
-                out_script.get_human()
-            ])
-            self.outputs_tree.addTopLevelItem(item)
-
-        self.locktime_edit.setText(str(tx.nLockTime))
+        self.tx_widget.set_tx(tx)
 
         self.status_message('Deserialized transaction {}'.format(bitcoin.core.b2lx(tx.GetHash())))
 

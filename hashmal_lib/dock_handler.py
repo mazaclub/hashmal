@@ -34,7 +34,7 @@ class DockHandler(QWidget):
 
     def evaluate_current_script(self):
         """Evaluate the script being edited with the Stack Evaluator tool."""
-        script_hex = self.gui.script_editor.script_edit.get_data('Hex')
+        script_hex = self.gui.script_editor.get_data('Hex')
         if not script_hex: return
         self.stack_eval.tx_script.setPlainText(script_hex)
         self.stack_eval.setVisible(True)

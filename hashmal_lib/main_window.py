@@ -8,9 +8,11 @@ from PyQt4 import QtCore
 from config import Config
 from dock_handler import DockHandler
 from settings_dialog import SettingsDialog
-from scriptedit import ScriptEditor
+from scriptedit import MyScriptEdit
 from help_widgets import QuickTips, ToolInfo
 from gui_utils import script_file_filter, hashmal_style, floated_buttons
+
+known_script_formats = ['Human', 'Hex']
 
 class HashmalMain(QMainWindow):
 
@@ -31,9 +33,11 @@ class HashmalMain(QMainWindow):
         self.dock_handler.create_docks()
         self.dock_handler.do_default_layout()
 
-        self.script_editor = ScriptEditor(self)
-        self.script_editor.changesSaved.connect(self.on_changes_saved)
-        self.setCentralWidget(self.script_editor)
+        # Filename of script being edited.
+        self.filename = ''
+        # The last text that we saved.
+        self.last_saved = ''
+        self.create_script_editor()
 
         self.create_menubar()
         self.create_default_script()
@@ -94,8 +98,15 @@ class HashmalMain(QMainWindow):
             self.statusBar().setProperty('hasError', False)
         self.style().polish(self.statusBar())
 
+    def on_text_changed(self):
+        s = str(self.script_editor.toPlainText())
+        saved = False
+        if s == self.last_saved and self.filename:
+            saved = True
+        self.on_changes_saved(saved)
+
     def on_changes_saved(self, saved):
-        title = ''.join(['Hashmal - ', self.script_editor.filename])
+        title = ''.join(['Hashmal - ', self.filename])
         if not saved:
             title = ''.join([title, ' *'])
         self.setWindowTitle(title)
@@ -106,11 +117,11 @@ class HashmalMain(QMainWindow):
         if self.qt_settings.value('saveLayoutOnExit', defaultValue=QtCore.QVariant(False)).toBool():
             self.qt_settings.setValue('toolLayout/default', self.saveState())
 
-        if self.changes_saved or (not self.script_editor.filename and not str(self.script_editor.script_edit.toPlainText())):
+        if self.changes_saved or (not self.filename and not str(self.script_editor.toPlainText())):
             event.accept()
             return
         result = QMessageBox.question(self, 'Save Changes',
-                    'Do you want to save your changes to ' + self.script_editor.filename + ' before closing?',
+                    'Do you want to save your changes to ' + self.filename + ' before closing?',
                     QMessageBox.Yes | QMessageBox.No)
         if result == QMessageBox.Yes:
             self.save_script()
@@ -123,7 +134,7 @@ class HashmalMain(QMainWindow):
         self.load_script(filename)
 
     def save_script(self):
-        filename = self.script_editor.filename
+        filename = self.filename
         if not filename:
             filename = str(QFileDialog.getSaveFileName(self, 'Save script', filter=script_file_filter))
             if not filename: return
@@ -131,8 +142,11 @@ class HashmalMain(QMainWindow):
         if not filename.endswith('.coinscript'):
             filename += '.coinscript'
 
-        self.script_editor.filename = filename
-        self.script_editor.save()
+        self.filename = filename
+        with open(self.filename, 'w') as file:
+            file.write(str(self.script_editor.toPlainText()))
+        self.last_saved = str(self.script_editor.toPlainText())
+        self.on_text_changed()
 
     def save_script_as(self):
         filename = str(QFileDialog.getSaveFileName(self, 'Save script as', filter=script_file_filter))
@@ -140,20 +154,20 @@ class HashmalMain(QMainWindow):
 
         if not filename.endswith('.coinscript'):
             filename += '.coinscript'
-        self.script_editor.filename = filename
-        self.script_editor.save()
+        self.filename = filename
+        self.save_script()
 
     def open_script(self):
         filename = str(QFileDialog.getOpenFileName(self, 'Open script', '.', filter=script_file_filter))
         if not filename:
             return
         # Confirm discarding changes if an unsaved file is open.
-        if (self.script_editor.filename
+        if (self.filename
             and str(self.script_editor.script_edit.toPlainText())
-            and filename != self.script_editor.filename
+            and filename != self.filename
             and not self.changes_saved):
             result = QMessageBox.question(self, 'Save Changes',
-                        'Do you want to save your changes to ' + self.script_editor.filename + ' before closing?',
+                        'Do you want to save your changes to ' + self.filename + ' before closing?',
                         QMessageBox.Yes | QMessageBox.No)
             if result == QMessageBox.Yes:
                 self.save_script()
@@ -162,7 +176,35 @@ class HashmalMain(QMainWindow):
 
     def load_script(self, filename):
         self.setWindowTitle('Hashmal - ' + filename)
-        self.script_editor.load(filename)
+        if os.path.exists(filename):
+            self.filename = filename
+            with open(self.filename,'r') as file:
+                self.script_editor.setPlainText(file.read())
+        else:
+            self.script_editor.clear()
+        self.last_saved = str(self.script_editor.toPlainText())
+        self.on_text_changed()
+
+
+    def create_script_editor(self):
+        vbox = QVBoxLayout()
+        self.format_combo = QComboBox()
+        self.format_combo.addItems(known_script_formats)
+        self.script_editor = MyScriptEdit(self)
+        self.script_editor.textChanged.connect(self.on_text_changed)
+
+        self.format_combo.currentIndexChanged.connect(lambda index: self.script_editor.set_format(known_script_formats[index]))
+
+        hbox = QHBoxLayout()
+        hbox.addWidget(QLabel('Format: '))
+        hbox.addWidget(self.format_combo)
+        hbox.addStretch(1)
+        vbox.addLayout(hbox)
+        vbox.addWidget(self.script_editor)
+
+        w = QWidget()
+        w.setLayout(vbox)
+        self.setCentralWidget(w)
 
     def do_about(self):
         d = QDialog(self)

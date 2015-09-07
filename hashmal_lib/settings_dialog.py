@@ -1,7 +1,7 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import QSettings, QSize, QVariant
 
-from gui_utils import floated_buttons, Amount
+from gui_utils import floated_buttons, Amount, monospace_font
 
 class SettingsDialog(QDialog):
     """Shows info about tools and manages their layout."""
@@ -28,8 +28,10 @@ class SettingsDialog(QDialog):
         vbox = QVBoxLayout()
         tabs = QTabWidget()
         qt_tab = self.create_qt_tab()
+        editor_tab = self.create_editor_tab()
         general_tab = self.create_general_tab()
         tabs.addTab(qt_tab, 'Window Settings')
+        tabs.addTab(editor_tab, 'Editor')
         tabs.addTab(general_tab, 'General')
 
         close_button = QPushButton('Close')
@@ -87,6 +89,52 @@ class SettingsDialog(QDialog):
         w.setLayout(form)
         return w
 
+    def create_editor_tab(self):
+        form = QFormLayout()
+        font_db = QFontDatabase()
+
+        editor_font = self.gui.script_editor.font()
+
+        editor_font_combo = QComboBox()
+        editor_font_combo.addItems(font_db.families())
+        editor_font_combo.setCurrentIndex(font_db.families().indexOf(editor_font.family()))
+
+        editor_font_size = QSpinBox()
+        editor_font_size.setRange(5, 24)
+        editor_font_size.setValue(editor_font.pointSize())
+
+        def change_font_family(idx):
+            family = editor_font_combo.currentText()
+            editor_font.setFamily(family)
+            self.change_editor_font(editor_font)
+
+        def change_font_size(value):
+            editor_font.setPointSize(value)
+            self.change_editor_font(editor_font)
+
+        def reset_font():
+            editor_font_combo.setCurrentIndex(font_db.families().indexOf(monospace_font.family()))
+            editor_font_size.setValue(monospace_font.pointSize())
+
+        editor_font_combo.currentIndexChanged.connect(change_font_family)
+        editor_font_size.valueChanged.connect(change_font_size)
+
+        reset_font_button = QPushButton('Reset to Default')
+        reset_font_button.clicked.connect(reset_font)
+
+        font_group = QGroupBox('Font')
+        font_form = QFormLayout()
+        font_form.addRow('Family:', editor_font_combo)
+        font_form.addRow('Size:', editor_font_size)
+        font_form.addRow(floated_buttons([reset_font_button]))
+        font_group.setLayout(font_form)
+
+        form.addRow(font_group)
+
+        w = QWidget()
+        w.setLayout(form)
+        return w
+
     def create_general_tab(self):
         form = QFormLayout()
 
@@ -124,3 +172,6 @@ class SettingsDialog(QDialog):
         self.qt_settings.remove(key)
         self.gui.show_status_message('Deleted layout "{}".'.format(name))
 
+    def change_editor_font(self, font):
+        self.gui.script_editor.setFont(font)
+        self.qt_settings.setValue('editor/font', font.toString())

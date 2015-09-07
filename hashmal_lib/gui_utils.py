@@ -6,6 +6,7 @@ from PyQt4 import QtCore
 import config
 
 monospace_font = QFont('Monospace')
+monospace_font.setPointSize(9)
 monospace_font.setStyleHint(QFont.TypeWriter)
 
 script_file_filter = 'Coinscripts (*.coinscript);;Text files (*.txt);;All files (*.*)'

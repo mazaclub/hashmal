@@ -10,7 +10,7 @@ from dock_handler import DockHandler
 from settings_dialog import SettingsDialog
 from scriptedit import MyScriptEdit
 from help_widgets import QuickTips, ToolInfo
-from gui_utils import script_file_filter, hashmal_style, floated_buttons
+from gui_utils import script_file_filter, hashmal_style, floated_buttons, monospace_font
 
 known_script_formats = ['Human', 'Hex']
 
@@ -38,6 +38,14 @@ class HashmalMain(QMainWindow):
         # The last text that we saved.
         self.last_saved = ''
         self.create_script_editor()
+        # Set up script editor font.
+        script_font = self.qt_settings.value('editor/font', defaultValue=QtCore.QVariant('default')).toString()
+        if script_font == 'default':
+            font = monospace_font
+        else:
+            font = QFont()
+            font.fromString(script_font)
+        self.script_editor.setFont(font)
 
         self.create_menubar()
         self.create_default_script()

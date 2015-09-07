@@ -5,7 +5,7 @@ from PyQt4.QtGui import *
 
 from hashmal_lib.core.script import Script
 from hashmal_lib.tx_widget import TxWidget, InputsTree, OutputsTree
-from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit
+from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font
 from base import BaseDock
 
 class TxBuilder(BaseDock):
@@ -21,10 +21,10 @@ class TxBuilder(BaseDock):
         vbox = QVBoxLayout()
         tabs = QTabWidget()
 
-        tabs.addTab(self.create_version_locktime_tab(), 'Version/Locktime')
-        tabs.addTab(self.create_inputs_tab(), 'Inputs')
-        tabs.addTab(self.create_outputs_tab(), 'Outputs')
-        tabs.addTab(self.create_review_tab(), 'Review')
+        tabs.addTab(self.create_version_locktime_tab(), '&Version/Locktime')
+        tabs.addTab(self.create_inputs_tab(), '&Inputs')
+        tabs.addTab(self.create_outputs_tab(), '&Outputs')
+        tabs.addTab(self.create_review_tab(), '&Review')
 
         vbox.addWidget(tabs)
         return vbox
@@ -38,13 +38,16 @@ class TxBuilder(BaseDock):
         self.locktime_edit = AmountEdit()
         self.locktime_edit.setText('0')
 
-        version_desc = QLabel('A transaction\'s version determines how it is interpreted.')
-        locktime_desc = QLabel('A transaction\'s locktime defines the earliest time or block that it may be added to the blockchain. Only applies if non-zero and at least one input has a Sequence that\'s not the maximum possible value.')
+        version_desc = QLabel('A transaction\'s version determines how it is interpreted.\n\nBitcoin transactions are currently version 1.')
+        locktime_desc = QLabel('A transaction\'s locktime defines the earliest time or block that it may be added to the blockchain.\n\nLocktime only applies if it\'s non-zero and at least one input has a Sequence that\'s not the maximum possible value.')
         for i in [version_desc, locktime_desc]:
             i.setWordWrap(True)
+        for i in [self.version_edit, self.locktime_edit]:
+            i.setFont(monospace_font)
 
         form.addRow(version_desc)
         form.addRow('Version:', self.version_edit)
+        form.addRow(Separator())
         form.addRow(locktime_desc)
         form.addRow('Locktime:', self.locktime_edit)
 
@@ -67,8 +70,11 @@ class TxBuilder(BaseDock):
 
         input_sequence = AmountEdit()
         input_sequence.setText('4294967295')
+        maxify_input_sequence = QPushButton('Max')
+        maxify_input_sequence.clicked.connect(lambda: input_sequence.setText('0xffffffff'))
 
         rm_input_edit = QSpinBox()
+        rm_input_edit.setRange(0, 0)
         rm_input_button = QPushButton('Remove input')
 
         def add_input():
@@ -81,12 +87,12 @@ class TxBuilder(BaseDock):
                 return
             else:
                 self.inputs_tree.add_input(new_input)
-                rm_input_edit.setRange(0, len(self.inputs_tree.get_inputs()))
+                rm_input_edit.setRange(0, len(self.inputs_tree.get_inputs()) - 1)
 
         def rm_input():
             in_num = rm_input_edit.value()
             self.inputs_tree.takeTopLevelItem(in_num)
-            rm_input_edit.setRange(0, len(self.inputs_tree.get_inputs()))
+            rm_input_edit.setRange(0, len(self.inputs_tree.get_inputs()) - 1)
 
         add_input_button = QPushButton('Add input')
         add_input_button.setToolTip('Add the above input')
@@ -94,19 +100,23 @@ class TxBuilder(BaseDock):
 
         rm_input_button.clicked.connect(rm_input)
 
+        for i in [input_prev_tx, input_prev_vout, input_script, input_sequence]:
+            i.setFont(monospace_font)
+
         form.addRow(self.inputs_tree)
         form.addRow(Separator())
 
         form.addRow('Previous Transaction:', input_prev_tx)
         form.addRow('Previous Tx Output:', input_prev_vout)
         form.addRow('Input script hex:', input_script)
-        seq_desc = QLabel('Sequence is mostly deprecated.')
+        seq_desc = QLabel('Sequence is mostly deprecated.\nIf an input has a sequence that\'s not the maximum value, the transaction\'s locktime will apply.')
         seq_desc.setWordWrap(True)
         form.addRow(seq_desc)
-        form.addRow('Sequence:', input_sequence)
+        form.addRow('Sequence:', HBox(input_sequence, maxify_input_sequence))
 
+        form.addRow(Separator())
         form.addRow(floated_buttons([add_input_button]))
-        form.addRow('Remove input:', floated_buttons([rm_input_edit, rm_input_button]))
+        form.addRow('Remove input:', HBox(rm_input_edit, rm_input_button))
 
         w = QWidget()
         w.setLayout(form)
@@ -122,6 +132,7 @@ class TxBuilder(BaseDock):
         output_script.setToolTip('Script that will be put on the stack after the input that spends it.')
 
         rm_output_edit = QSpinBox()
+        rm_output_edit.setRange(0, 0)
         rm_output_button = QPushButton('Remove output')
 
         def add_output():
@@ -139,12 +150,12 @@ class TxBuilder(BaseDock):
                 return
             else:
                 self.outputs_tree.add_output(new_output)
-                rm_output_edit.setRange(0, len(self.outputs_tree.get_outputs()))
+                rm_output_edit.setRange(0, len(self.outputs_tree.get_outputs()) - 1)
 
         def rm_output():
             out_n = rm_output_edit.value()
             self.outputs_tree.takeTopLevelItem(out_n)
-            rm_output_edit.setRange(0, len(self.outputs_tree.get_outputs()))
+            rm_output_edit.setRange(0, len(self.outputs_tree.get_outputs()) - 1)
 
         add_output_button = QPushButton('Add output')
         add_output_button.setToolTip('Add the above output')
@@ -155,6 +166,9 @@ class TxBuilder(BaseDock):
         value_desc = QLabel('Include a decimal point if this value is not in satoshis.')
         value_desc.setWordWrap(True)
 
+        for i in [output_value, output_script]:
+            i.setFont(monospace_font)
+
         form.addRow(self.outputs_tree)
         form.addRow(Separator())
 
@@ -162,8 +176,9 @@ class TxBuilder(BaseDock):
         form.addRow('Value:', output_value)
         form.addRow('Output script hex:', output_script)
 
+        form.addRow(Separator())
         form.addRow(floated_buttons([add_output_button]))
-        form.addRow('Remove output:', floated_buttons([rm_output_edit, rm_output_button]))
+        form.addRow('Remove output:', HBox(rm_output_edit, rm_output_button))
 
         w = QWidget()
         w.setLayout(form)

@@ -30,9 +30,9 @@ class SettingsDialog(QDialog):
         qt_tab = self.create_qt_tab()
         editor_tab = self.create_editor_tab()
         general_tab = self.create_general_tab()
-        tabs.addTab(qt_tab, 'Window Settings')
-        tabs.addTab(editor_tab, 'Editor')
-        tabs.addTab(general_tab, 'General')
+        tabs.addTab(qt_tab, '&Window Settings')
+        tabs.addTab(editor_tab, '&Editor')
+        tabs.addTab(general_tab, '&General')
 
         close_button = QPushButton('Close')
         close_button.clicked.connect(self.close)

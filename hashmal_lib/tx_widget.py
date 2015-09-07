@@ -1,8 +1,9 @@
 import bitcoin
 from bitcoin.core import COutPoint, CTxIn, CTxOut, lx
 from PyQt4.QtGui import *
+from PyQt4 import QtCore
 
-from gui_utils import Amount
+from gui_utils import Amount, monospace_font
 from hashmal_lib.core.script import Script
 
 class InputsTree(QTreeWidget):
@@ -15,6 +16,26 @@ class InputsTree(QTreeWidget):
         self.header().setResizeMode(0, QHeaderView.Interactive)
         self.header().setResizeMode(1, QHeaderView.Stretch)
         self.header().setResizeMode(2, QHeaderView.Interactive)
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.customContextMenu)
+
+    def copy_script(self):
+        item = self.currentItem()
+        QApplication.clipboard().setText(item.text(1))
+
+    def copy_script_hex(self):
+        item = self.currentItem()
+        script = Script.from_human(str(item.text(1)))
+        QApplication.clipboard().setText(script.get_hex())
+
+    def customContextMenu(self, pos):
+        menu = QMenu()
+        item = self.currentItem()
+        if self.isItemSelected(item):
+            menu.addAction('Copy Input Script', self.copy_script)
+            menu.addAction('Copy Input Script Hex', self.copy_script_hex)
+
+        menu.exec_(self.viewport().mapToGlobal(pos))
 
     def add_input(self, i):
         in_script = Script(i.scriptSig)
@@ -23,6 +44,8 @@ class InputsTree(QTreeWidget):
             in_script.get_human(),
             str(i.nSequence)
         ])
+        for i in range(3):
+            item.setFont(i, monospace_font)
         self.addTopLevelItem(item)
 
     def get_inputs(self):
@@ -36,7 +59,6 @@ class InputsTree(QTreeWidget):
             outpoint = COutPoint(lx(prev_hash), int(prev_vout))
             i_input = CTxIn(outpoint, in_script.get_hex().decode('hex'), sequence)
             vin.append(i_input)
-#            vin.append( (str(item.text(0)), str(item.text(1)), int(item.text(2))) )
         return vin
 
 class OutputsTree(QTreeWidget):
@@ -47,6 +69,26 @@ class OutputsTree(QTreeWidget):
         self.setAlternatingRowColors(True)
         self.header().setResizeMode(0, QHeaderView.Interactive)
         self.header().setResizeMode(1, QHeaderView.Stretch)
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.customContextMenu)
+
+    def copy_script(self):
+        item = self.currentItem()
+        QApplication.clipboard().setText(item.text(1))
+
+    def copy_script_hex(self):
+        item = self.currentItem()
+        script = Script.from_human(str(item.text(1)))
+        QApplication.clipboard().setText(script.get_hex())
+
+    def customContextMenu(self, pos):
+        menu = QMenu()
+        item = self.currentItem()
+        if self.isItemSelected(item):
+            menu.addAction('Copy Output Script', self.copy_script)
+            menu.addAction('Copy Output Script Hex', self.copy_script_hex)
+
+        menu.exec_(self.viewport().mapToGlobal(pos))
 
     def add_output(self, o):
         out_script = Script(o.scriptPubKey)
@@ -55,6 +97,8 @@ class OutputsTree(QTreeWidget):
             value.get_str(),
             out_script.get_human()
         ])
+        for i in range(2):
+            item.setFont(i, monospace_font)
         self.addTopLevelItem(item)
 
     def get_outputs(self):
@@ -64,14 +108,12 @@ class OutputsTree(QTreeWidget):
             item = root.child(i)
             value = str(item.text(0))
             if '.' in value:
-#                value = float(value)
                 value = int(float(value) * pow(10, 8))
             else:
                 value = int(value)
             out_script = Script.from_human(str(item.text(1)))
             i_output = CTxOut(value, out_script.get_hex().decode('hex'))
             vout.append(i_output)
-#            vout.append( (value, str(item.text(1))) )
         return vout
 
 class TxWidget(QWidget):

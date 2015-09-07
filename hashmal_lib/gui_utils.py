@@ -11,6 +11,13 @@ monospace_font.setStyleHint(QFont.TypeWriter)
 
 script_file_filter = 'Coinscripts (*.coinscript);;Text files (*.txt);;All files (*.*)'
 
+def HBox(*widgets):
+    """Create an HBoxLayout with the widgets passed."""
+    hbox = QHBoxLayout()
+    for w in widgets:
+        hbox.addWidget(w)
+    return hbox
+
 def floated_buttons(btns, left=False):
     """Returns a HBoxLayout with buttons floated to the right or left."""
     hbox = QHBoxLayout()

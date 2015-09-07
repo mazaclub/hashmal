@@ -48,7 +48,7 @@ class HashmalMain(QMainWindow):
         self.script_editor.setFont(font)
 
         self.create_menubar()
-        self.create_default_script()
+        self.new_script()
         self.statusBar().setVisible(True)
         self.statusBar().messageChanged.connect(self.change_status_bar)
 
@@ -59,10 +59,6 @@ class HashmalMain(QMainWindow):
 
     def sizeHint(self):
         return QtCore.QSize(800, 500)
-
-    def create_default_script(self):
-        filename = os.path.expanduser('Untitled.coinscript')
-        self.load_script(filename)
 
     def create_menubar(self):
         menubar = QMenuBar()
@@ -113,9 +109,7 @@ class HashmalMain(QMainWindow):
         saved = False
         if s == self.last_saved and self.filename:
             saved = True
-        self.on_changes_saved(saved)
 
-    def on_changes_saved(self, saved):
         title = ''.join(['Hashmal - ', self.filename])
         if not saved:
             title = ''.join([title, ' *'])
@@ -127,17 +121,24 @@ class HashmalMain(QMainWindow):
         if self.qt_settings.value('saveLayoutOnExit', defaultValue=QtCore.QVariant(False)).toBool():
             self.qt_settings.setValue('toolLayout/default', self.saveState())
 
-        if self.changes_saved or (not self.filename and not str(self.script_editor.toPlainText())):
-            event.accept()
-            return
-        result = QMessageBox.question(self, 'Save Changes',
-                    'Do you want to save your changes to ' + self.filename + ' before closing?',
-                    QMessageBox.Yes | QMessageBox.No)
-        if result == QMessageBox.Yes:
-            self.save_script()
+        self.close_script()
         event.accept()
 
+    def close_script(self):
+        # Confirm discarding changes if an unsaved file is open.
+        if (str(self.script_editor.toPlainText())
+            and not self.changes_saved):
+            result = QMessageBox.question(self, 'Save Changes',
+                        'Do you want to save your changes to ' + self.filename + ' before closing?',
+                        QMessageBox.Yes | QMessageBox.No)
+            if result == QMessageBox.Yes:
+                self.save_script()
+        self.filename = ''
+        self.changes_saved = True
+        self.script_editor.clear()
+
     def new_script(self, filename=''):
+        self.close_script()
         if not filename:
             base_name = ''.join(['Untitled-', str(time.time()), '.coinscript'])
             filename = os.path.expanduser(base_name)
@@ -171,21 +172,11 @@ class HashmalMain(QMainWindow):
         filename = str(QFileDialog.getOpenFileName(self, 'Open script', '.', filter=script_file_filter))
         if not filename:
             return
-        # Confirm discarding changes if an unsaved file is open.
-        if (self.filename
-            and str(self.script_editor.toPlainText())
-            and filename != self.filename
-            and not self.changes_saved):
-            result = QMessageBox.question(self, 'Save Changes',
-                        'Do you want to save your changes to ' + self.filename + ' before closing?',
-                        QMessageBox.Yes | QMessageBox.No)
-            if result == QMessageBox.Yes:
-                self.save_script()
+        self.close_script()
 
         self.load_script(filename)
 
     def load_script(self, filename):
-        self.setWindowTitle('Hashmal - ' + filename)
         if os.path.exists(filename):
             self.filename = filename
             with open(self.filename,'r') as file:

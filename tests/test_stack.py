@@ -3,6 +3,7 @@ import unittest
 import bitcoin
 from bitcoin.core.scripteval import EvalScript
 
+from hashmal_lib.scriptedit import transform_human
 from hashmal_lib.core.script import Script
 from hashmal_lib.core.stack import Stack
 
@@ -58,3 +59,21 @@ class StackTest(unittest.TestCase):
             for i in expected_states:
                 stack_state, _ = iterator.next()
                 self.assertEqual(i, stack_state)
+
+    def test_transform_human(self):
+        variables = {
+            'numberOne': '0x01',
+            'stringOne': '"1"',
+        }
+        human_tests = [
+            ('0x02 "test" 0x03', '010204746573740103'),
+            ('$numberOne 0x01', '01010101'),
+            ('0x10 $stringOne 0x11', '011001310111'),
+            # nonexistent variable
+            ('$one 0x05', '04246f6e650105')
+        ]
+        for text, expected_hex in human_tests:
+            txt = transform_human(text, variables)
+            s = Script.from_human(txt)
+            self.assertEqual(s.get_hex(), expected_hex)
+

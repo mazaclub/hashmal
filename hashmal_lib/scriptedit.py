@@ -12,10 +12,16 @@ from core.script import Script
 from docks.base import BaseDock
 from gui_utils import monospace_font
 
-def transform_human(text, main_window):
-    """Transform user input into something Script can read.
+def transform_human(text, variables):
+    """Transform user input with given context.
 
-    Main window is needed for tool integration."""
+    Args:
+        text (str): User input.
+        variables (dict): State of the Variables tool.
+
+    Returns:
+        A human-readable script that Script can parse.
+    """
     # these are parseActions for pyparsing.
     def str_literal_to_hex(s, loc, toks):
         for i, t in enumerate(toks):
@@ -23,7 +29,7 @@ def transform_human(text, main_window):
         return toks
     def var_name_to_value(s, loc, toks):
         for i, t in enumerate(toks):
-            val = main_window.dock_handler.variables.get_key(t[1:])
+            val = variables.get(t[1:])
             if val:
                 toks[i] = val
         return toks
@@ -37,6 +43,13 @@ def transform_human(text, main_window):
     s = var_name.transformString(s)
     s = str_literal.transformString(s)
     return s
+
+def transform_human_script(text, main_window):
+    """Transform user input into something Script can read.
+
+    Main window is needed for tool integration."""
+    variables = main_window.dock_handler.variables.data
+    return transform_human(text, variables)
 
 class ScriptHighlighter(QSyntaxHighlighter):
     def __init__(self, gui, script_edit):
@@ -90,7 +103,7 @@ class MyScriptEdit(QTextEdit):
             except Exception:
                 pass
         elif fmt == 'Human':
-            txt = transform_human(text, self.gui)
+            txt = transform_human_script(text, self.gui)
             script = Script.from_human(txt)
         self.script = script
 

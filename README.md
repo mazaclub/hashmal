@@ -25,7 +25,3 @@ Use at own risk!
 
 See the file `doc/usage.adoc` for basic instructions. See the [Hashmal wiki on Github](https://github.com/mazaclub/hashmal/wiki) for details.
 
-
-## To-Do
-
-- Implement the ability to download transactions by their Tx IDs for stack evaluation purposes.

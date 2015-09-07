@@ -77,6 +77,7 @@ class HashmalMain(QMainWindow):
         # Script actions
         script_menu = menubar.addMenu('&Script')
         script_menu.addAction('&Evaluate', self.dock_handler.evaluate_current_script)
+        script_menu.addAction('&Copy Hex', self.script_editor.copy_hex)
 
         # Settings and tool toggling
         tools_menu = menubar.addMenu('&Tools')

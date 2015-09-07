@@ -17,16 +17,18 @@ class QuickTips(QDialog):
 <li>You can quickly evaluate the script you\'re working on via <i>Script > Evaluate</i> in the menubar.</li>
 <li>Put text in double quotation marks to ensure that it\'s treated as text that needs to be hex-encoded.</li>
 </ul>
+
+<p>See <a href="https://github.com/mazaclub/hashmal/wiki">https://github.com/mazaclub/hashmal/wiki</a> for detailed help.</p>
 '''
         tips = QLabel(tips_text)
         tips.setWordWrap(True)
         vbox.addWidget(QLabel('<b>Quick Tips:</b>'))
         vbox.addWidget(tips)
 
-        does_show_on_startup = self.gui.settings.value('quickTipsOnStart', defaultValue=QtCore.QVariant(True)).toBool()
+        does_show_on_startup = self.gui.qt_settings.value('quickTipsOnStart', defaultValue=QtCore.QVariant(True)).toBool()
         show_on_startup = QCheckBox('Show this dialog on startup.')
         show_on_startup.setChecked(does_show_on_startup)
-        show_on_startup.stateChanged.connect(lambda checked: self.gui.settings.setValue('quickTipsOnStart', True if checked else False))
+        show_on_startup.stateChanged.connect(lambda checked: self.gui.qt_settings.setValue('quickTipsOnStart', True if checked else False))
         vbox.addWidget(show_on_startup)
 
         close_button = QPushButton('Close')

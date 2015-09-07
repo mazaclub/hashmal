@@ -168,6 +168,9 @@ class StackEval(BaseDock):
         while 1:
             if not self.do_step():
                 break
+        cursor = QTextCursor(self.tx_script.document())
+        cursor.setPosition(0)
+        self.tx_script.setTextCursor(cursor)
 
     def do_step(self):
         """Returns whether another step can be done."""

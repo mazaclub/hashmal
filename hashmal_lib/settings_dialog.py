@@ -4,7 +4,10 @@ from PyQt4.QtCore import QSettings, QSize, QVariant
 from gui_utils import floated_buttons, Amount, monospace_font
 
 class SettingsDialog(QDialog):
-    """Shows info about tools and manages their layout."""
+    """Configuration interface.
+
+    Handles loading/saving window layouts as well.
+    """
     def __init__(self, main_window):
         super(SettingsDialog, self).__init__(main_window)
         self.gui = main_window

@@ -37,17 +37,22 @@ class BaseDock(QDockWidget):
         pass
 
     def create_layout(self):
-        """Returns the main layout for our widget."""
+        """Returns the main layout for our widget.
+
+        Subclasses should override this to return their layout.
+        """
         return QVBoxLayout()
 
     def refresh_data(self):
-        """Synchronize."""
-        pass
-
-    def update_script_view(self, txt):
-        """Called on widgets that have script views."""
+        """Synchronize. Called when needsUpdate is emitted."""
         pass
 
     def status_message(self, msg, error=False):
+        """Show a message on the status bar.
+
+        Args:
+            msg (str): Message to be displayed.
+            error (bool): Whether to display msg as an error.
+        """
         msg = ''.join([ '[%s] --> %s' % (self.tool_name, msg) ])
         self.statusMessage.emit(msg, error)

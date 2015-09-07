@@ -4,8 +4,11 @@ from bitcoin.core.script import CScript, OPCODE_NAMES, OPCODES_BY_NAME
 from utils import push_script
 
 class Script(CScript):
+    """Transaction script.
 
-
+    Subclassed from CScript to provide methods for
+    getting/setting according to certain formats.
+    """
     @classmethod
     def from_human(cls, data):
         hex_str = []

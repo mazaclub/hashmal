@@ -15,6 +15,9 @@ from gui_utils import monospace_font
 def transform_human(text, variables):
     """Transform user input with given context.
 
+    This is separated from transform_human_script() so that
+    testing this with known context is possible.
+
     Args:
         text (str): User input.
         variables (dict): State of the Variables tool.
@@ -69,6 +72,11 @@ class ScriptHighlighter(QSyntaxHighlighter):
             self.setFormat(idx, len(word), fmt)
 
 class MyScriptEdit(QTextEdit):
+    """Script editor.
+
+    Keeps an internal Script instance that it updates
+    with its text, and uses to convert formats.
+    """
     def __init__(self, gui=None):
         super(MyScriptEdit, self).__init__(gui)
         self.gui = gui

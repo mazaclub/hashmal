@@ -15,6 +15,7 @@ def e(*args):
 
 
 class Stack(object):
+    """State of a Script's execution."""
     def __init__(self):
         super(Stack, self).__init__()
         self.tx_script = None

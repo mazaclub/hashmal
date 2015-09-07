@@ -30,6 +30,7 @@ def floated_buttons(btns, left=False):
     return hbox
 
 class Separator(QFrame):
+    """A raised horizontal line to separate widgets."""
     def __init__(self, parent=None):
         super(Separator, self).__init__(parent)
         self.setFrameShape(QFrame.HLine)
@@ -41,6 +42,13 @@ class Separator(QFrame):
         return QtCore.QSize(6, 8)
 
 class Amount(object):
+    """Bitcoin output amount.
+
+    Internally, the amount is stored as satoshis.
+    Widgets that use instances of this class should connect
+    to the singleton config.Config's optionChanged signal,
+    and account for changes to 'amount_format'.
+    """
     def __init__(self, satoshis=0):
         super(Amount, self).__init__()
         self.satoshis = satoshis

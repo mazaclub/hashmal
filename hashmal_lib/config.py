@@ -16,6 +16,12 @@ def get_config():
     return hashmal_config
 
 class Config(QtCore.QObject):
+    """Wrapper for core.Config.
+
+    This exists so that widgets can connect to optionChanged
+    if they require themselves to update with a certain option.
+    """
+
     optionChanged = QtCore.pyqtSignal(str, name='optionChanged')
     def __init__(self, parent=None):
         super(Config, self).__init__(parent)

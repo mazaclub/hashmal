@@ -7,6 +7,7 @@ from gui_utils import Amount, monospace_font
 from hashmal_lib.core.script import Script
 
 class InputsTree(QTreeWidget):
+    """TreeWidget showing a transaction's inputs."""
     def __init__(self, parent=None):
         super(InputsTree, self).__init__(parent)
         self.setColumnCount(3)
@@ -62,6 +63,7 @@ class InputsTree(QTreeWidget):
         return vin
 
 class OutputsTree(QTreeWidget):
+    """TreeWidget showing a transaction's outputs."""
     def __init__(self, parent=None):
         super(OutputsTree, self).__init__(parent)
         self.setColumnCount(2)
@@ -117,6 +119,7 @@ class OutputsTree(QTreeWidget):
         return vout
 
 class TxWidget(QWidget):
+    """Displays the deserialized fields of a transaction."""
     def __init__(self, parent=None):
         super(TxWidget, self).__init__(parent)
         form = QFormLayout()

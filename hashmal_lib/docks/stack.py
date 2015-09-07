@@ -21,10 +21,10 @@ class StackEval(BaseDock):
         self.has_spending_tx.setChecked(False)
 
     def init_metadata(self):
-        self.tool_name = 'Stack View'
+        self.tool_name = 'Stack Evaluator'
         self.description = '\n'.join([
-                'Stack View steps through scripts, showing you what\'s happening as it happens.',
-                '<b>Please read this warning from the source of python-bitcoinlib, which Stack View uses to evaluate scripts:</b>',
+                'Stack Evaluator steps through scripts, showing you what\'s happening as it happens.',
+                '<b>Please read this warning from the source of python-bitcoinlib, which Stack Evaluator uses to evaluate scripts:</b>',
                 '"Be warned that there are highly likely to be consensus bugs in this code; it is unlikely to match Satoshi Bitcoin exactly. Think carefully before using this module."'
         ])
 
@@ -44,6 +44,10 @@ class StackEval(BaseDock):
         self.stack_result.clear()
         self.stack_result.setProperty('hasError', False)
         self.style().polish(self.stack_result)
+        # Clear selected step.
+        cursor = QTextCursor(self.tx_script.document())
+        cursor.setPosition(0)
+        self.tx_script.setTextCursor(cursor)
 
     def create_layout(self):
         form = QFormLayout()
@@ -147,6 +151,19 @@ class StackEval(BaseDock):
     def set_input_index(self, idx):
         self.inIdx = idx
 
+    def highlight_step(self, op):
+        """Highlights the relevant text in the input widget."""
+        opcode, data, byte_index = op
+        if data is None:
+            data = ''
+
+        pos = byte_index * 2
+        length = 2 + 2 * len(data)
+        cursor = QTextCursor(self.tx_script.document())
+        cursor.setPosition(pos)
+        cursor.setPosition(pos + length, QTextCursor.KeepAnchor)
+        self.tx_script.setTextCursor(cursor)
+
     def do_evaluate(self):
         while 1:
             if not self.do_step():
@@ -158,7 +175,7 @@ class StackEval(BaseDock):
             txt = str(self.tx_script.toPlainText())
             scr = CScript(txt.decode('hex'))
             # So we can show the opcode in the stack log
-            self.script_ops = [i[0] for i in scr.raw_iter()]
+            self.script_ops = [i for i in scr.raw_iter()]
             self.stack.set_script(scr, self.tx, self.inIdx)
             self.stack_iterator = self.stack.step()
             self.stack_log.clear()
@@ -172,7 +189,8 @@ class StackEval(BaseDock):
             self.stack_view.clear()
             self.stack_view.addItems(new_stack)
 
-            op_name = OPCODE_NAMES.get(self.script_ops[self.step_counter - 1], 'PUSHDATA')
+            op_name = OPCODE_NAMES.get(self.script_ops[self.step_counter - 1][0], 'PUSHDATA')
+            self.highlight_step(self.script_ops[self.step_counter - 1])
             item = QTreeWidgetItem(map(lambda i: str(i), [self.step_counter, op_name, action]))
             item.setTextAlignment(0, Qt.AlignLeft)
             item.setToolTip(1, 'Step {} operation'.format(self.step_counter))

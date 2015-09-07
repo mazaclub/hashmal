@@ -171,7 +171,7 @@ class HashmalMain(QMainWindow):
             return
         # Confirm discarding changes if an unsaved file is open.
         if (self.filename
-            and str(self.script_editor.script_edit.toPlainText())
+            and str(self.script_editor.toPlainText())
             and filename != self.filename
             and not self.changes_saved):
             result = QMessageBox.question(self, 'Save Changes',

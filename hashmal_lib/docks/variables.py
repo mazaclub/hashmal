@@ -25,6 +25,7 @@ class Variables(BaseDock):
         self.table = QTableWidget()
         self.table.setColumnCount(2)
         self.table.setHorizontalHeaderLabels([ 'Key', 'Value' ])
+        self.table.verticalHeader().setDefaultSectionSize(25)
         self.table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
         self.table.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.context_menu)
@@ -36,7 +37,7 @@ class Variables(BaseDock):
         self.new_var_key = QLineEdit()
         self.new_var_value = QLineEdit()
         add_var_hbox.addWidget(self.new_var_key)
-        add_var_hbox.addWidget(QLabel(' = '))
+        add_var_hbox.addWidget(QLabel(':'))
         add_var_hbox.addWidget(self.new_var_value)
         add_var_btn = QPushButton('Add')
         add_var_btn.clicked.connect(self.add_new_var)
@@ -114,7 +115,10 @@ class Variables(BaseDock):
             return
         self.set_key(k, v)
         self.status_message('Set variable %s to %s'.format(k, v))
+        self.new_var_key.clear()
+        self.new_var_value.clear()
 
     def remove_var(self):
         k = str(self.del_var_key.text())
         self.remove_key(k)
+        self.del_var_key.clear()

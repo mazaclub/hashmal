@@ -2,6 +2,7 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
 from docks.addr_encoder import AddrEncoder
+from docks.blockchain import Blockchain
 from docks.variables import Variables
 from docks.stack import StackEval
 from docks.script_gen import ScriptGenerator
@@ -17,6 +18,7 @@ class DockHandler(QWidget):
 
     def create_docks(self):
         self.addr_encoder = AddrEncoder(self)
+        self.blockchain = Blockchain(self)
         self.variables = Variables(self)
         self.stack_eval = StackEval(self)
         self.script_generator = ScriptGenerator(self)
@@ -25,6 +27,7 @@ class DockHandler(QWidget):
 
         self.dock_widgets.extend([
                     self.addr_encoder,
+                    self.blockchain,
                     self.variables,
                     self.stack_eval,
                     self.script_generator,
@@ -69,3 +72,7 @@ class DockHandler(QWidget):
         self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.tx_deserializer)
         self.gui.tabifyDockWidget(self.tx_builder, self.tx_deserializer)
         self.tx_deserializer.setVisible(False)
+
+        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.blockchain)
+        self.gui.tabifyDockWidget(self.tx_deserializer, self.blockchain)
+        self.blockchain.setVisible(False)

@@ -42,6 +42,7 @@ setup(
         'hashmal_lib.docks.__init__',
         'hashmal_lib.docks.addr_encoder',
         'hashmal_lib.docks.base',
+        'hashmal_lib.docks.blockchain',
         'hashmal_lib.docks.script_gen',
         'hashmal_lib.docks.stack',
         'hashmal_lib.docks.tx_builder',

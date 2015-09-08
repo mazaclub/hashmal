@@ -5,7 +5,7 @@ from bitcoin.core import COutPoint, CTxIn, CTxOut, lx
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from gui_utils import Amount, monospace_font, HBox
+from gui_utils import Amount, monospace_font, HBox, floated_buttons
 from hashmal_lib.core.script import Script
 
 class InputsTree(QTreeWidget):
@@ -146,6 +146,41 @@ class LockTimeWidget(QWidget):
         else:
             self.locktime_human.setText('Not locked.')
 
+class TxProperties(QWidget):
+    """Displays properties of a transaction (e.g. isFinal)."""
+    def __init__(self, parent=None):
+        super(TxProperties, self).__init__(parent)
+        self.tx_size_edit = QLineEdit()
+        self.tx_size_edit.setReadOnly(True)
+        tx_size = HBox(QLabel('Size:'), self.tx_size_edit)
+        tx_size.setContentsMargins(0, 0, 0, 0)
+        self.tx_size = QWidget()
+        self.tx_size.setLayout(tx_size)
+        self.tx_size.setToolTip('Size (in bytes) of the serialized tx')
+
+        self.is_final = QCheckBox('Is Final')
+        self.is_final.setToolTip('True if all inputs have a Sequence of 0xffffffff')
+        self.is_coinbase = QCheckBox('Is Coinbase')
+        self.is_coinbase.setToolTip('True if the tx generates new coins via mining')
+        for i in [self.is_final, self.is_coinbase]:
+            i.setEnabled(False)
+        hbox = floated_buttons([self.tx_size, self.is_final, self.is_coinbase], left=True)
+        hbox.setContentsMargins(16, 0, 0, 0)
+        self.setLayout(hbox)
+
+    def clear(self):
+        self.tx_size_edit.clear()
+        self.is_final.setChecked(False)
+        self.is_coinbase.setChecked(False)
+
+    def set_tx(self, tx):
+        self.tx_size_edit.setText(str(len(tx.serialize())))
+        if len(tx.vin) > 0:
+            self.is_final.setChecked(all(i.is_final() for i in tx.vin))
+        else:
+            self.is_final.setChecked(False)
+        self.is_coinbase.setChecked(tx.is_coinbase())
+
 class TxWidget(QWidget):
     """Displays the deserialized fields of a transaction."""
     def __init__(self, parent=None):
@@ -164,11 +199,14 @@ class TxWidget(QWidget):
 
         self.locktime_edit = LockTimeWidget()
 
+        self.tx_properties = TxProperties()
+
         form.addRow('Tx ID:', self.tx_id)
         form.addRow('Version:', self.version_edit)
         form.addRow('Inputs:', inputs)
         form.addRow('Outputs:', outputs)
         form.addRow('LockTime:', self.locktime_edit)
+        form.addRow('Metadata:', self.tx_properties)
 
         self.setLayout(form)
 
@@ -183,6 +221,7 @@ class TxWidget(QWidget):
 
         self.locktime_edit.set_locktime(tx.nLockTime)
 
+        self.tx_properties.set_tx(tx)
         self.tx_id.setText(bitcoin.core.b2lx(tx.GetHash()))
 
     def clear(self):
@@ -190,6 +229,7 @@ class TxWidget(QWidget):
         self.inputs_tree.clear()
         self.outputs_tree.clear()
         self.locktime_edit.clear()
+        self.tx_properties.clear()
 
     def add_input(self, i):
         self.inputs_tree.add_input(i)

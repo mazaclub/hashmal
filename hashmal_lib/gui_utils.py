@@ -5,6 +5,12 @@ from PyQt4 import QtCore
 
 import config
 
+RawRole = QtCore.Qt.UserRole + 1
+"""DataRole that is considered "raw" / "non-human-readable."
+
+For example, the hex data of a human-readable script.
+"""
+
 monospace_font = QFont('Monospace')
 monospace_font.setPointSize(9)
 monospace_font.setStyleHint(QFont.TypeWriter)

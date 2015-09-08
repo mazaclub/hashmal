@@ -5,123 +5,159 @@ from bitcoin.core import COutPoint, CTxIn, CTxOut, lx
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from gui_utils import Amount, monospace_font, HBox, floated_buttons
+from gui_utils import Amount, monospace_font, HBox, floated_buttons, RawRole
 from hashmal_lib.core.script import Script
 
-class InputsTree(QTreeWidget):
-    """TreeWidget showing a transaction's inputs."""
+
+class InputsTree(QWidget):
+    """Model and View showing a transaction's inputs."""
     def __init__(self, parent=None):
         super(InputsTree, self).__init__(parent)
-        self.setColumnCount(3)
-        self.setHeaderLabels(['Prev Output', 'scriptSig', 'Sequence'])
-        self.setAlternatingRowColors(True)
-        self.header().setStretchLastSection(False)
-        self.header().setResizeMode(0, QHeaderView.Interactive)
-        self.header().setResizeMode(1, QHeaderView.Stretch)
-        self.header().setResizeMode(2, QHeaderView.Interactive)
-        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.customContextMenu)
+        self.model = QStandardItemModel()
+        self.view = QTreeView()
+        self.model.setColumnCount(3)
+        self.model.setHorizontalHeaderLabels(['Prev Output', 'scriptSig', 'Sequence'])
+        self.view.setAlternatingRowColors(True)
+        self.view.setModel(self.model)
+        self.view.header().setStretchLastSection(False)
+        self.view.header().setResizeMode(0, QHeaderView.Interactive)
+        self.view.header().setResizeMode(1, QHeaderView.Stretch)
+        self.view.header().setResizeMode(2, QHeaderView.Interactive)
+        self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.view.customContextMenuRequested.connect(self.customContextMenu)
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.addWidget(self.view)
+        self.setLayout(vbox)
+
+    def clear(self):
+        self.model.setRowCount(0)
 
     def copy_script(self):
-        item = self.currentItem()
-        QApplication.clipboard().setText(item.text(1))
+        """Copy the scriptSig to clipboard."""
+        item = self.model.itemFromIndex(self.view.selectedIndexes()[1])
+        QApplication.clipboard().setText(item.text())
 
     def copy_script_hex(self):
-        item = self.currentItem()
-        script = Script.from_human(str(item.text(1)))
-        QApplication.clipboard().setText(script.get_hex())
+        """Copy the scriptSig to clipboard as hex."""
+        item = self.model.itemFromIndex(self.view.selectedIndexes()[1])
+        txt = item.data(RawRole).toString()
+        QApplication.clipboard().setText(txt)
 
     def customContextMenu(self, pos):
+        if len(self.view.selectedIndexes()) == 0:
+            return
         menu = QMenu()
-        item = self.currentItem()
-        if self.isItemSelected(item):
-            menu.addAction('Copy Input Script', self.copy_script)
-            menu.addAction('Copy Input Script Hex', self.copy_script_hex)
+        menu.addAction('Copy Input Script', self.copy_script)
+        menu.addAction('Copy Input Script Hex', self.copy_script_hex)
 
-        menu.exec_(self.viewport().mapToGlobal(pos))
+        menu.exec_(self.view.viewport().mapToGlobal(pos))
 
     def add_input(self, i):
         in_script = Script(i.scriptSig)
-        item = QTreeWidgetItem([
+        item = map(lambda x: QStandardItem(x), [
             str(i.prevout),
             in_script.get_human(),
             str(i.nSequence)
         ])
-        for i in range(3):
-            item.setFont(i, monospace_font)
-        self.addTopLevelItem(item)
+        # Raw scriptSig is stored as RawRole.
+        item[1].setData(QtCore.QVariant(in_script.get_hex()), RawRole)
+        self.model.appendRow(item)
 
     def get_inputs(self):
         vin = []
-        root = self.invisibleRootItem()
-        for i in range(root.childCount()):
-            item = root.child(i)
-            prev_hash, prev_vout = str(item.text(0)).split(':')
-            in_script = Script.from_human(str(item.text(1)))
-            sequence = int(item.text(2))
+        for i in range(self.model.rowCount()):
+            prev_hash, prev_vout = str(self.model.item(i, 0).text()).split(':')
+            in_script = str(self.model.item(i, 1).data(RawRole).toString())
+            sequence = int(self.model.item(i, 2).text())
+
             outpoint = COutPoint(lx(prev_hash), int(prev_vout))
-            i_input = CTxIn(outpoint, in_script.get_hex().decode('hex'), sequence)
+            i_input = CTxIn(outpoint, in_script.decode('hex'), sequence)
             vin.append(i_input)
         return vin
 
-class OutputsTree(QTreeWidget):
-    """TreeWidget showing a transaction's outputs."""
+class OutputsTree(QWidget):
+    """Model and View showing a transaction's outputs."""
     def __init__(self, parent=None):
         super(OutputsTree, self).__init__(parent)
-        self.setColumnCount(2)
-        self.setHeaderLabels(['Value', 'scriptPubKey'])
-        self.setAlternatingRowColors(True)
-        self.header().setResizeMode(0, QHeaderView.Interactive)
-        self.header().setResizeMode(1, QHeaderView.Stretch)
-        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.customContextMenu)
+        self.model = QStandardItemModel()
+        self.view = QTreeView()
+        self.model.setColumnCount(2)
+        self.model.setHorizontalHeaderLabels(['Value', 'scriptPubKey'])
+        self.view.setAlternatingRowColors(True)
+        self.view.setModel(self.model)
+        self.view.header().setResizeMode(0, QHeaderView.Interactive)
+        self.view.header().setResizeMode(1, QHeaderView.Stretch)
+        self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.view.customContextMenuRequested.connect(self.customContextMenu)
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.addWidget(self.view)
+        self.setLayout(vbox)
+
+    def clear(self):
+        self.model.setRowCount(0)
 
     def copy_script(self):
-        item = self.currentItem()
-        QApplication.clipboard().setText(item.text(1))
+        """Copy the scriptPubKey to clipboard."""
+        item = self.model.itemFromIndex(self.view.selectedIndexes()[1])
+        QApplication.clipboard().setText(item.text())
 
     def copy_script_hex(self):
-        item = self.currentItem()
-        script = Script.from_human(str(item.text(1)))
+        """Copy the scriptPubKey to clipboard as hex."""
+        item = self.model.itemFromIndex(self.view.selectedIndexes()[1])
+        script = Script.from_human(str(item.text()))
         QApplication.clipboard().setText(script.get_hex())
 
     def customContextMenu(self, pos):
+        if len(self.view.selectedIndexes()) == 0:
+            return
         menu = QMenu()
-        item = self.currentItem()
-        if self.isItemSelected(item):
-            menu.addAction('Copy Output Script', self.copy_script)
-            menu.addAction('Copy Output Script Hex', self.copy_script_hex)
+        menu.addAction('Copy Output Script', self.copy_script)
+        menu.addAction('Copy Output Script Hex', self.copy_script_hex)
 
-        menu.exec_(self.viewport().mapToGlobal(pos))
+        menu.exec_(self.view.viewport().mapToGlobal(pos))
 
     def add_output(self, o):
         out_script = Script(o.scriptPubKey)
         value = Amount(o.nValue)
-        item = QTreeWidgetItem([
+        item = map(lambda x: QStandardItem(x), [
             value.get_str(),
             out_script.get_human()
         ])
-        for i in range(2):
-            item.setFont(i, monospace_font)
-        self.addTopLevelItem(item)
+        # Value in satoshis is stored as RawRole.
+        item[0].setData(QtCore.QVariant(value.satoshis), RawRole)
+        # Raw scriptPubKey is stored as RawRole.
+        item[1].setData(QtCore.QVariant(out_script.get_hex()), RawRole)
+        self.model.appendRow(item)
 
     def get_outputs(self):
         vout = []
-        root = self.invisibleRootItem()
-        for i in range(root.childCount()):
-            item = root.child(i)
-            value = str(item.text(0))
-            if '.' in value:
-                value = int(float(value) * pow(10, 8))
-            else:
-                value = int(value)
-            out_script = Script.from_human(str(item.text(1)))
+        for i in range(self.model.rowCount()):
+            value, ok = self.model.item(i, 0).data(RawRole).toInt()
+            if not ok:
+                raise Exception('Could not get satoshis for output %d' % i)
+                return
+            out_script = Script(str(self.model.item(i, 1).data(RawRole).toString()).decode('hex'))
             i_output = CTxOut(value, out_script.get_hex().decode('hex'))
             vout.append(i_output)
         return vout
 
+    def amount_format_changed(self):
+        """Parents should call this when config.amount_format changes.
+
+        Refreshes TxOut amounts with the new format.
+        """
+        vout = self.get_outputs()
+        self.clear()
+        for o in vout:
+            self.add_output(o)
+
 class LockTimeWidget(QWidget):
-    """Displays a transaction's locktime."""
+    """Displays a transaction's locktime.
+
+    Displays the raw int and the human-readable interpretation
+    side-by-side."""
     def __init__(self, parent=None):
         super(LockTimeWidget, self).__init__(parent)
         self.locktime_raw = QLineEdit()
@@ -137,6 +173,7 @@ class LockTimeWidget(QWidget):
         self.locktime_human.clear()
 
     def set_locktime(self, locktime):
+        """Formats the raw and human-readable locktimes."""
         self.locktime_raw.setText(str(locktime))
         if locktime < 500000000 and locktime > 0:
             self.locktime_human.setText('Block %d' % locktime)
@@ -192,11 +229,8 @@ class TxWidget(QWidget):
 
         self.version_edit = QLineEdit()
         self.version_edit.setReadOnly(True)
-
         self.inputs_tree = inputs = InputsTree()
-
         self.outputs_tree = outputs = OutputsTree()
-
         self.locktime_edit = LockTimeWidget()
 
         self.tx_properties = TxProperties()

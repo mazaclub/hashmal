@@ -9,6 +9,9 @@ from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, 
 from base import BaseDock
 
 class TxBuilder(BaseDock):
+    def __init__(self, handler):
+        super(TxBuilder, self).__init__(handler)
+        self.config.optionChanged.connect(self.on_option_changed)
 
     def init_metadata(self):
         self.tool_name = 'Transaction Builder'
@@ -91,7 +94,7 @@ class TxBuilder(BaseDock):
 
         def rm_input():
             in_num = rm_input_edit.value()
-            self.inputs_tree.takeTopLevelItem(in_num)
+            self.inputs_tree.model.takeRow(in_num)
             rm_input_edit.setRange(0, len(self.inputs_tree.get_inputs()) - 1)
 
         add_input_button = QPushButton('Add input')
@@ -154,7 +157,7 @@ class TxBuilder(BaseDock):
 
         def rm_output():
             out_n = rm_output_edit.value()
-            self.outputs_tree.takeTopLevelItem(out_n)
+            self.outputs_tree.model.takeRow(out_n)
             rm_output_edit.setRange(0, len(self.outputs_tree.get_outputs()) - 1)
 
         add_output_button = QPushButton('Add output')
@@ -217,3 +220,11 @@ class TxBuilder(BaseDock):
         self.raw_tx.setText(bitcoin.core.b2x(tx.serialize()))
 
         self.tx_widget.set_tx(tx)
+
+    def on_option_changed(self, key):
+        if key == 'amount_format':
+            self.needsUpdate.emit()
+
+    def refresh_data(self):
+        self.build_transaction()
+        self.outputs_tree.amount_format_changed()

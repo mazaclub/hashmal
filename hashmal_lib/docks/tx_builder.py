@@ -83,8 +83,8 @@ class TxBuilder(BaseDock):
         def add_input():
             try:
                 outpoint = COutPoint(lx(str(input_prev_tx.text())), input_prev_vout.get_amount())
-                in_script = str(input_script.toPlainText()).decode('hex')
-                new_input = CTxIn(outpoint, in_script, input_sequence.get_amount())
+                in_script = Script.from_human(str(input_script.toPlainText()))
+                new_input = CTxIn(outpoint, in_script.get_hex().decode('hex'), input_sequence.get_amount())
             except Exception as e:
                 self.status_message(str(e), True)
                 return
@@ -111,7 +111,7 @@ class TxBuilder(BaseDock):
 
         form.addRow('Previous Transaction:', input_prev_tx)
         form.addRow('Previous Tx Output:', input_prev_vout)
-        form.addRow('Input script hex:', input_script)
+        form.addRow('Input script:', input_script)
         seq_desc = QLabel('Sequence is mostly deprecated.\nIf an input has a sequence that\'s not the maximum value, the transaction\'s locktime will apply.')
         seq_desc.setWordWrap(True)
         form.addRow(seq_desc)
@@ -177,7 +177,7 @@ class TxBuilder(BaseDock):
 
         form.addRow(value_desc)
         form.addRow('Value:', output_value)
-        form.addRow('Output script hex:', output_script)
+        form.addRow('Output script:', output_script)
 
         form.addRow(Separator())
         form.addRow(floated_buttons([add_output_button]))

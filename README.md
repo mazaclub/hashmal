@@ -25,3 +25,7 @@ Use at own risk!
 
 See the file `doc/usage.adoc` for basic instructions. See the [Hashmal wiki on Github](https://github.com/mazaclub/hashmal/wiki) for details.
 
+
+## License
+
+GPLv3.

@@ -19,6 +19,10 @@ setup(
         'script',
         'ide'
     ],
+    classifiers=[
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'Topic :: Software Development :: Interpreters'
+    ],
     scripts=['hashmal'],
     py_modules=[
         'hashmal_lib.__init__',

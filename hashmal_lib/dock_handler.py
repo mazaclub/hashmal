@@ -38,17 +38,30 @@ class DockHandler(QWidget):
         for i in self.dock_widgets:
             i.statusMessage.connect(self.gui.show_status_message)
 
+    def bring_to_front(self, dock):
+        """Activate a dock by ensuring it is visible and raising it."""
+        dock.setVisible(True)
+        dock.raise_()
+
     def evaluate_current_script(self):
         """Evaluate the script being edited with the Stack Evaluator tool."""
         script_hex = self.gui.script_editor.get_data('Hex')
         if not script_hex: return
+        self.bring_to_front(self.stack_eval)
         self.stack_eval.tx_script.setPlainText(script_hex)
         self.stack_eval.setVisible(True)
         self.stack_eval.do_evaluate()
 
     def set_stack_spending_tx(self, txt):
         """Set the spending transaction in the Stack Evaluator tool."""
+        self.bring_to_front(self.stack_eval)
         self.stack_eval.set_spending_tx(txt)
+
+    def deserialize_tx(self, tx):
+        """Deserialize a raw transaction."""
+        self.bring_to_front(self.tx_deserializer)
+        self.tx_deserializer.raw_tx_edit.setPlainText(tx)
+        self.tx_deserializer.deserialize()
 
     def do_default_layout(self):
         # Generally, small widgets go to the right.

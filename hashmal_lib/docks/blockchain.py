@@ -25,14 +25,12 @@ class BApi(object):
         return r.json()
 
     def get_raw_tx(self, txid):
+        """Download a raw transaction."""
         s = [self.domain]
         s.append(self.api_type.rawtx_route)
         s.append(txid)
         s = ''.join(s)
-        try:
-            d = self.request(s)
-        except Exception as e:
-            return str(e)
+        d = self.request(s)
         return self.api_type.rawtx_parse(d)
 
     def api_name(self):
@@ -122,6 +120,8 @@ class Blockchain(BaseDock):
         self.tx_id_edit = QLineEdit()
         self.raw_tx_edit = QTextEdit()
         self.raw_tx_edit.setReadOnly(True)
+        self.raw_tx_edit.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.raw_tx_edit.customContextMenuRequested.connect(self.context_menu)
         self.download_button = QPushButton('Download')
         self.download_button.clicked.connect(self.do_download)
 
@@ -133,21 +133,36 @@ class Blockchain(BaseDock):
         w.setLayout(form)
         return w
 
+    def context_menu(self, position):
+        menu = QMenu()
+        def set_as_spending():
+            self.handler.set_stack_spending_tx(str(self.raw_tx_edit.toPlainText()))
+        def deserialize():
+            self.handler.deserialize_tx(str(self.raw_tx_edit.toPlainText()))
+        text_exists = True if self.raw_tx_edit.toPlainText() else False
+        menu.addAction('Deserialize', deserialize).setEnabled(text_exists)
+        menu.addAction('Set as transaction in Stack Evaluator', set_as_spending).setEnabled(text_exists)
+        menu.exec_(self.raw_tx_edit.viewport().mapToGlobal(position))
+
     def do_download(self):
         self.download_button.setEnabled(False)
         txid = str(self.tx_id_edit.text())
         self.raw_tx_edit.setText('Downloading...')
-        raw = self.api.get_raw_tx(txid)
-        if not raw:
-            self.raw_tx_edit.setText('Could not download %s!' % txid)
+        try:
+            raw = self.api.get_raw_tx(txid)
+        except Exception as e:
+            self.raw_tx_edit.clear()
+            self.status_message(str(e), True)
+            return
         else:
             self.raw_tx_edit.setText(raw)
-        self.download_button.setEnabled(True)
+            self.status_message('Downloaded transaction %s' % txid)
+        finally:
+            self.download_button.setEnabled(True)
 
     def download_raw_tx(txid):
         """This is for use by other widgets."""
-        raw = self.api.get_raw_tx(txid)
-        return raw
+        return self.api.get_raw_tx(txid)
 
     def set_api_type(self, api):
         """Set the base API type and save."""

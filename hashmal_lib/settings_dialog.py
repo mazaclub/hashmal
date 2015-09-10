@@ -1,5 +1,5 @@
 from PyQt4.QtGui import *
-from PyQt4.QtCore import QSettings, QSize, QVariant
+from PyQt4.QtCore import *
 
 from gui_utils import floated_buttons, Amount, monospace_font
 
@@ -33,9 +33,9 @@ class SettingsDialog(QDialog):
         qt_tab = self.create_qt_tab()
         editor_tab = self.create_editor_tab()
         general_tab = self.create_general_tab()
+        tabs.addTab(general_tab, '&General')
         tabs.addTab(qt_tab, '&Window Settings')
         tabs.addTab(editor_tab, '&Editor')
-        tabs.addTab(general_tab, '&General')
 
         close_button = QPushButton('Close')
         close_button.clicked.connect(self.close)
@@ -132,7 +132,16 @@ class SettingsDialog(QDialog):
         font_form.addRow(floated_buttons([reset_font_button]))
         font_group.setLayout(font_form)
 
+
+        vars_color = ColorButton('variables', QColor('darkMagenta'))
+
+        colors_group = QGroupBox('Colors')
+        colors_form = QFormLayout()
+        colors_form.addRow('Variables:', floated_buttons([vars_color], True))
+        colors_group.setLayout(colors_form)
+
         form.addRow(font_group)
+        form.addRow(colors_group)
 
         w = QWidget()
         w.setLayout(form)
@@ -178,3 +187,21 @@ class SettingsDialog(QDialog):
     def change_editor_font(self, font):
         self.gui.script_editor.setFont(font)
         self.qt_settings.setValue('editor/font', font.toString())
+
+class ColorButton(QPushButton):
+    """Represents a color visually."""
+    def __init__(self, name, default_color, parent=None):
+        super(ColorButton, self).__init__(parent)
+        self.name = name
+        self.color = QColor(QSettings().value('color/' + name, default_color.name()))
+        self.clicked.connect(self.show_color_dialog)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(0, 0, self.size().width(), self.size().height(), self.color)
+
+    def show_color_dialog(self):
+        new_color = QColorDialog.getColor(self.color)
+        if not new_color.isValid(): return
+        self.color = new_color
+        QSettings().setValue('color/' + self.name, self.color.name())

@@ -61,6 +61,7 @@ class ScriptHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text):
         from_index = 0
+        settings = self.gui.qt_settings
         for word in str(text).split():
             idx = text.indexOf(word, from_index)
             from_index = idx + len(word)
@@ -68,7 +69,7 @@ class ScriptHighlighter(QSyntaxHighlighter):
             # Highlight variable names.
             if word.startswith('$'):
                 if self.gui.dock_handler.variables.get_key(word[1:]):
-                    fmt.setForeground(Qt.darkMagenta)
+                    fmt.setForeground( QColor(settings.value('color/variables', 'darkMagenta')) )
             self.setFormat(idx, len(word), fmt)
 
 class MyScriptEdit(QTextEdit):

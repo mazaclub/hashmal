@@ -87,7 +87,7 @@ def transform_human(text, variables=None):
 
     # Opcodes, implicit (e.g. 'ADD') and explicit (e.g. 'OP_ADD')
     explicit_op = pyparsing.oneOf(op_names_explicit)
-    implicit_op = pyparsing.oneOf(op_names_implicit)
+    implicit_op = Combine(pyparsing.WordStart() + pyparsing.oneOf(op_names_implicit))
     implicit_op.setParseAction(implicit_opcode_to_explicit)
 
     contexts = pyparsing.Optional(var_name('Variable') |
@@ -111,6 +111,7 @@ def transform_human(text, variables=None):
     s = text
     s = var_name.transformString(s)
     s = str_literal.transformString(s)
+    s = implicit_op.transformString(s)
     s = implicit_hex.transformString(s)
     s = explicit_hex.transformString(s)
     return s, context_tips

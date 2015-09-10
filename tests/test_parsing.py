@@ -36,3 +36,13 @@ class ParsingTest(unittest.TestCase):
         variables = {'seven': '0x7'}
         scr = '$seven 0x07 OP_EQUAL'
         self.assertEqual('0x07 0x07 OP_EQUAL', transform_human(scr, variables)[0])
+
+    def test_opcode_transform(self):
+        ops_tests = [
+            ('ADD', 'OP_ADD'),
+            ('0x2 0x5 DUP', '0x02 0x05 OP_DUP'),
+            ('1 2 ADD', '0x01 0x02 OP_ADD')
+        ]
+        for text, expected in ops_tests:
+            result, _ = transform_human(text)
+            self.assertEqual(expected, result)

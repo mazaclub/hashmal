@@ -9,9 +9,6 @@ from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, 
 from base import BaseDock
 
 class TxBuilder(BaseDock):
-    def __init__(self, handler):
-        super(TxBuilder, self).__init__(handler)
-        self.config.optionChanged.connect(self.on_option_changed)
 
     def init_metadata(self):
         self.tool_name = 'Transaction Builder'

@@ -22,6 +22,8 @@ class BaseDock(QDockWidget):
         self.needsUpdate.connect(self.refresh_data)
         self.setWidget(self.main_widget)
 
+        self.config.optionChanged.connect(self.on_option_changed)
+
         self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
         self.setFeatures(QDockWidget.DockWidgetClosable | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
         self.setObjectName(self.tool_name)
@@ -45,6 +47,10 @@ class BaseDock(QDockWidget):
 
     def refresh_data(self):
         """Synchronize. Called when needsUpdate is emitted."""
+        pass
+
+    def on_option_changed(self, key):
+        """Called when a config option changes."""
         pass
 
     def status_message(self, msg, error=False):

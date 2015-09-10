@@ -17,7 +17,6 @@ class TxDeserializer(BaseDock):
         super(TxDeserializer, self).__init__(handler)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.context_menu)
-        self.config.optionChanged.connect(self.on_config_changed)
 
     def init_metadata(self):
         self.tool_name = 'Transaction Deserializer'
@@ -80,7 +79,7 @@ class TxDeserializer(BaseDock):
 
         self.status_message('Deserialized transaction {}'.format(bitcoin.core.b2lx(tx.GetHash())))
 
-    def on_config_changed(self, key):
+    def on_option_changed(self, key):
         if key == 'amount_format':
             self.needsUpdate.emit()
 

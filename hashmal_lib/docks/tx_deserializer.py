@@ -1,5 +1,3 @@
-import io
-
 import bitcoin
 from bitcoin.core import CTransaction
 
@@ -65,12 +63,12 @@ class TxDeserializer(BaseDock):
         self.clear()
         txt = str(self.raw_tx_edit.toPlainText())
         try:
-            buf = io.BytesIO(txt.decode('hex'))
+            txt = txt.decode('hex')
         except Exception:
             self.status_message('Raw transaction must be hex.', True)
             return
         try:
-            self.tx = tx = CTransaction.stream_deserialize(buf)
+            self.tx = tx = CTransaction.deserialize(txt)
         except Exception:
             self.status_message('Cannot deserialize transaction.', True)
             return

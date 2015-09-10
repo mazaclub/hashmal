@@ -1,51 +1,14 @@
 
 import os
 
-import pyparsing
-from pyparsing import Word, QuotedString, ZeroOrMore
-
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4 import QtCore
 
 from core.script import Script
 from docks.base import BaseDock
-from gui_utils import monospace_font
+from script_widget import transform_human, ScriptEdit
 
-def transform_human(text, variables):
-    """Transform user input with given context.
-
-    This is separated from transform_human_script() so that
-    testing this with known context is possible.
-
-    Args:
-        text (str): User input.
-        variables (dict): State of the Variables tool.
-
-    Returns:
-        A human-readable script that Script can parse.
-    """
-    # these are parseActions for pyparsing.
-    def str_literal_to_hex(s, loc, toks):
-        for i, t in enumerate(toks):
-            toks[i] = ''.join(['0x', t.encode('hex')])
-        return toks
-    def var_name_to_value(s, loc, toks):
-        for i, t in enumerate(toks):
-            val = variables.get(t[1:])
-            if val:
-                toks[i] = val
-        return toks
-    # ^ parseActions for pyparsing end here.
-    str_literal = QuotedString('"')
-    str_literal.setParseAction(str_literal_to_hex)
-    var_name = pyparsing.Combine(Word('$') + Word(pyparsing.alphas))
-    var_name.setParseAction(var_name_to_value)
-
-    s = text
-    s = var_name.transformString(s)
-    s = str_literal.transformString(s)
-    return s
 
 def transform_human_script(text, main_window):
     """Transform user input into something Script can read.
@@ -55,6 +18,7 @@ def transform_human_script(text, main_window):
     return transform_human(text, variables)
 
 class ScriptHighlighter(QSyntaxHighlighter):
+    """Highlights variables, etc. with colors from QSettings."""
     def __init__(self, gui, script_edit):
         super(ScriptHighlighter, self).__init__(script_edit)
         self.gui = gui
@@ -72,37 +36,20 @@ class ScriptHighlighter(QSyntaxHighlighter):
                     fmt.setForeground( QColor(settings.value('color/variables', 'darkMagenta')) )
             self.setFormat(idx, len(word), fmt)
 
-class MyScriptEdit(QTextEdit):
-    """Script editor.
+class MyScriptEdit(ScriptEdit):
+    """Main script editor.
 
-    Keeps an internal Script instance that it updates
-    with its text, and uses to convert formats.
+    Requires the main window as an argument so it can integrate tools.
     """
     def __init__(self, gui=None):
         super(MyScriptEdit, self).__init__(gui)
         self.gui = gui
-        self.current_format = 'Human'
-        self.script = Script()
-        self.textChanged.connect(self.on_text_changed)
-        self.setFont(monospace_font)
         self.highlighter = ScriptHighlighter(self.gui, self.document())
-
-    def on_text_changed(self):
-        txt = str(self.toPlainText())
-        self.set_data(txt, self.current_format)
-
-    def copy_hex(self):
-        txt = self.get_data('Hex')
-        QApplication.clipboard().setText(txt)
 
     def contextMenuEvent(self, e):
         menu = self.createStandardContextMenu()
         menu.addAction('Copy Hex', self.copy_hex)
         menu.exec_(e.globalPos())
-
-    def set_format(self, fmt):
-        self.current_format = fmt
-        self.setPlainText(self.get_data())
 
     def set_data(self, text, fmt):
         script = None
@@ -112,16 +59,7 @@ class MyScriptEdit(QTextEdit):
             except Exception:
                 pass
         elif fmt == 'Human':
-            txt = transform_human_script(text, self.gui)
+            txt, self.context = transform_human_script(text, self.gui)
             script = Script.from_human(txt)
         self.script = script
-
-    def get_data(self, fmt=None):
-        if fmt is None:
-            fmt = self.current_format
-        if not self.script: return ''
-        if fmt == 'Hex':
-            return self.script.get_hex()
-        elif fmt == 'Human':
-            return self.script.get_human()
 

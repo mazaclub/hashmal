@@ -31,6 +31,7 @@ setup(
         'hashmal_lib.gui_utils',
         'hashmal_lib.help_widgets',
         'hashmal_lib.main_window',
+        'hashmal_lib.script_widget',
         'hashmal_lib.scriptedit',
         'hashmal_lib.settings_dialog',
         'hashmal_lib.tx_widget',

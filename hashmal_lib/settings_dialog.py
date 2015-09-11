@@ -134,10 +134,12 @@ class SettingsDialog(QDialog):
 
 
         vars_color = ColorButton('variables', QColor('darkMagenta'))
+        strs_color = ColorButton('strings', QColor('gray'))
 
         colors_group = QGroupBox('Colors')
         colors_form = QFormLayout()
         colors_form.addRow('Variables:', floated_buttons([vars_color], True))
+        colors_form.addRow('String literals:', floated_buttons([strs_color], True))
         colors_group.setLayout(colors_form)
 
         form.addRow(font_group)

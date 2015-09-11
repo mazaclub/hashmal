@@ -22,19 +22,30 @@ class ScriptHighlighter(QSyntaxHighlighter):
     def __init__(self, gui, script_edit):
         super(ScriptHighlighter, self).__init__(script_edit)
         self.gui = gui
+        self.editor = script_edit
 
     def highlightBlock(self, text):
-        from_index = 0
+        """Use the ScriptEdit's context attribute to highlight."""
+        if len(self.editor.context) == 0:
+            return
+
         settings = self.gui.qt_settings
-        for word in str(text).split():
-            idx = text.indexOf(word, from_index)
-            from_index = idx + len(word)
+        offset = self.currentBlock().position()
+        for start, end, value, match_type in self.editor.context:
+            start = start - offset
+            end = end - offset
+            idx = start
+            length = end - start
             fmt = QTextCharFormat()
-            # Highlight variable names.
-            if word.startswith('$'):
-                if self.gui.dock_handler.variables.get_key(word[1:]):
+            if match_type == 'Variable':
+                length += 1 # account for '$' prefix
+                var_name = str(text[idx+1: idx+length]).strip()
+                if self.gui.dock_handler.variables.get_key(var_name):
                     fmt.setForeground( QColor(settings.value('color/variables', 'darkMagenta')) )
-            self.setFormat(idx, len(word), fmt)
+            elif match_type == 'String literal':
+                fmt.setForeground( QColor(settings.value('color/strings', 'gray')) )
+            self.setFormat(idx, length, fmt)
+        return
 
 class MyScriptEdit(ScriptEdit):
     """Main script editor.
@@ -44,7 +55,7 @@ class MyScriptEdit(ScriptEdit):
     def __init__(self, gui=None):
         super(MyScriptEdit, self).__init__(gui)
         self.gui = gui
-        self.highlighter = ScriptHighlighter(self.gui, self.document())
+        self.highlighter = ScriptHighlighter(self.gui, self)
 
     def contextMenuEvent(self, e):
         menu = self.createStandardContextMenu()

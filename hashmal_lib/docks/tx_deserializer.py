@@ -62,6 +62,8 @@ class TxDeserializer(BaseDock):
     def deserialize(self):
         self.clear()
         txt = str(self.raw_tx_edit.toPlainText())
+        if not txt:
+            return
         try:
             txt = txt.decode('hex')
         except Exception:

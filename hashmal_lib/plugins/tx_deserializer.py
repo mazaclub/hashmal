@@ -4,11 +4,13 @@ from bitcoin.core import CTransaction
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from base import BaseDock
+from base import BaseDock, Plugin
 from hashmal_lib.gui_utils import monospace_font, floated_buttons, Separator, Amount
 from hashmal_lib.tx_widget import TxWidget
 from hashmal_lib.core.script import Script
 
+def make_plugin():
+    return Plugin([TxDeserializer])
 
 class TxDeserializer(BaseDock):
     def __init__(self, handler):

@@ -3,9 +3,12 @@ from bitcoin.base58 import CBase58Data
 
 from PyQt4.QtGui import *
 
-from base import BaseDock
+from base import BaseDock, Plugin
 from hashmal_lib.core.utils import push_script
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
+
+def make_plugin():
+    return Plugin([ScriptGenerator])
 
 class ScriptTemplate(QWidget):
     """Template for a script.

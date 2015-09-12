@@ -8,8 +8,10 @@ from PyQt4.QtCore import *
 
 from hashmal_lib.core.stack import Stack
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
-from base import BaseDock
+from base import BaseDock, Plugin
 
+def make_plugin():
+    return Plugin([StackEval])
 
 class StackEval(BaseDock):
 

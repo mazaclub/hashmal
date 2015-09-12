@@ -79,9 +79,9 @@ class HashmalMain(QMainWindow):
         tools_menu = menubar.addMenu('&Tools')
         tools_menu.addAction('&Settings', lambda: SettingsDialog(self).exec_())
         tools_menu.addSeparator()
-        for i, w in enumerate(sorted(self.dock_handler.dock_widgets)):
-            tools_menu.addAction(w.toggleViewAction())
-            w.toggleViewAction().setShortcut('Alt+'+str(i))
+        for i, name in enumerate(sorted(self.dock_handler.dock_widgets)):
+            tools_menu.addAction(self.dock_handler.dock_widgets[name].toggleViewAction())
+            self.dock_handler.dock_widgets[name].toggleViewAction().setShortcut('Alt+'+str(i))
 
         help_menu = menubar.addMenu('&Help')
         help_menu.addAction('&About', self.do_about)

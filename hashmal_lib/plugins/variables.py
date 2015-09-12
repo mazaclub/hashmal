@@ -4,8 +4,11 @@ from collections import OrderedDict
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from base import BaseDock
+from base import BaseDock, Plugin
 from hashmal_lib.gui_utils import floated_buttons
+
+def make_plugin():
+    return Plugin([Variables])
 
 class Variables(BaseDock):
     def __init__(self, handler):

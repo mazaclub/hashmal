@@ -6,7 +6,10 @@ from PyQt4.QtGui import *
 from hashmal_lib.core.script import Script
 from hashmal_lib.tx_widget import TxWidget, InputsTree, OutputsTree
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font
-from base import BaseDock
+from base import BaseDock, Plugin
+
+def make_plugin():
+    return Plugin([TxBuilder])
 
 class TxBuilder(BaseDock):
 

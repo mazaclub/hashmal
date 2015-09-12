@@ -4,11 +4,11 @@ from bitcoin.base58 import CBase58Data
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from base import BaseDock
+from base import BaseDock, Plugin
 from hashmal_lib.gui_utils import monospace_font, Separator
 
 def make_plugin():
-    return [AddrEncoder]
+    return Plugin([AddrEncoder])
 
 class AddrEncoder(BaseDock):
     def __init__(self, handler):

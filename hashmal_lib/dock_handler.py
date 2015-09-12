@@ -1,42 +1,34 @@
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from plugins.addr_encoder import AddrEncoder
-from plugins.blockchain import Blockchain
-from plugins.variables import Variables
-from plugins.stack import StackEval
-from plugins.script_gen import ScriptGenerator
-from plugins.tx_builder import TxBuilder
-from plugins.tx_deserializer import TxDeserializer
+
+from pkg_resources import iter_entry_points
 
 class DockHandler(QWidget):
     """Handles the many available dock widgets."""
     def __init__(self, parent):
         super(DockHandler, self).__init__(parent)
         self.gui = parent
-        self.dock_widgets = []
+        self.dock_widgets = {}
 
     def create_docks(self):
-        self.addr_encoder = AddrEncoder(self)
-        self.blockchain = Blockchain(self)
-        self.variables = Variables(self)
-        self.stack_eval = StackEval(self)
-        self.script_generator = ScriptGenerator(self)
-        self.tx_builder = TxBuilder(self)
-        self.tx_deserializer = TxDeserializer(self)
+        self.loaded_plugins = {}
+        for entry_point in iter_entry_points(group='hashmal.plugin'):
+            plugin_maker = entry_point.load()
+            self.loaded_plugins[entry_point.name] = plugin_maker()
 
-        self.dock_widgets.extend([
-                    self.addr_encoder,
-                    self.blockchain,
-                    self.variables,
-                    self.stack_eval,
-                    self.script_generator,
-                    self.tx_builder,
-                    self.tx_deserializer
-                    ])
-        self.dock_widgets.sort(key = lambda i: i.tool_name)
-        for i in self.dock_widgets:
-            i.statusMessage.connect(self.gui.show_status_message)
+#        from pprint import pprint
+#        pprint(self.loaded_plugins)
+
+        for name, plugin in self.loaded_plugins.items():
+            for dock in plugin.docks:
+                dock_instance = dock(self)
+                self.dock_widgets[dock_instance.tool_name] = dock_instance
+
+#        pprint(self.dock_widgets)
+
+        for name, dock in self.dock_widgets.items():
+            dock.statusMessage.connect(self.gui.show_status_message)
 
     def bring_to_front(self, dock):
         """Activate a dock by ensuring it is visible and raising it."""
@@ -47,45 +39,45 @@ class DockHandler(QWidget):
         """Evaluate the script being edited with the Stack Evaluator tool."""
         script_hex = self.gui.script_editor.get_data('Hex')
         if not script_hex: return
-        self.bring_to_front(self.stack_eval)
-        self.stack_eval.tx_script.setPlainText(script_hex)
-        self.stack_eval.setVisible(True)
-        self.stack_eval.do_evaluate()
+        self.bring_to_front(self.dock_widgets['Stack Evaluator'])
+        self.dock_widgets['Stack Evaluator'].tx_script.setPlainText(script_hex)
+        self.dock_widgets['Stack Evaluator'].setVisible(True)
+        self.dock_widgets['Stack Evaluator'].do_evaluate()
 
     def set_stack_spending_tx(self, txt):
         """Set the spending transaction in the Stack Evaluator tool."""
-        self.bring_to_front(self.stack_eval)
-        self.stack_eval.set_spending_tx(txt)
+        self.bring_to_front(self.dock_widgets['Stack Evaluator'])
+        self.dock_widgets['Stack Evaluator'].set_spending_tx(txt)
 
     def deserialize_tx(self, tx):
         """Deserialize a raw transaction."""
-        self.bring_to_front(self.tx_deserializer)
-        self.tx_deserializer.raw_tx_edit.setPlainText(tx)
-        self.tx_deserializer.deserialize()
+        self.bring_to_front(self.dock_widgets['Transaction Deserializer'])
+        self.dock_widgets['Transaction Deserializer'].raw_tx_edit.setPlainText(tx)
+        self.dock_widgets['Transaction Deserializer'].deserialize()
 
     def do_default_layout(self):
         # Generally, small widgets go to the right.
 
-        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.script_generator)
-        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.variables)
-        self.gui.tabifyDockWidget(self.script_generator, self.variables)
-        self.variables.setVisible(False)
+        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock_widgets['Script Generator'])
+        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock_widgets['Variables'])
+        self.gui.tabifyDockWidget(self.dock_widgets['Script Generator'], self.dock_widgets['Variables'])
+        self.dock_widgets['Variables'].setVisible(False)
 
-        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.addr_encoder)
-        self.gui.tabifyDockWidget(self.variables, self.addr_encoder)
-        self.addr_encoder.setVisible(False)
+        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock_widgets['Address Encoder'])
+        self.gui.tabifyDockWidget(self.dock_widgets['Variables'], self.dock_widgets['Address Encoder'])
+        self.dock_widgets['Address Encoder'].setVisible(False)
 
         # Large widgets generally go to the bottom.
 
-        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.stack_eval)
-        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.tx_builder)
-        self.gui.tabifyDockWidget(self.stack_eval, self.tx_builder)
-        self.tx_builder.setVisible(False)
+        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.dock_widgets['Stack Evaluator'])
+        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.dock_widgets['Transaction Builder'])
+        self.gui.tabifyDockWidget(self.dock_widgets['Stack Evaluator'], self.dock_widgets['Transaction Builder'])
+        self.dock_widgets['Transaction Builder'].setVisible(False)
 
-        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.tx_deserializer)
-        self.gui.tabifyDockWidget(self.tx_builder, self.tx_deserializer)
-        self.tx_deserializer.setVisible(False)
+        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.dock_widgets['Transaction Deserializer'])
+        self.gui.tabifyDockWidget(self.dock_widgets['Transaction Builder'], self.dock_widgets['Transaction Deserializer'])
+        self.dock_widgets['Transaction Deserializer'].setVisible(False)
 
-        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.blockchain)
-        self.gui.tabifyDockWidget(self.tx_deserializer, self.blockchain)
-        self.blockchain.setVisible(False)
+        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.dock_widgets['Blockchain'])
+        self.gui.tabifyDockWidget(self.dock_widgets['Transaction Deserializer'], self.dock_widgets['Blockchain'])
+        self.dock_widgets['Blockchain'].setVisible(False)

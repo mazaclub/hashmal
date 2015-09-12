@@ -5,7 +5,10 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
 from hashmal_lib.gui_utils import floated_buttons
-from base import BaseDock
+from base import BaseDock, Plugin
+
+def make_plugin():
+    return Plugin([Blockchain])
 
 ApiType = namedtuple('ApiType', ('name', 'default_domain', 'rawtx_route', 'rawtx_parse'))
 """Structure of a blockchain API."""

@@ -13,7 +13,7 @@ def transform_human_script(text, main_window):
     """Transform user input into something Script can read.
 
     Main window is needed for tool integration."""
-    variables = main_window.dock_handler.variables.data
+    variables = main_window.dock_handler.dock_widgets['Variables'].data
     return transform_human(text, variables)
 
 class ScriptHighlighter(QSyntaxHighlighter):

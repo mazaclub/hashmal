@@ -3,6 +3,15 @@ from PyQt4 import QtCore
 
 from hashmal_lib import config
 
+class Plugin(object):
+    """A plugin.
+
+    A module's make_plugin() function should return
+    an instance of this class.
+    """
+    def __init__(self, dock_widgets):
+        self.docks = dock_widgets
+
 class BaseDock(QDockWidget):
     """Base class for docks."""
     needsUpdate = QtCore.pyqtSignal()

@@ -25,6 +25,8 @@ Use at own risk!
 
 See the file `doc/usage.adoc` for basic instructions. See the [Hashmal wiki on Github](https://github.com/mazaclub/hashmal/wiki) for details.
 
+The file `doc/plugins.adoc` has some information on the plugins system that Hashmal uses.
+
 
 ## License
 

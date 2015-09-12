@@ -5,7 +5,7 @@ from PyQt4 import QtCore
 from pkg_resources import iter_entry_points
 
 class DockHandler(QWidget):
-    """Handles the many available dock widgets."""
+    """Loads plugins and handles the many available dock widgets."""
     def __init__(self, parent):
         super(DockHandler, self).__init__(parent)
         self.gui = parent
@@ -13,19 +13,16 @@ class DockHandler(QWidget):
 
     def create_docks(self):
         self.loaded_plugins = {}
+        # Load plugins.
         for entry_point in iter_entry_points(group='hashmal.plugin'):
             plugin_maker = entry_point.load()
             self.loaded_plugins[entry_point.name] = plugin_maker()
 
-#        from pprint import pprint
-#        pprint(self.loaded_plugins)
-
+        # Instantiate dock widgets from plugins.
         for name, plugin in self.loaded_plugins.items():
             for dock in plugin.docks:
                 dock_instance = dock(self)
                 self.dock_widgets[dock_instance.tool_name] = dock_instance
-
-#        pprint(self.dock_widgets)
 
         for name, dock in self.dock_widgets.items():
             dock.statusMessage.connect(self.gui.show_status_message)

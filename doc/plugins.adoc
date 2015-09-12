@@ -1,0 +1,12 @@
+= Plugin System
+
+Hashmal has a plugin system that uses the `entry points` interface provided by `setuptools`.
+See https://github.com/mazaclub/hashmal/wiki/Plugins[the wiki] for more information.
+
+== Plugins
+
+A plugin is a module containing the function `make_plugin()`, which returns an instance of
+the class `Plugin` defined in `hashmal_lib.plugins.base`.
+
+A `Plugin` instance is initialized with a list of classes representing dock widgets.
+This is subject to change.

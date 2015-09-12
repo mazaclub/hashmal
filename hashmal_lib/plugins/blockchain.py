@@ -44,6 +44,7 @@ class Blockchain(BaseDock):
     def init_metadata(self):
         self.tool_name = 'Blockchain'
         self.description = 'Blockchain allows you to download data from block explorers.'
+        self.is_large = True
 
     def init_data(self):
         config_apis = self.config.get_option('blockchain_apis', {})

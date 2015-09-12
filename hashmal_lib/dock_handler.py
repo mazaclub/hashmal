@@ -56,28 +56,23 @@ class DockHandler(QWidget):
         self.dock_widgets['Transaction Deserializer'].deserialize()
 
     def do_default_layout(self):
-        # Generally, small widgets go to the right.
 
-        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock_widgets['Script Generator'])
-        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock_widgets['Variables'])
-        self.gui.tabifyDockWidget(self.dock_widgets['Script Generator'], self.dock_widgets['Variables'])
-        self.dock_widgets['Variables'].setVisible(False)
+        last_small = last_large = None
+        for name, dock in self.dock_widgets.items():
+            # Large docks go to the bottom.
+            if dock.is_large:
+                self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, dock)
+                if last_large:
+                    self.gui.tabifyDockWidget(last_large, dock)
+                last_large = dock
+            # Small docks go to the right.
+            else:
+                self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock)
+                if last_small:
+                    self.gui.tabifyDockWidget(last_small, dock)
+                last_small = dock
+            dock.setVisible(False)
 
-        self.gui.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock_widgets['Address Encoder'])
-        self.gui.tabifyDockWidget(self.dock_widgets['Variables'], self.dock_widgets['Address Encoder'])
-        self.dock_widgets['Address Encoder'].setVisible(False)
+        self.dock_widgets['Variables'].setVisible(True)
+        self.dock_widgets['Stack Evaluator'].setVisible(True)
 
-        # Large widgets generally go to the bottom.
-
-        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.dock_widgets['Stack Evaluator'])
-        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.dock_widgets['Transaction Builder'])
-        self.gui.tabifyDockWidget(self.dock_widgets['Stack Evaluator'], self.dock_widgets['Transaction Builder'])
-        self.dock_widgets['Transaction Builder'].setVisible(False)
-
-        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.dock_widgets['Transaction Deserializer'])
-        self.gui.tabifyDockWidget(self.dock_widgets['Transaction Builder'], self.dock_widgets['Transaction Deserializer'])
-        self.dock_widgets['Transaction Deserializer'].setVisible(False)
-
-        self.gui.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.dock_widgets['Blockchain'])
-        self.gui.tabifyDockWidget(self.dock_widgets['Transaction Deserializer'], self.dock_widgets['Blockchain'])
-        self.dock_widgets['Blockchain'].setVisible(False)

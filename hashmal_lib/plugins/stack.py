@@ -27,6 +27,7 @@ class StackEval(BaseDock):
                 '<b>Please read this warning from the source of python-bitcoinlib, which Stack Evaluator uses to evaluate scripts:</b>',
                 '"Be warned that there are highly likely to be consensus bugs in this code; it is unlikely to match Satoshi Bitcoin exactly. Think carefully before using this module."'
         ])
+        self.is_large = True
 
     def init_data(self):
         self.stack = Stack()

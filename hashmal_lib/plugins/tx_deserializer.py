@@ -21,6 +21,7 @@ class TxDeserializer(BaseDock):
     def init_metadata(self):
         self.tool_name = 'Transaction Deserializer'
         self.description = 'Deserializes transactions.'
+        self.is_large = True
 
     def init_data(self):
         self.tx = None

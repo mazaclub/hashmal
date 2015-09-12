@@ -16,6 +16,7 @@ class TxBuilder(BaseDock):
     def init_metadata(self):
         self.tool_name = 'Transaction Builder'
         self.description = 'Transaction Builder helps you create transactions.'
+        self.is_large = True
 
     def init_data(self):
         self.tx = None

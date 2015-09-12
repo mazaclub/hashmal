@@ -22,6 +22,9 @@ class BaseDock(QDockWidget):
         self.tool_name = ''
         self.description = ''
         self.config = config.get_config()
+        # If True, dock will be placed on the bottom by default.
+        # Otherwise, dock will be placed on the right.
+        self.is_large = False
 
         self.init_metadata()
         self.init_data()

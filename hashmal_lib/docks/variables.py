@@ -89,8 +89,15 @@ class Variables(BaseDock):
 
         def copy():
             item = self.table.currentItem()
-            QApplication.clipboard().setText(str(item.data(QtCore.Qt.DisplayRole).toString()))
+            QApplication.clipboard().setText(str(item.text()))
         menu.addAction('Copy', copy)
+
+        def delete():
+            row = self.table.currentRow()
+            name = str(self.table.item(row, 0).text())
+            del self.data[name]
+            self.needsUpdate.emit()
+        menu.addAction('Delete', delete)
 
         menu.exec_(self.table.viewport().mapToGlobal(position))
 

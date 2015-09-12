@@ -7,6 +7,9 @@ from PyQt4 import QtCore
 from base import BaseDock
 from hashmal_lib.gui_utils import monospace_font, Separator
 
+def make_plugin():
+    return [AddrEncoder]
+
 class AddrEncoder(BaseDock):
     def __init__(self, handler):
         super(AddrEncoder, self).__init__(handler)

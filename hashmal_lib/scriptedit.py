@@ -6,7 +6,6 @@ from PyQt4.QtCore import *
 from PyQt4 import QtCore
 
 from core.script import Script
-from docks.base import BaseDock
 from script_widget import transform_human, ScriptEdit
 
 

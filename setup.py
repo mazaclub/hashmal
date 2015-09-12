@@ -27,6 +27,6 @@ setup(
     packages=[
         'hashmal_lib',
         'hashmal_lib.core',
-        'hashmal_lib.docks'
+        'hashmal_lib.plugins'
     ]
 )

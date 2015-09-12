@@ -1,13 +1,13 @@
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from docks.addr_encoder import AddrEncoder
-from docks.blockchain import Blockchain
-from docks.variables import Variables
-from docks.stack import StackEval
-from docks.script_gen import ScriptGenerator
-from docks.tx_builder import TxBuilder
-from docks.tx_deserializer import TxDeserializer
+from plugins.addr_encoder import AddrEncoder
+from plugins.blockchain import Blockchain
+from plugins.variables import Variables
+from plugins.stack import StackEval
+from plugins.script_gen import ScriptGenerator
+from plugins.tx_builder import TxBuilder
+from plugins.tx_deserializer import TxDeserializer
 
 class DockHandler(QWidget):
     """Handles the many available dock widgets."""

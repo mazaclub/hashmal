@@ -14,6 +14,7 @@ class Plugin(object):
 
 class BaseDock(QDockWidget):
     """Base class for docks."""
+    needsFocus = QtCore.pyqtSignal()
     needsUpdate = QtCore.pyqtSignal()
     statusMessage = QtCore.pyqtSignal(str, bool, name='statusMessage')
     def __init__(self, handler):
@@ -22,12 +23,14 @@ class BaseDock(QDockWidget):
         self.tool_name = ''
         self.description = ''
         self.config = config.get_config()
+        self.advertised_actions = {}
         # If True, dock will be placed on the bottom by default.
         # Otherwise, dock will be placed on the right.
         self.is_large = False
 
         self.init_metadata()
         self.init_data()
+        self.init_actions()
         my_layout = self.create_layout()
         self.main_widget = QWidget()
         self.main_widget.setLayout(my_layout)
@@ -50,6 +53,23 @@ class BaseDock(QDockWidget):
         """Initialize attributes such as data containers."""
         pass
 
+    def init_actions(self):
+        """Initialize advertised actions.
+
+        Subclasses with actions to advertise should create a list of tuples for
+        each category they advertise in their 'advertised_actions' attribute.
+
+        Tuples are in the form (action_name, action)
+
+        Example:
+            If a subclass can deserialize a raw transaction via the method 'deserialize_tx',
+            it would do the following:
+
+            deserialize_raw_tx = ('Deserialize', self.deserialize_tx)
+            self.advertised_actions['raw_transaction'] = [deserialize_raw_tx]
+        """
+        pass
+
     def create_layout(self):
         """Returns the main layout for our widget.
 
@@ -64,6 +84,16 @@ class BaseDock(QDockWidget):
     def on_option_changed(self, key):
         """Called when a config option changes."""
         pass
+
+    def get_actions(self, category):
+        """Get the advertised actions for category.
+
+        category can be one of:
+            - raw_transaction
+
+        """
+        if self.advertised_actions.get(category):
+            return self.advertised_actions.get(category)
 
     def status_message(self, msg, error=False):
         """Show a message on the status bar.

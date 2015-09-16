@@ -26,6 +26,10 @@ class TxDeserializer(BaseDock):
     def init_data(self):
         self.tx = None
 
+    def init_actions(self):
+        deserialize = ('Deserialize', self.deserialize_raw)
+        self.advertised_actions['raw_transaction'] = [deserialize]
+
     def create_layout(self):
         form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.WrapLongRows)
@@ -50,17 +54,20 @@ class TxDeserializer(BaseDock):
     def context_menu(self, position):
         menu = QMenu()
         menu.addAction('Clear Fields', self.clear)
-        set_spend = menu.addAction('Set as spending transaction in Stack Evaluator', self.set_as_spending_tx)
-        set_spend.setEnabled(True if self.tx else False)
+        if self.tx:
+            txt = str(self.raw_tx_edit.toPlainText())
+            self.handler.add_plugin_actions(self, menu, 'raw_transaction', txt)
 
         menu.exec_(self.mapToGlobal(position))
 
-    def set_as_spending_tx(self):
-        txt = str(self.raw_tx_edit.toPlainText())
-        self.handler.set_stack_spending_tx(txt)
-
     def clear(self):
         self.tx_widget.clear()
+
+    def deserialize_raw(self, txt):
+        """Deserialize a raw transaction."""
+        self.needsFocus.emit()
+        self.raw_tx_edit.setPlainText(txt)
+        self.deserialize()
 
     def deserialize(self):
         self.clear()

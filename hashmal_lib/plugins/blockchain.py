@@ -139,13 +139,11 @@ class Blockchain(BaseDock):
 
     def context_menu(self, position):
         menu = QMenu()
-        def set_as_spending():
-            self.handler.set_stack_spending_tx(str(self.raw_tx_edit.toPlainText()))
-        def deserialize():
-            self.handler.deserialize_tx(str(self.raw_tx_edit.toPlainText()))
-        text_exists = True if self.raw_tx_edit.toPlainText() else False
-        menu.addAction('Deserialize', deserialize).setEnabled(text_exists)
-        menu.addAction('Set as transaction in Stack Evaluator', set_as_spending).setEnabled(text_exists)
+
+        txt = str(self.raw_tx_edit.toPlainText())
+        if txt:
+            self.handler.add_plugin_actions(self, menu, 'raw_transaction', txt)
+
         menu.exec_(self.raw_tx_edit.viewport().mapToGlobal(position))
 
     def do_download(self):

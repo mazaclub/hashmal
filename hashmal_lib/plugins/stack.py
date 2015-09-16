@@ -35,6 +35,10 @@ class StackEval(BaseDock):
         self.tx = None
         self.inIdx = 0
 
+    def init_actions(self):
+        set_as_spending = ('Set as spending transaction', self.set_spending_tx)
+        self.advertised_actions['raw_transaction'] = [set_as_spending]
+
     def reset_step_counter(self):
         self.step_counter = -1
 
@@ -132,6 +136,7 @@ class StackEval(BaseDock):
         """Called from other tools to set the spending transaction."""
         if not txt:
             return
+        self.needsFocus.emit()
         self.has_spending_tx.setChecked(True)
         self.tx_edit.setPlainText(txt)
 

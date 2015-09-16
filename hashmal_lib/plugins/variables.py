@@ -1,5 +1,6 @@
-
 from collections import OrderedDict
+
+from bitcoin.core import CTransaction
 
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
@@ -22,6 +23,11 @@ class Variables(BaseDock):
     def init_data(self):
         data = self.config.get_option('variables', {})
         self.data = OrderedDict(data)
+        self.filters = ['None', 'Hex', 'Raw Transaction', 'Text']
+
+    def init_actions(self):
+        store_as = ('Store raw tx as...', self.store_as_variable)
+        self.advertised_actions['raw_transaction'] = [store_as]
 
     def create_layout(self):
         form = QFormLayout()
@@ -34,6 +40,11 @@ class Variables(BaseDock):
         self.table.customContextMenuRequested.connect(self.context_menu)
         self.table.setSizePolicy(QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding))
 
+        self.filter_combo = QComboBox()
+        self.filter_combo.addItems(self.filters)
+        self.filter_combo.currentIndexChanged.connect(self.filter_table)
+
+        form.addRow('Filter:', self.filter_combo)
         form.addRow(self.table)
 
         add_var_hbox = QHBoxLayout()
@@ -64,6 +75,49 @@ class Variables(BaseDock):
 
     def is_valid_key(self, key):
         return isinstance(key, str) and key and key.isalnum()
+
+    def filter_table(self):
+        filter_str = str(self.filter_combo.currentText())
+        for i in range(self.table.rowCount()):
+            if filter_str == 'None':
+                self.table.showRow(i)
+                continue
+
+            item = self.table.item(i, 1)
+            if filter_str == item.data(QtCore.Qt.UserRole).toString():
+                self.table.showRow(i)
+            else:
+                self.table.hideRow(i)
+
+    def classify_data(self, value):
+        """Determine what to categorize a value as."""
+        # If the value is not hex, assume text
+        try:
+            i = int(value, 16)
+        except ValueError:
+            return 'Text'
+
+        # See if it's a raw transaction.
+        try:
+            t = CTransaction.deserialize(value.decode('hex'))
+            return 'Raw Transaction'
+        except Exception:
+            pass
+
+        # Use the generic 'Hex' category if nothing else matches.
+        return 'Hex'
+
+    def store_as_variable(self, value):
+        """Prompt to store a value."""
+        key = 'rawtx'
+        if self.get_key(key):
+            offset = 1
+            while self.get_key(key):
+                key = ''.join(['rawtx', str(offset)])
+                offset += 1
+        self.new_var_key.setText(key)
+        self.new_var_value.setText(value)
+        self.needsFocus.emit()
 
     def get_key(self, key):
         """Get a value for a key.
@@ -111,8 +165,10 @@ class Variables(BaseDock):
             self.table.insertRow(0)
             item_key = QTableWidgetItem(k)
             item_value = QTableWidgetItem(str(v))
+            item_value.setData(QtCore.Qt.UserRole, self.classify_data(str(v)))
             self.table.setItem(0, 0, item_key)
             self.table.setItem(0, 1, item_value)
+        self.filter_table()
 
     def add_new_var(self):
         k = str(self.new_var_key.text())

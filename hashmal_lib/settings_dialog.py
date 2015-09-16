@@ -17,15 +17,23 @@ class SettingsDialog(QDialog):
             self.save_layout()
 
         # load saved layouts
-        self.qt_settings.beginGroup('toolLayout')
-        self.layout_names = self.qt_settings.childKeys()
-        self.qt_settings.endGroup()
+        self.load_layout_names()
 
         self.setup_layout()
         self.setWindowTitle('Settings')
 
     def sizeHint(self):
         return QSize(375, 270)
+
+    def load_layout_names(self):
+        self.qt_settings.beginGroup('toolLayout')
+        self.layout_names = self.qt_settings.childKeys()
+        self.qt_settings.endGroup()
+
+    def refresh_layout_combobox(self):
+        self.load_layout_names()
+        self.layout_combo.clear()
+        self.layout_combo.addItems(self.layout_names)
 
     def setup_layout(self):
         vbox = QVBoxLayout()
@@ -47,7 +55,7 @@ class SettingsDialog(QDialog):
 
     def create_qt_tab(self):
         # QComboBox for loading/deleting a layout
-        layout_combo = QComboBox()
+        self.layout_combo = layout_combo = QComboBox()
         layout_combo.addItems(self.layout_names)
         # Load layout
         load_button = QPushButton('Load')
@@ -60,6 +68,7 @@ class SettingsDialog(QDialog):
 
         # QLineEdit for saving a layout
         layout_name_edit = QLineEdit()
+        layout_name_edit.setText('default')
         # Save layout button
         save_button = QPushButton('Save')
         save_button.clicked.connect(lambda: self.save_layout(str(layout_name_edit.text())))
@@ -175,6 +184,7 @@ class SettingsDialog(QDialog):
         key = '/'.join(['toolLayout', name])
         self.qt_settings.setValue(key, self.gui.saveState())
         self.gui.show_status_message('Saved layout "{}".'.format(name))
+        self.refresh_layout_combobox()
 
     def load_layout(self, name='default'):
         key = '/'.join(['toolLayout', name])
@@ -185,6 +195,7 @@ class SettingsDialog(QDialog):
         key = '/'.join(['toolLayout', name])
         self.qt_settings.remove(key)
         self.gui.show_status_message('Deleted layout "{}".'.format(name))
+        self.refresh_layout_combobox()
 
     def change_editor_font(self, font):
         self.gui.script_editor.setFont(font)

@@ -39,7 +39,7 @@ class ScriptHighlighter(QSyntaxHighlighter):
             if match_type == 'Variable':
                 length += 1 # account for '$' prefix
                 var_name = str(text[idx+1: idx+length]).strip()
-                if self.gui.dock_handler.variables.get_key(var_name):
+                if self.gui.dock_handler.dock_widgets['Variables'].get_key(var_name):
                     fmt.setForeground( QColor(settings.value('color/variables', 'darkMagenta')) )
             elif match_type == 'String literal':
                 fmt.setForeground( QColor(settings.value('color/strings', 'gray')) )

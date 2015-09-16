@@ -106,8 +106,8 @@ class OutputsTree(QWidget):
     def copy_script_hex(self):
         """Copy the scriptPubKey to clipboard as hex."""
         item = self.model.itemFromIndex(self.view.selectedIndexes()[1])
-        script = Script.from_human(str(item.text()))
-        QApplication.clipboard().setText(script.get_hex())
+        txt = item.data(RawRole).toString()
+        QApplication.clipboard().setText(txt)
 
     def customContextMenu(self, pos):
         if len(self.view.selectedIndexes()) == 0:

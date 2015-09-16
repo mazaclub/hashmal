@@ -30,6 +30,12 @@ class TxBuilder(BaseDock):
         tabs.addTab(self.create_outputs_tab(), '&Outputs')
         tabs.addTab(self.create_review_tab(), '&Review')
 
+        # Build the tx if the Review tab is selected.
+        def maybe_build(i):
+            if i == 3:
+                self.build_transaction()
+        tabs.currentChanged.connect(maybe_build)
+
         vbox.addWidget(tabs)
         return vbox
 

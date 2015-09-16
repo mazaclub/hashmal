@@ -53,7 +53,6 @@ class TxDeserializer(BaseDock):
 
     def context_menu(self, position):
         menu = QMenu()
-        menu.addAction('Clear Fields', self.clear)
         if self.tx:
             txt = str(self.raw_tx_edit.toPlainText())
             self.handler.add_plugin_actions(self, menu, 'raw_transaction', txt)

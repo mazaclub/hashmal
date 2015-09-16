@@ -138,7 +138,7 @@ class Blockchain(BaseDock):
         return w
 
     def context_menu(self, position):
-        menu = QMenu()
+        menu = self.raw_tx_edit.createStandardContextMenu(position)
 
         txt = str(self.raw_tx_edit.toPlainText())
         if txt:

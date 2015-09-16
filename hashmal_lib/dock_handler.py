@@ -45,12 +45,17 @@ class DockHandler(QWidget):
             data: Data to call the action(s) with.
 
         """
+        separator_added = False
         for name, dock in self.dock_widgets.items():
             if dock.__class__ == instance.__class__:
                 continue
 
             dock_actions = dock.get_actions(category)
             if dock_actions:
+                # Add the separator before plugin actions.
+                if not separator_added:
+                    menu.addSeparator()
+                    separator_added = True
                 dock_menu = menu.addMenu(name)
                 for action_name, action_receiver in dock_actions:
                     dock_menu.addAction(action_name, partial(action_receiver, data))

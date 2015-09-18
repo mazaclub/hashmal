@@ -1,9 +1,10 @@
 import bitcoin
-from bitcoin.core import COutPoint, CTxIn, CTxOut, CMutableTransaction, lx
+from bitcoin.core import COutPoint, CTxIn, CTxOut, lx
 
 from PyQt4.QtGui import *
 
 from hashmal_lib.core.script import Script
+from hashmal_lib.core import Transaction
 from hashmal_lib.tx_widget import TxWidget, InputsTree, OutputsTree
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font
 from base import BaseDock, Plugin
@@ -216,7 +217,7 @@ class TxBuilder(BaseDock):
 
     def build_transaction(self):
         self.tx_widget.clear()
-        self.tx = tx = CMutableTransaction()
+        self.tx = tx = Transaction()
         tx.nVersion = self.version_edit.get_amount()
         for i in self.inputs_tree.get_inputs():
             tx.vin.append(i)

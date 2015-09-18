@@ -1,11 +1,11 @@
 from collections import OrderedDict
 
-from bitcoin.core import CTransaction
 
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
 from base import BaseDock, Plugin
+from hashmal_lib.core import Transaction
 from hashmal_lib.gui_utils import floated_buttons, HBox
 
 def make_plugin():
@@ -77,7 +77,7 @@ class VarsModel(QtCore.QAbstractTableModel):
 
         # See if it's a raw transaction.
         try:
-            t = CTransaction.deserialize(value.decode('hex'))
+            t = Transaction.deserialize(value.decode('hex'))
             return 'Raw Transaction'
         except Exception:
             pass

@@ -1,11 +1,11 @@
 import bitcoin
-from bitcoin.core import CTransaction, CMutableTransaction
 from bitcoin.core.script import CScript, OPCODE_NAMES
 from bitcoin.core.scripteval import EvalScript
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
+from hashmal_lib.core import Transaction
 from hashmal_lib.core.stack import Stack
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 from base import BaseDock, Plugin
@@ -148,7 +148,7 @@ class StackEval(BaseDock):
             self.input_idx.setEnabled(False)
             self.tx_edit.setToolTip('')
             return
-        self.tx = CTransaction.deserialize(txt.decode('hex'))
+        self.tx = Transaction.deserialize(txt.decode('hex'))
         self.tx_edit.setToolTip(''.join(['Tx ID: ', bitcoin.core.b2lx(self.tx.GetHash())]))
         self.input_idx.setRange(0, len(self.tx.vin) - 1)
         self.input_idx.setEnabled(True)

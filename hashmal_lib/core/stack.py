@@ -1,5 +1,4 @@
 import bitcoin
-from bitcoin.core import CMutableTransaction
 from bitcoin.core.script import *
 from bitcoin.core.scripteval import *
 from bitcoin.core.scripteval import (

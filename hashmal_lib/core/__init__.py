@@ -4,3 +4,5 @@ import script
 import stack
 import transaction
 import chainparams
+
+from transaction import Transaction

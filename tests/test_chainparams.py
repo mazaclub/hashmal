@@ -1,6 +1,6 @@
 import unittest
 
-from hashmal_lib.core import chainparams, transaction
+from hashmal_lib.core import chainparams, Transaction
 
 maza_raw_tx = '010000000279fd18c19fad871077a757804561e11d722296b68e6afd4d2a16c06d9c9a30b8000000006a4730440220380bf06cf81a43a9d425b6d34be7315e9ebb396081ecb94e291a906e6b9e36a6022060458349b8592a1d7133e77756a011e2d8e5749b67a2a94f3a5488e81458c00c0121024370144b106ab92b9bdf2cf2de6eb173f4656e581d27ed2c0f77479db338fc21ffffffff551d183e1f98a5a5e7f5b296ba6d77729babb7f90aaabe6b8eb128c624e10fce000000006b483045022100e1d89636d53334e29703dff014323cb8c9836e2b77f666477f185a1882cc2c7a02201d3af8352b2bf338b79a709a30fdf4e9c5166487b7af15fb48a85eac2e43c722012103c4e79c99c1cfcce534b4715ec9a8f6ccf735f050a58caf7b6126ebe4691aa480ffffffff025a232d00000000001976a9144fd5ae7260db3ddc49d058e6f200a486058c666288ac00127a00000000001976a9149d0d296ad8e00e57f90670215d9276765ba1c81788ac00000000'.decode('hex')
 
@@ -28,44 +28,44 @@ class ChainparamsTest(unittest.TestCase):
         chainparams.set_tx_fields(bitcoin_fields)
 
     def test_bitcoin_fields(self):
-        tx = transaction.Transaction.deserialize(maza_raw_tx)
+        tx = Transaction.deserialize(maza_raw_tx)
         self.assertEqual(bitcoin_fields, tx.fields)
         self.assertEqual(maza_raw_tx, tx.serialize())
 
     def test_clams_fields(self):
         chainparams.set_tx_fields(clams_fields)
-        tx = transaction.Transaction.deserialize(clams_raw_tx)
+        tx = Transaction.deserialize(clams_raw_tx)
         self.assertNotEqual(bitcoin_fields, tx.fields)
         self.assertIn(('ClamSpeech', 'bytes', None), tx.fields)
         self.assertEqual(clams_raw_tx, tx.serialize())
 
     def test_peercoin_fields(self):
         chainparams.set_tx_fields(peercoin_fields)
-        tx = transaction.Transaction.deserialize(ppc_raw_tx)
+        tx = Transaction.deserialize(ppc_raw_tx)
         self.assertNotEqual(bitcoin_fields, tx.fields)
         self.assertIn(('Timestamp', b'<i', 4), tx.fields)
         self.assertEqual(ppc_raw_tx, tx.serialize())
 
     def test_change_tx_fields(self):
-        tx = transaction.Transaction.deserialize(maza_raw_tx)
+        tx = Transaction.deserialize(maza_raw_tx)
 
         chainparams.set_tx_fields(peercoin_fields)
-        tx2 = transaction.Transaction.deserialize(ppc_raw_tx)
+        tx2 = Transaction.deserialize(ppc_raw_tx)
 
         self.assertNotEqual(tx.fields, tx2.fields)
 
     def test_preset_chainparams(self):
         chainparams.set_to_preset('Bitcoin')
-        tx = transaction.Transaction.deserialize(maza_raw_tx)
-        self.assertRaises(Exception, transaction.Transaction.deserialize, clams_raw_tx)
-        self.assertRaises(Exception, transaction.Transaction.deserialize, ppc_raw_tx)
+        tx = Transaction.deserialize(maza_raw_tx)
+        self.assertRaises(Exception, Transaction.deserialize, clams_raw_tx)
+        self.assertRaises(Exception, Transaction.deserialize, ppc_raw_tx)
 
         chainparams.set_to_preset('Clams')
-        tx = transaction.Transaction.deserialize(clams_raw_tx)
-        self.assertRaises(Exception, transaction.Transaction.deserialize, maza_raw_tx)
-        self.assertRaises(Exception, transaction.Transaction.deserialize, ppc_raw_tx)
+        tx = Transaction.deserialize(clams_raw_tx)
+        self.assertRaises(Exception, Transaction.deserialize, maza_raw_tx)
+        self.assertRaises(Exception, Transaction.deserialize, ppc_raw_tx)
 
         chainparams.set_to_preset('Peercoin')
-        tx = transaction.Transaction.deserialize(ppc_raw_tx)
-        self.assertRaises(Exception, transaction.Transaction.deserialize, clams_raw_tx)
-        self.assertRaises(Exception, transaction.Transaction.deserialize, maza_raw_tx)
+        tx = Transaction.deserialize(ppc_raw_tx)
+        self.assertRaises(Exception, Transaction.deserialize, clams_raw_tx)
+        self.assertRaises(Exception, Transaction.deserialize, maza_raw_tx)

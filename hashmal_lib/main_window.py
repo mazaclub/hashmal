@@ -5,6 +5,7 @@ import time
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
+from hashmal_lib.core import chainparams
 from config import Config
 from dock_handler import DockHandler
 from settings_dialog import SettingsDialog
@@ -27,6 +28,9 @@ class HashmalMain(QMainWindow):
         QtCore.QCoreApplication.setOrganizationName('mazaclub')
         QtCore.QCoreApplication.setApplicationName('hashmal')
         self.qt_settings = QtCore.QSettings()
+
+        active_params = self.config.get_option('chainparams', 'Bitcoin')
+        chainparams.set_to_preset(active_params)
 
         self.setDockNestingEnabled(True)
         self.dock_handler = DockHandler(self)

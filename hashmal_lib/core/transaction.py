@@ -45,7 +45,6 @@ class Transaction(CMutableTransaction):
             try:
                 getattr(self, name)
             except AttributeError:
-                print('%s no attr' % name)
                 setattr(self, name, None)
 
     @classmethod

@@ -25,11 +25,13 @@ PeercoinPreset = ParamsPreset('Peercoin',
             ('vout', 'outputs', None),
             ('nLockTime', b'<I', 4)])
 
-presets = dict((i.name, i) for i in [
-            BitcoinPreset,
-            ClamsPreset,
-            PeercoinPreset]
-)
+presets_list = [
+        BitcoinPreset,
+        ClamsPreset,
+        PeercoinPreset
+]
+
+presets = dict((i.name, i) for i in presets_list)
 
 
 def get_tx_fields():

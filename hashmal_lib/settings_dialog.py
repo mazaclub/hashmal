@@ -1,7 +1,8 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from gui_utils import floated_buttons, Amount, monospace_font
+from hashmal_lib.core import chainparams
+from gui_utils import floated_buttons, Amount, monospace_font, Separator
 
 class SettingsDialog(QDialog):
     """Configuration interface.
@@ -41,9 +42,11 @@ class SettingsDialog(QDialog):
         qt_tab = self.create_qt_tab()
         editor_tab = self.create_editor_tab()
         general_tab = self.create_general_tab()
+        chainparams_tab = self.create_chainparams_tab()
         tabs.addTab(general_tab, '&General')
         tabs.addTab(qt_tab, '&Window Settings')
         tabs.addTab(editor_tab, '&Editor')
+        tabs.addTab(chainparams_tab, '&Chainparams')
 
         close_button = QPushButton('Close')
         close_button.clicked.connect(self.close)
@@ -180,6 +183,36 @@ class SettingsDialog(QDialog):
         w.setLayout(form)
         return w
 
+    def create_chainparams_tab(self):
+        form = QFormLayout()
+        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+
+        desc = ''.join(['ChainParams define some basic rules of the blockchain.',
+                        ' Notably, these rules include the format of transactions.'])
+        desc_label = QLabel(desc)
+        desc_label.setWordWrap(True)
+
+        self.params_combo = params_combo = QComboBox()
+        params_combo.addItems([i.name for i in chainparams.presets_list])
+
+        active_params = self.config.get_option('chainparams', 'Bitcoin')
+        params_combo.setCurrentIndex([i.name for i in chainparams.presets_list].index(active_params))
+        params_combo.currentIndexChanged.connect(self.change_chainparams)
+
+        self.format_list = QListWidget()
+        for name, _, _ in chainparams.get_tx_fields():
+            self.format_list.addItem(name)
+
+        form.addRow(desc_label)
+        form.addRow('Params:', params_combo)
+        form.addRow(Separator())
+        form.addRow('Tx Format:', self.format_list)
+
+        w = QWidget()
+        w.setLayout(form)
+        return w
+
+
     def save_layout(self, name='default'):
         key = '/'.join(['toolLayout', name])
         self.qt_settings.setValue(key, self.gui.saveState())
@@ -200,6 +233,15 @@ class SettingsDialog(QDialog):
     def change_editor_font(self, font):
         self.gui.script_editor.setFont(font)
         self.qt_settings.setValue('editor/font', font.toString())
+
+    def change_chainparams(self):
+        new_name = str(self.params_combo.currentText())
+        chainparams.set_to_preset(new_name)
+        self.config.set_option('chainparams', new_name)
+
+        self.format_list.clear()
+        for name, _, _ in chainparams.get_tx_fields():
+            self.format_list.addItem(name)
 
 class ColorButton(QPushButton):
     """Represents a color visually."""

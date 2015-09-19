@@ -255,7 +255,7 @@ class TxBuilder(BaseDock):
             value = str(w.text())
             default = getattr(tx, name)
             if isinstance(default, int):
-                value = int(value)
+                value = w.get_amount()
             setattr(tx, name, value)
 
         self.raw_tx.setText(bitcoin.core.b2x(tx.serialize()))
@@ -267,6 +267,7 @@ class TxBuilder(BaseDock):
             self.needsUpdate.emit()
 
     def adjust_tx_fields(self):
+        """Show or hide tx field widgets."""
         tx_fields = chainparams.get_tx_fields()
         for field in tx_fields:
             name = field[0]
@@ -276,6 +277,8 @@ class TxBuilder(BaseDock):
             default_value = field[3]
             if name not in [j[0] for j in self.tx_field_widgets]:
                 widget = QLineEdit()
+                if isinstance(default_value, int):
+                    widget = AmountEdit()
                 widget.setText(str(default_value))
                 label = QLabel(''.join([name, ':']))
                 self.tx_field_widgets.append((name, widget))

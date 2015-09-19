@@ -16,6 +16,25 @@ ApiType = namedtuple('ApiType', ('name', 'default_domain', 'rawtx_route', 'rawtx
 insight_api = ApiType('insight', 'https://insight.bitpay.com', '/api/rawtx/', lambda d: d.get('rawtx'))
 known_api_types = [insight_api]
 
+class Downloader(QtCore.QObject):
+    start = QtCore.pyqtSignal()
+    finished = QtCore.pyqtSignal(str, str, str, name='finished')
+    def __init__(self, api, txid):
+        super(Downloader, self).__init__()
+        self.api = api
+        self.txid = txid
+        self.start.connect(self.download)
+
+    @QtCore.pyqtSlot()
+    def download(self):
+        raw_tx = ''
+        error = ''
+        try:
+            raw_tx = self.api.get_raw_tx(self.txid)
+        except Exception as e:
+            error = str(e)
+        self.finished.emit(self.txid, raw_tx, error)
+
 class BApi(object):
     """Blockchain API."""
     def __init__(self, api_type, domain=''):
@@ -59,6 +78,7 @@ class Blockchain(BaseDock):
 
         domain = config_apis.get(config_api_type, api_type.default_domain)
         self.api = BApi(api_type, domain)
+
 
     def create_layout(self):
         """Two tabs:
@@ -146,23 +166,37 @@ class Blockchain(BaseDock):
 
         menu.exec_(self.raw_tx_edit.viewport().mapToGlobal(position))
 
+    def make_downloader(self, txid):
+        self.downloader_thread = QtCore.QThread()
+        self.downloader = Downloader(self.api, txid)
+        self.downloader.moveToThread(self.downloader_thread)
+        self.downloader.finished.connect(self.downloader_thread.quit)
+
     def do_download(self):
         self.download_button.setEnabled(False)
         txid = str(self.tx_id_edit.text())
         self.raw_tx_edit.setText('Downloading...')
-        try:
-            raw = self.api.get_raw_tx(txid)
-        except Exception as e:
-            self.raw_tx_edit.clear()
-            self.status_message(str(e), True)
-            return
-        else:
-            self.raw_tx_edit.setText(raw)
-            self.status_message('Downloaded transaction %s' % txid)
-        finally:
-            self.download_button.setEnabled(True)
 
-    def download_raw_tx(txid):
+        self.make_downloader(txid)
+        self.downloader.finished.connect(self.set_result)
+        self.downloader_thread.start()
+        self.downloader.start.emit()
+
+    def set_result(self, txid, rawtx, error):
+        """Set result of tx downloader thread."""
+        if error:
+            self.status_message(error, True)
+            self.raw_tx_edit.clear()
+        elif not rawtx:
+            self.status_message('Unknown error. Failed to retrieve transaction.', True)
+            self.raw_tx_edit.clear()
+        else:
+            self.raw_tx_edit.setText(rawtx)
+            self.status_message('Downloaded transaction %s' % txid)
+
+        self.download_button.setEnabled(True)
+
+    def download_raw_tx(self, txid):
         """This is for use by other widgets."""
         return self.api.get_raw_tx(txid)
 

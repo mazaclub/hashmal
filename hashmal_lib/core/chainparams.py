@@ -5,25 +5,25 @@ import transaction
 ParamsPreset = namedtuple('ParamsPreset', ('name', 'tx_fields'))
 
 BitcoinPreset = ParamsPreset('Bitcoin',
-           [('nVersion', b'<i', 4),
-            ('vin', 'inputs', None),
-            ('vout', 'outputs', None),
-            ('nLockTime', b'<I', 4)])
+           [('nVersion', b'<i', 4, 1),
+            ('vin', 'inputs', None, None),
+            ('vout', 'outputs', None, None),
+            ('nLockTime', b'<I', 4, 0)])
 
 ClamsPreset = ParamsPreset('Clams',
-           [('nVersion', b'<i', 4),
-            ('Timestamp', b'<i', 4),
-            ('vin', 'inputs', None),
-            ('vout', 'outputs', None),
-            ('nLockTime', b'<I', 4),
-            ('ClamSpeech', 'bytes', None)])
+           [('nVersion', b'<i', 4, 1),
+            ('Timestamp', b'<i', 4, 0),
+            ('vin', 'inputs', None, None),
+            ('vout', 'outputs', None, None),
+            ('nLockTime', b'<I', 4, 0),
+            ('ClamSpeech', 'bytes', None, b'')])
 
 PeercoinPreset = ParamsPreset('Peercoin',
-           [('nVersion', b'<i', 4),
-            ('Timestamp', b'<i', 4),
-            ('vin', 'inputs', None),
-            ('vout', 'outputs', None),
-            ('nLockTime', b'<I', 4)])
+           [('nVersion', b'<i', 4, 1),
+            ('Timestamp', b'<i', 4, 0),
+            ('vin', 'inputs', None, None),
+            ('vout', 'outputs', None, None),
+            ('nLockTime', b'<I', 4, 0)])
 
 presets_list = [
         BitcoinPreset,

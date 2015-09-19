@@ -5,10 +5,10 @@ from bitcoin.core import CMutableTransaction, CTxIn, CTxOut
 from bitcoin.core.serialize import ser_read, BytesSerializer, VectorSerializer
 
 transaction_fields = [
-    ('nVersion', b'<i', 4),
-    ('vin', 'inputs', None),
-    ('vout', 'outputs', None),
-    ('nLockTime', b'<I', 4)
+    ('nVersion', b'<i', 4, 1),
+    ('vin', 'inputs', None, None),
+    ('vout', 'outputs', None, None),
+    ('nLockTime', b'<I', 4, 0)
 ]
 """Fields of transactions.
 
@@ -41,16 +41,16 @@ class Transaction(CMutableTransaction):
         if fields is None:
             fields = list(transaction_fields)
         self.fields = fields
-        for name, _, _ in self.fields:
+        for name, _, _, default in self.fields:
             try:
                 getattr(self, name)
             except AttributeError:
-                setattr(self, name, None)
+                setattr(self, name, default)
 
     @classmethod
     def stream_deserialize(cls, f):
         self = cls()
-        for attr, fmt, num_bytes in self.fields:
+        for attr, fmt, num_bytes, _ in self.fields:
             if fmt not in ['inputs', 'outputs', 'bytes']:
                 setattr(self, attr, struct.unpack(fmt, ser_read(f, num_bytes))[0])
             elif fmt == 'inputs':
@@ -62,7 +62,7 @@ class Transaction(CMutableTransaction):
         return self
 
     def stream_serialize(self, f):
-        for attr, fmt, num_bytes in self.fields:
+        for attr, fmt, num_bytes, _ in self.fields:
             if fmt not in ['inputs', 'outputs', 'bytes']:
                 f.write(struct.pack(fmt, getattr(self, attr)))
             elif fmt == 'inputs':

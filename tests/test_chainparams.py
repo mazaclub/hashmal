@@ -9,18 +9,18 @@ clams_raw_tx = '02000000404afb5501526139de11764d06f5110deeb1f9fd4aefec059ccf3613
 ppc_raw_tx = '0100000058e4615501a367e883a383167e64c84e9c068ba5c091672e434784982f877eede589cb7e53000000006a473044022043b9aee9187effd7e6c7bc444b09162570f17e36b4a9c02cf722126cc0efa3d502200b3ba14c809fa9a6f7f835cbdbbb70f2f43f6b30beaf91eec6b8b5981c80cea50121025edf500f18f9f2b3f175f823fa996fbb2ec52982a9aeb1dc2e388a651054fb0fffffffff0257be0100000000001976a91495efca2c6a6f0e0f0ce9530219b48607a962e77788ac45702000000000001976a914f28abfb465126d6772dcb4403b9e1ad2ea28a03488ac00000000'.decode('hex')
 
 bitcoin_fields = [
-    ('nVersion', b'<i', 4),
-    ('vin', 'inputs', None),
-    ('vout', 'outputs', None),
-    ('nLockTime', b'<I', 4)
+    ('nVersion', b'<i', 4, 1),
+    ('vin', 'inputs', None, None),
+    ('vout', 'outputs', None, None),
+    ('nLockTime', b'<I', 4, 0)
 ]
 
 clams_fields = list(bitcoin_fields)
-clams_fields.insert(1, ('Timestamp', b'<i', 4))
-clams_fields.append( ('ClamSpeech', 'bytes', None) )
+clams_fields.insert(1, ('Timestamp', b'<i', 4, 0))
+clams_fields.append( ('ClamSpeech', 'bytes', None, b'') )
 
 peercoin_fields = list(bitcoin_fields)
-peercoin_fields.insert(1, ('Timestamp', b'<i', 4))
+peercoin_fields.insert(1, ('Timestamp', b'<i', 4, 0))
 
 class ChainparamsTest(unittest.TestCase):
     def setUp(self):
@@ -36,14 +36,14 @@ class ChainparamsTest(unittest.TestCase):
         chainparams.set_tx_fields(clams_fields)
         tx = Transaction.deserialize(clams_raw_tx)
         self.assertNotEqual(bitcoin_fields, tx.fields)
-        self.assertIn(('ClamSpeech', 'bytes', None), tx.fields)
+        self.assertIn(('ClamSpeech', 'bytes', None, b''), tx.fields)
         self.assertEqual(clams_raw_tx, tx.serialize())
 
     def test_peercoin_fields(self):
         chainparams.set_tx_fields(peercoin_fields)
         tx = Transaction.deserialize(ppc_raw_tx)
         self.assertNotEqual(bitcoin_fields, tx.fields)
-        self.assertIn(('Timestamp', b'<i', 4), tx.fields)
+        self.assertIn(('Timestamp', b'<i', 4, 0), tx.fields)
         self.assertEqual(ppc_raw_tx, tx.serialize())
 
     def test_change_tx_fields(self):

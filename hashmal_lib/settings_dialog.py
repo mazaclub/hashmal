@@ -200,7 +200,7 @@ class SettingsDialog(QDialog):
         params_combo.currentIndexChanged.connect(self.change_chainparams)
 
         self.format_list = QListWidget()
-        for name, _, _ in chainparams.get_tx_fields():
+        for name, _, _, _ in chainparams.get_tx_fields():
             self.format_list.addItem(name)
 
         form.addRow(desc_label)
@@ -240,7 +240,7 @@ class SettingsDialog(QDialog):
         self.config.set_option('chainparams', new_name)
 
         self.format_list.clear()
-        for name, _, _ in chainparams.get_tx_fields():
+        for name, _, _, _ in chainparams.get_tx_fields():
             self.format_list.addItem(name)
 
 class ColorButton(QPushButton):

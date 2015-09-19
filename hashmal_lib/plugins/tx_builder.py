@@ -4,7 +4,7 @@ from bitcoin.core import COutPoint, CTxIn, CTxOut, lx
 from PyQt4.QtGui import *
 
 from hashmal_lib.core.script import Script
-from hashmal_lib.core import Transaction
+from hashmal_lib.core import Transaction, chainparams
 from hashmal_lib.tx_widget import TxWidget, InputsTree, OutputsTree
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font
 from base import BaseDock, Plugin
@@ -24,16 +24,20 @@ class TxBuilder(BaseDock):
 
     def create_layout(self):
         vbox = QVBoxLayout()
-        tabs = QTabWidget()
+        self.tabs = tabs = QTabWidget()
 
         tabs.addTab(self.create_version_locktime_tab(), '&Version/Locktime')
         tabs.addTab(self.create_inputs_tab(), '&Inputs')
         tabs.addTab(self.create_outputs_tab(), '&Outputs')
         tabs.addTab(self.create_review_tab(), '&Review')
 
+        self.tx_field_widgets = []
+        tabs.insertTab(3, self.create_other_tab(), 'Ot&her')
+        self.adjust_tx_fields()
+
         # Build the tx if the Review tab is selected.
         def maybe_build(i):
-            if i == 3:
+            if str(tabs.tabText(i)) == '&Review':
                 self.build_transaction()
         tabs.currentChanged.connect(maybe_build)
 
@@ -215,6 +219,13 @@ class TxBuilder(BaseDock):
         w.setLayout(form)
         return w
 
+    def create_other_tab(self):
+        self.tx_fields_layout = QFormLayout()
+
+        w = QWidget()
+        w.setLayout(self.tx_fields_layout)
+        return w
+
     def build_transaction(self):
         self.tx_widget.clear()
         self.tx = tx = Transaction()
@@ -225,14 +236,54 @@ class TxBuilder(BaseDock):
             tx.vout.append(o)
         tx.nLockTime = self.locktime_edit.get_amount()
 
+        for name, w in self.tx_field_widgets:
+            if not name in [field[0] for field in tx.fields]:
+                continue
+            value = str(w.text())
+            default = getattr(tx, name)
+            if isinstance(default, int):
+                value = int(value)
+            setattr(tx, name, value)
+
         self.raw_tx.setText(bitcoin.core.b2x(tx.serialize()))
 
         self.tx_widget.set_tx(tx)
 
     def on_option_changed(self, key):
-        if key == 'amount_format':
+        if key in ['amount_format', 'chainparams']:
             self.needsUpdate.emit()
 
+    def adjust_tx_fields(self):
+        tx_fields = chainparams.get_tx_fields()
+        for field in tx_fields:
+            name = field[0]
+            if name in ['nVersion', 'vin', 'vout', 'nLockTime']:
+                continue
+
+            default_value = field[3]
+            if name not in [j[0] for j in self.tx_field_widgets]:
+                widget = QLineEdit()
+                widget.setText(str(default_value))
+                label = QLabel(''.join([name, ':']))
+                self.tx_field_widgets.append((name, widget))
+                self.tx_fields_layout.addRow(label, widget)
+
+        tx_field_names = [i[0] for i in tx_fields]
+        for name, w in self.tx_field_widgets:
+            l = self.tx_fields_layout.labelForField(w)
+            if name in tx_field_names:
+                w.show()
+                l.show()
+            else:
+                w.hide()
+                l.hide()
+
+        if tx_field_names == ['nVersion', 'vin', 'vout', 'nLockTime']:
+            self.tabs.setTabEnabled(3, False)
+        else:
+            self.tabs.setTabEnabled(3, True)
+
     def refresh_data(self):
+        self.adjust_tx_fields()
         self.build_transaction()
         self.outputs_tree.amount_format_changed()

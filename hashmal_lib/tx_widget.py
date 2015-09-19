@@ -276,6 +276,8 @@ class TxWidget(QWidget):
             # We already handle these four.
             if name in ['nVersion', 'vin', 'vout', 'nLockTime']:
                 continue
+            if not name in [field[0] for field in tx.fields]:
+                continue
             value = getattr(tx, name)
             w.setText(str(value))
 
@@ -305,7 +307,6 @@ class TxWidget(QWidget):
         tx_fields = chainparams.get_tx_fields()
         for i, field in enumerate(tx_fields):
             name = field[0]
-            default_value = field[3]
             # Create a new widget for the tx field.
             if name not in [j[0] for j in self.field_widgets]:
                 widget = QLineEdit()

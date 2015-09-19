@@ -4,6 +4,43 @@ from PyQt4.QtCore import *
 from hashmal_lib.core import chainparams
 from gui_utils import floated_buttons, Amount, monospace_font, Separator
 
+class ChainparamsComboBox(QComboBox):
+    """ComboBox for selecting chainparams presets.
+
+    Separated from SettingsDialog so it can be used elsewhere.
+    """
+    paramsChanged = pyqtSignal()
+    def __init__(self, config, parent=None):
+        super(ChainparamsComboBox, self).__init__(parent)
+        self.config = config
+
+        preset_names = [i.name for i in chainparams.presets_list]
+        self.addItems(preset_names)
+        self.set_index()
+
+        self.currentIndexChanged.connect(self.change_params)
+        self.config.optionChanged.connect(self.check_config)
+
+    def set_index(self):
+        preset_names = [i.name for i in chainparams.presets_list]
+        active_params = self.config.get_option('chainparams', 'Bitcoin')
+        # The config file might have changed to have a nonexistent preset.
+        try:
+            self.setCurrentIndex(preset_names.index(active_params))
+        except ValueError:
+            self.setCurrentIndex(preset_names.index('Bitcoin'))
+
+    def check_config(self, key):
+        if key != 'chainparams':
+            return
+        self.set_index()
+
+    def change_params(self):
+        new_name = str(self.currentText())
+        chainparams.set_to_preset(new_name)
+        self.config.set_option('chainparams', new_name)
+        self.paramsChanged.emit()
+
 class SettingsDialog(QDialog):
     """Configuration interface.
 
@@ -192,19 +229,16 @@ class SettingsDialog(QDialog):
         desc_label = QLabel(desc)
         desc_label.setWordWrap(True)
 
-        self.params_combo = params_combo = QComboBox()
-        params_combo.addItems([i.name for i in chainparams.presets_list])
+        self.params_combo = ChainparamsComboBox(self.config)
 
-        active_params = self.config.get_option('chainparams', 'Bitcoin')
-        params_combo.setCurrentIndex([i.name for i in chainparams.presets_list].index(active_params))
-        params_combo.currentIndexChanged.connect(self.change_chainparams)
+        self.params_combo.paramsChanged.connect(self.change_chainparams)
 
         self.format_list = QListWidget()
         for name, _, _, _ in chainparams.get_tx_fields():
             self.format_list.addItem(name)
 
         form.addRow(desc_label)
-        form.addRow('Params:', params_combo)
+        form.addRow('Params:', self.params_combo)
         form.addRow(Separator())
         form.addRow('Tx Format:', self.format_list)
 
@@ -235,10 +269,6 @@ class SettingsDialog(QDialog):
         self.qt_settings.setValue('editor/font', font.toString())
 
     def change_chainparams(self):
-        new_name = str(self.params_combo.currentText())
-        chainparams.set_to_preset(new_name)
-        self.config.set_option('chainparams', new_name)
-
         self.format_list.clear()
         for name, _, _, _ in chainparams.get_tx_fields():
             self.format_list.addItem(name)

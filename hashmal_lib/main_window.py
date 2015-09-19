@@ -8,7 +8,7 @@ from PyQt4 import QtCore
 from hashmal_lib.core import chainparams
 from config import Config
 from dock_handler import DockHandler
-from settings_dialog import SettingsDialog
+from settings_dialog import SettingsDialog, ChainparamsComboBox
 from scriptedit import MyScriptEdit
 from help_widgets import QuickTips, ToolInfo
 from gui_utils import script_file_filter, hashmal_style, floated_buttons, monospace_font
@@ -52,6 +52,7 @@ class HashmalMain(QMainWindow):
         self.script_editor.setFont(font)
 
         self.create_menubar()
+        self.create_toolbar()
         self.new_script()
         self.statusBar().setVisible(True)
         self.statusBar().messageChanged.connect(self.change_status_bar)
@@ -211,6 +212,22 @@ class HashmalMain(QMainWindow):
         w = QWidget()
         w.setLayout(vbox)
         self.setCentralWidget(w)
+
+    def create_toolbar(self):
+        toolbar = QToolBar('Toolbar')
+        toolbar.setObjectName('Toolbar')
+
+        params_combo = ChainparamsComboBox(self.config)
+        params_form = QFormLayout()
+        params_form.setContentsMargins(0, 0, 0, 0)
+        params_form.addRow('Chainparams:', params_combo)
+        params_selector = QWidget()
+        params_selector.setLayout(params_form)
+        params_selector.setToolTip('Change chainparams preset')
+
+        toolbar.addWidget(params_selector)
+
+        self.addToolBar(toolbar)
 
     def do_about(self):
         d = QDialog(self)

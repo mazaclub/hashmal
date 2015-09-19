@@ -2,6 +2,7 @@ import bitcoin
 from bitcoin.core import COutPoint, CTxIn, CTxOut, lx
 
 from PyQt4.QtGui import *
+from PyQt4 import QtCore
 
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction, chainparams
@@ -13,6 +14,10 @@ def make_plugin():
     return Plugin([TxBuilder])
 
 class TxBuilder(BaseDock):
+    def __init__(self, handler):
+        super(TxBuilder, self).__init__(handler)
+        self.raw_tx.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.raw_tx.customContextMenuRequested.connect(self.context_menu)
 
     def init_metadata(self):
         self.tool_name = 'Transaction Builder'
@@ -44,6 +49,14 @@ class TxBuilder(BaseDock):
         vbox.addWidget(tabs)
         return vbox
 
+    def context_menu(self, position):
+        menu = self.raw_tx.createStandardContextMenu(position)
+
+        txt = str(self.raw_tx.toPlainText())
+        if txt:
+            self.handler.add_plugin_actions(self, menu, 'raw_transaction', txt)
+
+        menu.exec_(self.raw_tx.viewport().mapToGlobal(position))
 
     def create_version_locktime_tab(self):
         form = QFormLayout()

@@ -6,8 +6,9 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
 from gui_utils import Amount, monospace_font, HBox, floated_buttons, RawRole
+from hashmal_lib.core import chainparams
 from hashmal_lib.core.script import Script
-
+import config
 
 class InputsTree(QWidget):
     """Model and View showing a transaction's inputs."""
@@ -222,6 +223,11 @@ class TxWidget(QWidget):
     """Displays the deserialized fields of a transaction."""
     def __init__(self, parent=None):
         super(TxWidget, self).__init__(parent)
+        self.config = config.get_config()
+        self.config.optionChanged.connect(self.on_option_changed)
+        # Widgets for tx fields
+        self.field_widgets = []
+
         form = QFormLayout()
 
         self.tx_id = QLineEdit()
@@ -233,14 +239,25 @@ class TxWidget(QWidget):
         self.outputs_tree = outputs = OutputsTree()
         self.locktime_edit = LockTimeWidget()
 
+        self.field_widgets.append(('nVersion', self.version_edit))
+        self.field_widgets.append(('vin', self.inputs_tree))
+        self.field_widgets.append(('vout', self.outputs_tree))
+        self.field_widgets.append(('nLockTime', self.locktime_edit))
+
         self.tx_properties = TxProperties()
 
+        self.tx_fields_layout = QFormLayout()
+        self.tx_fields_layout.setContentsMargins(0, 0, 0, 0)
+        self.tx_fields_layout.addRow(QLabel('Version:'), self.version_edit)
+        self.tx_fields_layout.addRow(QLabel('Inputs:'), inputs)
+        self.tx_fields_layout.addRow(QLabel('Outputs:'), outputs)
+        self.tx_fields_layout.addRow(QLabel('LockTime:'), self.locktime_edit)
+
         form.addRow('Tx ID:', self.tx_id)
-        form.addRow('Version:', self.version_edit)
-        form.addRow('Inputs:', inputs)
-        form.addRow('Outputs:', outputs)
-        form.addRow('LockTime:', self.locktime_edit)
+        form.addRow(self.tx_fields_layout)
         form.addRow('Metadata:', self.tx_properties)
+
+        self.adjust_field_widgets()
 
         self.setLayout(form)
 
@@ -255,18 +272,63 @@ class TxWidget(QWidget):
 
         self.locktime_edit.set_locktime(tx.nLockTime)
 
+        for name, w in self.field_widgets:
+            # We already handle these four.
+            if name in ['nVersion', 'vin', 'vout', 'nLockTime']:
+                continue
+            value = getattr(tx, name)
+            w.setText(str(value))
+
         self.tx_properties.set_tx(tx)
+
         self.tx_id.setText(bitcoin.core.b2lx(tx.GetHash()))
 
     def clear(self):
-        self.version_edit.clear()
-        self.inputs_tree.clear()
-        self.outputs_tree.clear()
-        self.locktime_edit.clear()
+        self.tx_id.clear()
         self.tx_properties.clear()
+        for name, w in self.field_widgets:
+            w.clear()
 
     def add_input(self, i):
         self.inputs_tree.add_input(i)
 
     def add_output(self, o):
         self.outputs_tree.add_output(o)
+
+    def on_option_changed(self, key):
+        if key != 'chainparams':
+            return
+        self.adjust_field_widgets()
+
+    def adjust_field_widgets(self):
+        """Add widgets and adjust visibility for tx field widgets."""
+        tx_fields = chainparams.get_tx_fields()
+        for i, field in enumerate(tx_fields):
+            name = field[0]
+            default_value = field[3]
+            # Create a new widget for the tx field.
+            if name not in [j[0] for j in self.field_widgets]:
+                widget = QLineEdit()
+                widget.setReadOnly(True)
+                label = QLabel(''.join([name, ':']))
+                # Add the widget to our list and to the layout.
+                self.field_widgets.insert(i, (name, widget))
+                self.tx_fields_layout.insertRow(i, label, widget)
+
+            # Make sure the existing widget for the tx field is visible.
+            else:
+                w = self.field_widgets[i][1]
+                l = self.tx_fields_layout.labelForField(w)
+                w.show()
+                l.show()
+
+        # Hide unnecessary widgets
+        tx_field_names = [i[0] for i in tx_fields]
+        for i, (name, w) in enumerate(self.field_widgets):
+            if name not in tx_field_names:
+                l = self.tx_fields_layout.labelForField(w)
+                w.hide()
+                l.hide()
+
+        self.clear()
+

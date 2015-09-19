@@ -166,7 +166,7 @@ class LockTimeWidget(QWidget):
         for i in [self.locktime_raw, self.locktime_human]:
             i.setReadOnly(True)
         hbox = HBox(self.locktime_raw, self.locktime_human)
-        hbox.setContentsMargins(0, 6, 0, 0)
+        hbox.setContentsMargins(0, 0, 0, 0)
         self.setLayout(hbox)
 
     def clear(self):
@@ -183,6 +183,53 @@ class LockTimeWidget(QWidget):
             self.locktime_human.setText(' '.join([time.strftime('%Y-%m-%d %H:%M:%S'), 'UTC']))
         else:
             self.locktime_human.setText('Not locked.')
+
+class TimestampWidget(QWidget):
+    """Displays a transaction's timestamp.
+
+    This is only used by certain chains. Namely, Peercoin descendants.
+    Displays the raw int and the human-readable time side-by-side.
+    """
+    def __init__(self, parent=None):
+        super(TimestampWidget, self).__init__(parent)
+        self.timestamp_raw = QLineEdit()
+        self.timestamp_human = QLineEdit()
+        for i in [self.timestamp_raw, self.timestamp_human]:
+            i.setReadOnly(True)
+        hbox = HBox(self.timestamp_raw, self.timestamp_human)
+        hbox.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(hbox)
+        self.timestamp_raw.textChanged.connect(self.update_time)
+
+    def clear(self):
+        self.timestamp_raw.clear()
+        self.timestamp_human.clear()
+
+    def update_time(self):
+        """Update human-readable time to reflect raw."""
+        timestamp_str = self.timestamp_raw.text()
+        if not timestamp_str:
+            self.timestamp_human.clear()
+            return
+        timestamp = int(timestamp_str)
+        time = datetime.datetime.utcfromtimestamp(timestamp)
+        self.timestamp_human.setText(' '.join([time.strftime('%Y-%m-%d %H:%M:%S'), 'UTC']))
+        self.setToolTip('{} ({})'.format(str(timestamp), str(self.timestamp_human.text())))
+
+    def set_time(self, timestamp):
+        """Formats the raw and human-readable timestamps."""
+        self.timestamp_raw.setText(str(timestamp))
+        self.update_time()
+
+    def setText(self, text):
+        self.set_time(int(text))
+
+    def text(self):
+        return self.timestamp_raw.text()
+
+    def get_amount(self):
+        """This is for compatibility with AmountEdit."""
+        return int(self.text())
 
 class TxProperties(QWidget):
     """Displays properties of a transaction (e.g. isFinal)."""
@@ -311,6 +358,8 @@ class TxWidget(QWidget):
             if name not in [j[0] for j in self.field_widgets]:
                 widget = QLineEdit()
                 widget.setReadOnly(True)
+                if name == 'Timestamp':
+                    widget = TimestampWidget()
                 label = QLabel(''.join([name, ':']))
                 # Add the widget to our list and to the layout.
                 self.field_widgets.insert(i, (name, widget))

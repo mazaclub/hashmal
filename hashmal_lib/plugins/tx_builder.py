@@ -6,7 +6,7 @@ from PyQt4 import QtCore
 
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction, chainparams
-from hashmal_lib.tx_widget import TxWidget, InputsTree, OutputsTree
+from hashmal_lib.tx_widget import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font
 from base import BaseDock, Plugin
 
@@ -278,7 +278,12 @@ class TxBuilder(BaseDock):
             if name not in [j[0] for j in self.tx_field_widgets]:
                 widget = QLineEdit()
                 if isinstance(default_value, int):
-                    widget = AmountEdit()
+                    # Special case for timestamp fields.
+                    if name == 'Timestamp':
+                        widget = TimestampWidget()
+                        widget.timestamp_raw.setReadOnly(False)
+                    else:
+                        widget = AmountEdit()
                 widget.setText(str(default_value))
                 label = QLabel(''.join([name, ':']))
                 self.tx_field_widgets.append((name, widget))

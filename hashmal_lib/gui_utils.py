@@ -111,7 +111,8 @@ class AmountEdit(QLineEdit):
 
 hashmal_style = '''
 
-QStatusBar[hasError=true], QLineEdit[hasError=true] {
+QStatusBar[hasError=true], QLineEdit[hasError=true],
+QLabel[hasError=true] {
   background: rgba(255, 0, 0, 25%);
 }
 '''

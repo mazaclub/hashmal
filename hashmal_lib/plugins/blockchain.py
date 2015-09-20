@@ -32,7 +32,7 @@ class Downloader(QtCore.QObject):
         try:
             raw_tx = self.api.get_raw_tx(self.txid)
         except Exception as e:
-            error = str(e)
+            error = '{}: {}'.format(str(e.__class__.__name__), str(e))
         self.finished.emit(self.txid, raw_tx, error)
 
 class BApi(object):

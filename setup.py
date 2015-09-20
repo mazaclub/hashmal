@@ -35,8 +35,8 @@ setup(
             'Blockchain = hashmal_lib.plugins.blockchain:make_plugin',
             'Script Generator = hashmal_lib.plugins.script_gen:make_plugin',
             'Stack Evaluator = hashmal_lib.plugins.stack:make_plugin',
+            'Tx Analyzer = hashmal_lib.plugins.tx_analyzer:make_plugin',
             'Tx Builder = hashmal_lib.plugins.tx_builder:make_plugin',
-            'Tx Deserializer = hashmal_lib.plugins.tx_deserializer:make_plugin',
             'Variables = hashmal_lib.plugins.variables:make_plugin'
         ]
     }

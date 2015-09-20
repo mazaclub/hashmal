@@ -45,13 +45,16 @@ class InputsTree(QWidget):
         txt = item.data(RawRole).toString()
         QApplication.clipboard().setText(txt)
 
-    def customContextMenu(self, pos):
-        if len(self.view.selectedIndexes()) == 0:
-            return
+    def context_menu(self):
         menu = QMenu()
         menu.addAction('Copy Input Script', self.copy_script)
         menu.addAction('Copy Input Script Hex', self.copy_script_hex)
+        return menu
 
+    def customContextMenu(self, pos):
+        if len(self.view.selectedIndexes()) == 0:
+            return
+        menu = self.context_menu()
         menu.exec_(self.view.viewport().mapToGlobal(pos))
 
     def add_input(self, i):

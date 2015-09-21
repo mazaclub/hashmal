@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 import requests
 
 from PyQt4.QtGui import *
@@ -78,6 +78,8 @@ class Blockchain(BaseDock):
 
         domain = config_apis.get(config_api_type, api_type.default_domain)
         self.api = BApi(api_type, domain)
+        # Cache of recently downloaded txs
+        self.recent_transactions = OrderedDict()
 
 
     def create_layout(self):
@@ -91,6 +93,7 @@ class Blockchain(BaseDock):
         tabs = QTabWidget()
         tabs.addTab(self.create_download_tab(), 'Download')
         tabs.addTab(self.create_api_tab(), 'API Settings')
+        tabs.addTab(self.create_options_tab(), 'Settings')
 
         vbox.addWidget(tabs)
         return vbox
@@ -138,6 +141,28 @@ class Blockchain(BaseDock):
         w.setLayout(form)
         return w
 
+    def create_options_tab(self):
+        form = QFormLayout()
+
+        cache_size = int(self.config.get_option('blockchain_cache_size', 25))
+
+        cache_size_box = QSpinBox()
+        cache_size_box.setRange(0, 100)
+        cache_size_box.setValue(cache_size)
+        cache_size_box.setToolTip('Number of recent raw transactions to keep in memory')
+
+        def change_cache_size():
+            new_size = cache_size_box.value()
+            self.config.set_option('blockchain_cache_size', new_size)
+        cache_size_box.valueChanged.connect(change_cache_size)
+
+        form.addRow('Transaction cache size:', cache_size_box)
+
+        w = QWidget()
+        w.setLayout(form)
+        return w
+
+
     def create_download_tab(self):
         form = QFormLayout()
         
@@ -166,6 +191,11 @@ class Blockchain(BaseDock):
 
         menu.exec_(self.raw_tx_edit.viewport().mapToGlobal(position))
 
+    def update_cache(self, txid, rawtx):
+        self.recent_transactions[txid] = rawtx
+        while len(self.recent_transactions.keys()) > int(self.config.get_option('blockchain_cache_size', 25)):
+            self.recent_transactions.popitem(False)
+
     def make_downloader(self, txid):
         self.downloader_thread = QtCore.QThread()
         self.downloader = Downloader(self.api, txid)
@@ -175,8 +205,13 @@ class Blockchain(BaseDock):
     def do_download(self):
         self.download_button.setEnabled(False)
         txid = str(self.tx_id_edit.text())
-        self.raw_tx_edit.setText('Downloading...')
 
+        cached_tx = self.recent_transactions.get(txid)
+        if cached_tx:
+            self.set_result(txid, cached_tx, '')
+            return
+
+        self.raw_tx_edit.setText('Downloading...')
         self.make_downloader(txid)
         self.downloader.finished.connect(self.set_result)
         self.downloader_thread.start()
@@ -192,13 +227,20 @@ class Blockchain(BaseDock):
             self.raw_tx_edit.clear()
         else:
             self.raw_tx_edit.setText(rawtx)
+            self.update_cache(txid, rawtx)
             self.status_message('Downloaded transaction %s' % txid)
 
         self.download_button.setEnabled(True)
 
     def download_raw_tx(self, txid):
         """This is for use by other widgets."""
-        return self.api.get_raw_tx(txid)
+        if self.recent_transactions.get(txid):
+            return self.recent_transactions.get(txid)
+
+        rawtx = self.api.get_raw_tx(txid)
+        if rawtx:
+            self.update_cache(txid, rawtx)
+        return rawtx
 
     def set_api_type(self, api):
         """Set the base API type and save."""

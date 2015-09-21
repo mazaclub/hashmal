@@ -60,6 +60,12 @@ class DockHandler(QWidget):
                 for action_name, action_receiver in dock_actions:
                     dock_menu.addAction(action_name, partial(action_receiver, data))
 
+    def get_dock(self, dock_name, raise_if_none=False):
+        dock = self.dock_widgets.get(dock_name)
+        if dock is None and raise_if_none:
+            raise Exception('Unknown dock "{}".'.format(dock_name))
+        return dock
+
     def evaluate_current_script(self):
         """Evaluate the script being edited with the Stack Evaluator tool."""
         script_hex = self.gui.script_editor.get_data('Hex')

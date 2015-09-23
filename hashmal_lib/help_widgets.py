@@ -49,14 +49,14 @@ class ToolInfo(QDialog):
         self.gui = main_window
 
         tool_combo = QComboBox()
-        tool_combo.addItems( [i.tool_name for i in self.gui.dock_handler.dock_widgets] )
+        tool_combo.addItems( [i for i in sorted(self.gui.dock_handler.dock_widgets.keys())] )
 
         tool_info = QTextEdit()
         tool_info.setReadOnly(True)
 
         def show_tool_info():
             # Create HTML paragraphs from description.
-            tool = self.gui.dock_handler.dock_widgets[tool_combo.currentIndex()]
+            tool = self.gui.dock_handler.dock_widgets[str(tool_combo.currentText())]
             s = []
             for i in tool.description.split('\n'):
                 s.append('<p>{}</p>'.format(i))

@@ -210,6 +210,9 @@ class TxAnalyzer(BaseDock):
             self.status_message('Could not deserialize transaction.', True)
             return
         in_idx = self.inputs_box.value()
+        if in_idx >= len(tx.vin):
+            self.status_message('Input {} does not exist.'.format(in_idx), True)
+            return
 
         self.do_verify_input(tx, in_idx)
 

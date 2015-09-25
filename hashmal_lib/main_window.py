@@ -7,7 +7,7 @@ from PyQt4 import QtCore
 
 from hashmal_lib.core import chainparams
 from config import Config
-from dock_handler import DockHandler
+from plugin_handler import PluginHandler
 from settings_dialog import SettingsDialog, ChainparamsComboBox
 from scriptedit import MyScriptEdit
 from help_widgets import QuickTips, ToolInfo
@@ -32,9 +32,13 @@ class HashmalMain(QMainWindow):
         active_params = self.config.get_option('chainparams', 'Bitcoin')
         chainparams.set_to_preset(active_params)
 
+        # Plugin Handler loads plugins.
+        self.plugin_handler = PluginHandler(self)
+        self.plugin_handler.load_plugins()
+
         self.setDockNestingEnabled(True)
-        self.dock_handler = DockHandler(self)
-        self.dock_handler.create_docks()
+        # Plugin Handler also creates the dock widget handler.
+        self.dock_handler = self.plugin_handler.create_dock_handler()
         self.dock_handler.do_default_layout()
 
         # Filename of script being edited.

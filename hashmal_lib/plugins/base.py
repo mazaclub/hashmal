@@ -10,7 +10,16 @@ class Plugin(object):
     an instance of this class.
     """
     def __init__(self, dock_widgets):
-        self.docks = dock_widgets
+        self.dock_classes = dock_widgets
+        self.docks = {}
+        # name is set when the entry point is loaded.
+        self.name = ''
+
+    def instantiate_docks(self, dock_handler):
+        for cls in self.dock_classes:
+            instance = cls(dock_handler)
+            self.docks[instance.tool_name] = instance
+
 
 class BaseDock(QDockWidget):
     """Base class for docks."""
@@ -27,6 +36,7 @@ class BaseDock(QDockWidget):
         # If True, dock will be placed on the bottom by default.
         # Otherwise, dock will be placed on the right.
         self.is_large = False
+        self.is_enabled = True
 
         self.init_metadata()
         self.init_data()

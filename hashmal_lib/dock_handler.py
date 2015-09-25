@@ -7,31 +7,44 @@ from PyQt4 import QtCore
 from pkg_resources import iter_entry_points
 
 class DockHandler(QWidget):
-    """Loads plugins and handles the many available dock widgets."""
-    def __init__(self, parent):
-        super(DockHandler, self).__init__(parent)
-        self.gui = parent
+    """Handles the many available dock widgets."""
+    def __init__(self, main_window, plugin_handler):
+        super(DockHandler, self).__init__(main_window)
+        self.gui = main_window
+        self.plugin_handler = plugin_handler
         self.dock_widgets = {}
 
     def create_docks(self):
-        self.loaded_plugins = {}
-        # Load plugins.
-        for entry_point in iter_entry_points(group='hashmal.plugin'):
-            plugin_maker = entry_point.load()
-            self.loaded_plugins[entry_point.name] = plugin_maker()
+        """Instantiate dock widgets from plugins."""
+        for plugin in self.plugin_handler.loaded_plugins:
+            plugin.instantiate_docks(self)
+            for tool_name, dock_instance in plugin.docks.items():
+                self.dock_widgets.update({tool_name: dock_instance})
 
-        # Instantiate dock widgets from plugins.
-        for name, plugin in self.loaded_plugins.items():
-            for dock in plugin.docks:
-                dock_instance = dock(self)
-                self.dock_widgets[dock_instance.tool_name] = dock_instance
-
-        for name, dock in self.dock_widgets.items():
+    def set_dock_signals(self, dock, do_connect):
+        if do_connect:
             dock.needsFocus.connect(partial(self.bring_to_front, dock))
             dock.statusMessage.connect(self.gui.show_status_message)
+        else:
+            dock.needsFocus.disconnect()
+            dock.statusMessage.disconnect()
+
+    def set_dock_enabled(self, tool_name, is_enabled):
+        """Enable or disable a dock."""
+        dock = self.dock_widgets.get(tool_name)
+        if not dock:
+            return
+        if (dock.is_enabled and is_enabled) or (not dock.is_enabled and not is_enabled):
+            return
+
+        self.set_dock_signals(tool_name, is_enabled)
+        dock.is_enabled = is_enabled
+        dock.setVisible(is_enabled)
 
     def bring_to_front(self, dock):
         """Activate a dock by ensuring it is visible and raising it."""
+        if not dock.is_enabled:
+            return
         dock.setVisible(True)
         dock.raise_()
 
@@ -47,6 +60,8 @@ class DockHandler(QWidget):
         """
         separator_added = False
         for name, dock in self.dock_widgets.items():
+            if not dock.is_enabled:
+                continue
             if dock.__class__ == instance.__class__:
                 continue
 
@@ -62,6 +77,9 @@ class DockHandler(QWidget):
 
     def get_dock(self, dock_name, raise_if_none=False):
         dock = self.dock_widgets.get(dock_name)
+        if dock and not dock.is_enabled:
+            dock = None
+
         if dock is None and raise_if_none:
             raise Exception('Unknown dock "{}".'.format(dock_name))
         return dock

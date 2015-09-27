@@ -9,16 +9,15 @@ class Plugin(object):
     A module's make_plugin() function should return
     an instance of this class.
     """
-    def __init__(self, dock_widgets):
-        self.dock_classes = dock_widgets
-        self.docks = {}
+    def __init__(self, dock_widget):
+        self.dock_class = dock_widget
+        self.dock = None
         # name is set when the entry point is loaded.
         self.name = ''
 
-    def instantiate_docks(self, dock_handler):
-        for cls in self.dock_classes:
-            instance = cls(dock_handler)
-            self.docks[instance.tool_name] = instance
+    def instantiate_dock(self, dock_handler):
+        instance = self.dock_class(dock_handler)
+        self.dock = instance
 
 
 class BaseDock(QDockWidget):
@@ -26,19 +25,20 @@ class BaseDock(QDockWidget):
     needsFocus = QtCore.pyqtSignal()
     needsUpdate = QtCore.pyqtSignal()
     statusMessage = QtCore.pyqtSignal(str, bool, name='statusMessage')
+
+    tool_name = ''
+    description = ''
+    # If True, dock will be placed on the bottom by default.
+    # Otherwise, dock will be placed on the right.
+    is_large = False
+
     def __init__(self, handler):
         super(BaseDock, self).__init__('', handler)
         self.handler = handler
-        self.tool_name = ''
-        self.description = ''
         self.config = config.get_config()
         self.advertised_actions = {}
-        # If True, dock will be placed on the bottom by default.
-        # Otherwise, dock will be placed on the right.
-        self.is_large = False
         self.is_enabled = True
 
-        self.init_metadata()
         self.init_data()
         self.init_actions()
         my_layout = self.create_layout()
@@ -54,10 +54,6 @@ class BaseDock(QDockWidget):
         self.setObjectName(self.tool_name)
         self.setWindowTitle(self.tool_name)
         self.setWhatsThis(self.description)
-
-    def init_metadata(self):
-        """Initialize metadata (e.g. tool description)."""
-        pass
 
     def init_data(self):
         """Initialize attributes such as data containers."""

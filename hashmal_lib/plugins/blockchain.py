@@ -8,7 +8,7 @@ from hashmal_lib.gui_utils import floated_buttons
 from base import BaseDock, Plugin
 
 def make_plugin():
-    return Plugin([Blockchain])
+    return Plugin(Blockchain)
 
 ApiType = namedtuple('ApiType', ('name', 'default_domain', 'rawtx_route', 'rawtx_parse'))
 """Structure of a blockchain API."""
@@ -60,10 +60,9 @@ class BApi(object):
 
 class Blockchain(BaseDock):
 
-    def init_metadata(self):
-        self.tool_name = 'Blockchain'
-        self.description = 'Blockchain allows you to download data from block explorers.'
-        self.is_large = True
+    tool_name = 'Blockchain'
+    description = 'Blockchain allows you to download data from block explorers.'
+    is_large = True
 
     def init_data(self):
         config_apis = self.config.get_option('blockchain_apis', {})

@@ -11,18 +11,18 @@ from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, 
 from base import BaseDock, Plugin
 
 def make_plugin():
-    return Plugin([TxBuilder])
+    return Plugin(TxBuilder)
 
 class TxBuilder(BaseDock):
+
+    tool_name = 'Transaction Builder'
+    description = 'Transaction Builder helps you create transactions.'
+    is_large = True
+
     def __init__(self, handler):
         super(TxBuilder, self).__init__(handler)
         self.raw_tx.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.raw_tx.customContextMenuRequested.connect(self.context_menu)
-
-    def init_metadata(self):
-        self.tool_name = 'Transaction Builder'
-        self.description = 'Transaction Builder helps you create transactions.'
-        self.is_large = True
 
     def init_data(self):
         self.tx = None

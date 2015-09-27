@@ -8,7 +8,7 @@ from hashmal_lib.core.utils import push_script
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 
 def make_plugin():
-    return Plugin([ScriptGenerator])
+    return Plugin(ScriptGenerator)
 
 class ScriptTemplate(QWidget):
     """Template for a script.
@@ -70,14 +70,14 @@ class ScriptTemplate(QWidget):
             v.clear()
 
 class ScriptGenerator(BaseDock):
+
+    tool_name = 'Script Generator'
+    description = 'Generates scripts from templates.'
+
     def __init__(self, handler):
         super(ScriptGenerator, self).__init__(handler)
         self.template_combo.currentIndexChanged.emit(0)
         self.widget().setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-
-    def init_metadata(self):
-        self.tool_name = 'Script Generator'
-        self.description = 'Generates scripts from templates.'
 
     def init_data(self):
         # This list contains both ScriptTemplate instances and strings.

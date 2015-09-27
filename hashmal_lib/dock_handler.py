@@ -17,9 +17,8 @@ class DockHandler(QWidget):
     def create_docks(self):
         """Instantiate dock widgets from plugins."""
         for plugin in self.plugin_handler.loaded_plugins:
-            plugin.instantiate_docks(self)
-            for tool_name, dock_instance in plugin.docks.items():
-                self.dock_widgets.update({tool_name: dock_instance})
+            plugin.instantiate_dock(self)
+            self.dock_widgets.update({ plugin.dock.tool_name: plugin.dock })
 
     def set_dock_signals(self, dock, do_connect):
         if do_connect:
@@ -34,12 +33,9 @@ class DockHandler(QWidget):
         dock = self.dock_widgets.get(tool_name)
         if not dock:
             return
-        if (dock.is_enabled and is_enabled) or (not dock.is_enabled and not is_enabled):
-            return
 
-        self.set_dock_signals(tool_name, is_enabled)
+        self.set_dock_signals(dock, is_enabled)
         dock.is_enabled = is_enabled
-        dock.setVisible(is_enabled)
 
     def bring_to_front(self, dock):
         """Activate a dock by ensuring it is visible and raising it."""

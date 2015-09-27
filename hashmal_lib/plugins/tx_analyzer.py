@@ -11,17 +11,17 @@ from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction
 
 def make_plugin():
-    return Plugin([TxAnalyzer])
+    return Plugin(TxAnalyzer)
 
 class TxAnalyzer(BaseDock):
+
+    tool_name = 'Transaction Analyzer'
+    description = 'Deserializes transactions and verifies their inputs.'
+    is_large = True
+
     def __init__(self, handler):
         super(TxAnalyzer, self).__init__(handler)
         self.raw_tx_edit.textChanged.emit()
-
-    def init_metadata(self):
-        self.tool_name = 'Transaction Analyzer'
-        self.description = 'Deserializes transactions and verifies their inputs.'
-        self.is_large = True
 
     def init_data(self):
         self.tx = None

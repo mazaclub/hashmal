@@ -8,5 +8,5 @@ See https://github.com/mazaclub/hashmal/wiki/Plugins[the wiki] for more informat
 A plugin is a module containing the function `make_plugin()`, which returns an instance of
 the class `Plugin` defined in `hashmal_lib.plugins.base`.
 
-A `Plugin` instance is initialized with a list of classes representing dock widgets.
+A `Plugin` instance is initialized with a class representing a dock widget.
 This is subject to change.

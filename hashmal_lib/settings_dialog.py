@@ -69,6 +69,9 @@ class SettingsDialog(QDialog):
         self.qt_settings.endGroup()
 
     def refresh_layout_combobox(self):
+        # Skip if things aren't set up yet.
+        if not getattr(self, 'layout_combo', None):
+            return
         self.load_layout_names()
         self.layout_combo.clear()
         self.layout_combo.addItems(self.layout_names)

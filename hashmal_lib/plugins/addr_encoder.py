@@ -8,19 +8,19 @@ from base import BaseDock, Plugin
 from hashmal_lib.gui_utils import monospace_font, Separator
 
 def make_plugin():
-    return Plugin([AddrEncoder])
+    return Plugin(AddrEncoder)
 
 class AddrEncoder(BaseDock):
+
+    tool_name = 'Address Encoder'
+    description = '\n'.join([
+            'Address Encoder encodes/decodes addresses with version bytes (blockchain identifiers).',
+            'Addresses are decoded into their 20-byte RIPEMD-160 hashes.'
+    ])
+
     def __init__(self, handler):
         super(AddrEncoder, self).__init__(handler)
         self.widget().setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-
-    def init_metadata(self):
-        self.tool_name = 'Address Encoder'
-        self.description = '\n'.join([
-                'Address Encoder encodes/decodes addresses with version bytes (blockchain identifiers).',
-                'Addresses are decoded into their 20-byte RIPEMD-160 hashes.'
-        ])
 
     def init_data(self):
         pass

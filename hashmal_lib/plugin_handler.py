@@ -1,9 +1,13 @@
 from pkg_resources import iter_entry_points
+import sys
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from dock_handler import DockHandler
+
+required_plugins = ['Stack Evaluator', 'Variables']
+"""These plugins are needed and cannot be disabled."""
 
 class PluginHandler(QWidget):
     """Handles loading/unloading plugins."""
@@ -30,13 +34,17 @@ class PluginHandler(QWidget):
 
             self.loaded_plugins.append(plugin_instance)
 
+        for req in required_plugins:
+            if req not in [i.name for i in self.loaded_plugins]:
+                print('Required plugin "{}" not found.\nTry running setup.py.'.format(req))
+                sys.exit(1)
+
     def setup_docks(self):
         """Enable or disable plugin docks according to config file."""
         disabled_plugins = self.config.get_option('disabled_plugins', [])
         for plugin in self.loaded_plugins:
             is_enabled = plugin.name not in disabled_plugins
-            for tool_name in plugin.docks.keys():
-                self.dock_handler.set_dock_enabled(tool_name, is_enabled)
+            self.dock_handler.set_dock_enabled(plugin.dock.tool_name, is_enabled)
 
     def create_dock_handler(self):
         """Create and return the Dock Handler."""
@@ -52,8 +60,11 @@ class PluginHandler(QWidget):
         if plugin is None:
             return
 
-        for tool_name, dock in plugin.docks.items():
-            self.dock_handler.set_dock_enabled(tool_name, is_enabled)
+        # Do not disable required plugins.
+        if not is_enabled and plugin_name in required_plugins:
+            return
+
+        self.dock_handler.set_dock_enabled(plugin.tool_name, is_enabled)
 
     def on_option_changed(self, key):
         if key == 'disabled_plugins':

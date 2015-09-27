@@ -11,23 +11,22 @@ from hashmal_lib.gui_utils import monospace_font, floated_buttons
 from base import BaseDock, Plugin
 
 def make_plugin():
-    return Plugin([StackEval])
+    return Plugin(StackEval)
 
 class StackEval(BaseDock):
+
+    tool_name = 'Stack Evaluator'
+    description = '\n'.join([
+            'Stack Evaluator steps through scripts, showing you what\'s happening as it happens.',
+            '<b>Please read this warning from the source of python-bitcoinlib, which Stack Evaluator uses to evaluate scripts:</b>',
+            '"Be warned that there are highly likely to be consensus bugs in this code; it is unlikely to match Satoshi Bitcoin exactly. Think carefully before using this module."'
+    ])
+    is_large = True
 
     def __init__(self, handler):
         super(StackEval, self).__init__(handler)
         self.widget().setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         self.has_spending_tx.setChecked(False)
-
-    def init_metadata(self):
-        self.tool_name = 'Stack Evaluator'
-        self.description = '\n'.join([
-                'Stack Evaluator steps through scripts, showing you what\'s happening as it happens.',
-                '<b>Please read this warning from the source of python-bitcoinlib, which Stack Evaluator uses to evaluate scripts:</b>',
-                '"Be warned that there are highly likely to be consensus bugs in this code; it is unlikely to match Satoshi Bitcoin exactly. Think carefully before using this module."'
-        ])
-        self.is_large = True
 
     def init_data(self):
         self.stack = Stack()

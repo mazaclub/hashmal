@@ -9,7 +9,7 @@ from hashmal_lib.core import Transaction
 from hashmal_lib.gui_utils import floated_buttons, HBox
 
 def make_plugin():
-    return Plugin([Variables])
+    return Plugin(Variables)
 
 class VarsModel(QtCore.QAbstractTableModel):
     """Model for stored variables."""
@@ -97,13 +97,13 @@ class VarsModel(QtCore.QAbstractTableModel):
         self.endRemoveRows()
 
 class Variables(BaseDock):
+
+    tool_name = 'Variables'
+    description = 'Variables records data for later access.'
+
     def __init__(self, handler):
         super(Variables, self).__init__(handler)
         self.needsUpdate.emit()
-
-    def init_metadata(self):
-        self.tool_name = 'Variables'
-        self.description = 'Variables records data for later access.'
 
     def init_data(self):
         data = self.config.get_option('variables', {})

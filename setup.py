@@ -1,4 +1,5 @@
 from setuptools import setup
+from hashmal_lib.gui_utils import hashmal_entry_points
 
 with open('requirements.txt') as f:
     requirements = f.readlines()
@@ -10,7 +11,7 @@ setup(
     version = '0.1.0a',
     description='Bitcoin transaction script IDE.',
     url='https://github.com/mazaclub/hashmal',
-    install_requires=requirements,
+    install_requires = requirements,
     author='Tyler Willis, mazaclub',
     author_email='kefkius@maza.club',
     keywords=[
@@ -29,15 +30,5 @@ setup(
         'hashmal_lib.core',
         'hashmal_lib.plugins'
     ],
-    entry_points={
-        'hashmal.plugin': [
-            'Address Encoder = hashmal_lib.plugins.addr_encoder:make_plugin',
-            'Blockchain = hashmal_lib.plugins.blockchain:make_plugin',
-            'Script Generator = hashmal_lib.plugins.script_gen:make_plugin',
-            'Stack Evaluator = hashmal_lib.plugins.stack:make_plugin',
-            'Tx Analyzer = hashmal_lib.plugins.tx_analyzer:make_plugin',
-            'Tx Builder = hashmal_lib.plugins.tx_builder:make_plugin',
-            'Variables = hashmal_lib.plugins.variables:make_plugin'
-        ]
-    }
+    entry_points = hashmal_entry_points
 )

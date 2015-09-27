@@ -109,6 +109,21 @@ class AmountEdit(QLineEdit):
         finally:
             self.style().polish(self)
 
+hashmal_entry_points = {
+    'hashmal.plugin': [
+        'Address Encoder = hashmal_lib.plugins.addr_encoder:make_plugin',
+        'Blockchain = hashmal_lib.plugins.blockchain:make_plugin',
+        'Script Generator = hashmal_lib.plugins.script_gen:make_plugin',
+        'Stack Evaluator = hashmal_lib.plugins.stack:make_plugin',
+        'Transaction Analyzer = hashmal_lib.plugins.tx_analyzer:make_plugin',
+        'Transaction Builder = hashmal_lib.plugins.tx_builder:make_plugin',
+        'Variables = hashmal_lib.plugins.variables:make_plugin'
+    ]
+}
+
+
+
+
 hashmal_style = '''
 
 QStatusBar[hasError=true], QLineEdit[hasError=true],

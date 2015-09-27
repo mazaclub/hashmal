@@ -10,8 +10,9 @@ from config import Config
 from plugin_handler import PluginHandler
 from settings_dialog import SettingsDialog, ChainparamsComboBox
 from scriptedit import MyScriptEdit
-from help_widgets import QuickTips, ToolInfo
+from help_widgets import QuickTips
 from gui_utils import script_file_filter, hashmal_style, floated_buttons, monospace_font
+from plugin_manager import PluginManager
 
 known_script_formats = ['Human', 'Hex']
 
@@ -88,14 +89,13 @@ class HashmalMain(QMainWindow):
         # Settings and tool toggling
         tools_menu = menubar.addMenu('&Tools')
         tools_menu.addAction('&Settings', lambda: SettingsDialog(self).exec_())
+        tools_menu.addAction('&Plugin Manager', lambda: PluginManager(self).exec_())
         tools_menu.addSeparator()
         for i, name in enumerate(sorted(self.dock_handler.dock_widgets)):
             tools_menu.addAction(self.dock_handler.dock_widgets[name].toggleViewAction())
-            self.dock_handler.dock_widgets[name].toggleViewAction().setShortcut('Alt+'+str(i))
 
         help_menu = menubar.addMenu('&Help')
         help_menu.addAction('&About', self.do_about)
-        help_menu.addAction('&Tool Info', lambda: ToolInfo(self).exec_())
         help_menu.addAction('&Quick Tips', self.do_quick_tips)
 
         self.setMenuBar(menubar)

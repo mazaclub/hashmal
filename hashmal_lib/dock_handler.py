@@ -13,6 +13,7 @@ class DockHandler(QWidget):
         self.gui = main_window
         self.plugin_handler = plugin_handler
         self.dock_widgets = {}
+        self.gui.config.optionChanged.connect(self.on_option_changed)
 
     def create_docks(self):
         """Instantiate dock widgets from plugins."""
@@ -36,6 +37,15 @@ class DockHandler(QWidget):
 
         self.set_dock_signals(dock, is_enabled)
         dock.is_enabled = is_enabled
+        self.assign_dock_shortcuts()
+
+    def assign_dock_shortcuts(self):
+        fav_tools = self.gui.config.get_option('favorite_tools', [])
+        for tool_name, dock in self.dock_widgets.items():
+            # Keyboard shortcut
+            shortcut = 'Alt+' + str(1 + fav_tools.index(tool_name)) if tool_name in fav_tools else ''
+            dock.toggleViewAction().setShortcut(shortcut)
+            dock.toggleViewAction().setEnabled(dock.is_enabled)
 
     def bring_to_front(self, dock):
         """Activate a dock by ensuring it is visible and raising it."""
@@ -110,3 +120,6 @@ class DockHandler(QWidget):
         self.dock_widgets['Variables'].setVisible(True)
         self.dock_widgets['Stack Evaluator'].setVisible(True)
 
+    def on_option_changed(self, key):
+        if self.dock_widgets and key == 'favorite_tools':
+            self.assign_dock_shortcuts()

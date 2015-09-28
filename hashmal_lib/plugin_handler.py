@@ -76,11 +76,11 @@ class PluginHandler(QWidget):
 
     def assign_dock_shortcuts(self):
         """Assign shortcuts to visibility-toggling actions."""
-        fav_tools = self.gui.config.get_option('favorite_tools', [])
+        favorites = self.gui.config.get_option('favorite_plugins', [])
         for plugin in self.loaded_plugins:
             dock = plugin.dock
             # Keyboard shortcut
-            shortcut = 'Alt+' + str(1 + fav_tools.index(plugin.name)) if plugin.name in fav_tools else ''
+            shortcut = 'Alt+' + str(1 + favorites.index(plugin.name)) if plugin.name in favorites else ''
             dock.toggleViewAction().setShortcut(shortcut)
             dock.toggleViewAction().setEnabled(dock.is_enabled)
 
@@ -166,6 +166,6 @@ class PluginHandler(QWidget):
     def on_option_changed(self, key):
         if key == 'disabled_plugins':
             self.update_enabled_plugins()
-        elif self.loaded_plugins and key == 'favorite_tools':
+        elif self.loaded_plugins and key == 'favorite_plugins':
             self.assign_dock_shortcuts()
 

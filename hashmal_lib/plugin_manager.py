@@ -72,66 +72,62 @@ class PluginsModel(QAbstractTableModel):
         if key == 'disabled_plugins':
             self.disabled_plugins = self.config.get_option('disabled_plugins', [])
 
-class ToolWidget(QWidget):
-    """Widget with details and controls for a tool."""
+class PluginDetails(QWidget):
+    """Widget with details and controls for a plugin."""
 
-    def __init__(self, manager, dock=None, parent=None):
-        super(ToolWidget, self).__init__(parent)
+    def __init__(self, manager, parent=None):
+        super(PluginDetails, self).__init__(parent)
         self.manager = manager
-        # Changing tool_is_favorite only does something if this is True.
+        # Changing plugin_is_favorite only updates shortcuts if this is True.
         self.is_ready = False
 
-        self.tool_name_edit = QLineEdit()
-        self.tool_desc_edit = QTextEdit()
-        self.tool_name_edit.setToolTip('Window title of the plugin\'s tool')
-        self.tool_desc_edit.setToolTip('Tool description')
-        for i in [self.tool_name_edit, self.tool_desc_edit]:
-            i.setReadOnly(True)
-        self.tool_is_favorite = QCheckBox('Favorite tool')
-        self.tool_is_favorite.setToolTip('Favorite tools are assigned keyboard shortcuts in the Tools menu')
-        self.tool_is_favorite.stateChanged.connect(self.set_favorite)
+        self.name_label = QLabel()
+        self.desc_edit = QTextEdit()
+        self.name_label.setToolTip('Plugin name')
+        self.desc_edit.setToolTip('Plugin description')
+        self.desc_edit.setReadOnly(True)
+        self.plugin_is_favorite = QCheckBox('Favorite plugin')
+        self.plugin_is_favorite.setToolTip('Favorite plugins are assigned keyboard shortcuts in the Tools menu')
+        self.plugin_is_favorite.stateChanged.connect(self.set_favorite)
 
         form = QFormLayout()
         form.setContentsMargins(0,6,0,0)
-        form.addRow('Tool Name:', self.tool_name_edit)
-        form.addRow(self.tool_is_favorite)
-        form.addRow(self.tool_desc_edit)
+        form.addRow('Plugin Name:', self.name_label)
+        form.addRow(self.plugin_is_favorite)
+        form.addRow(self.desc_edit)
         self.setLayout(form)
 
-        if dock is not None:
-            self.set_tool(dock)
-
-    def set_tool(self, dock):
+    def set_plugin(self, plugin):
         self.is_ready = False
-        self.tool_name_edit.setText(dock.tool_name)
+        self.name_label.setText(plugin.name)
         desc = []
-        for i in dock.description.split('\n'):
+        for i in plugin.dock.description.split('\n'):
             desc.append('<p>{}</p>'.format(i))
-        self.tool_desc_edit.setHtml(''.join(desc))
+        self.desc_edit.setHtml(''.join(desc))
 
-        is_in_favorites = dock.tool_name in self.manager.config.get_option('favorite_tools', [])
-        self.tool_is_favorite.setChecked(is_in_favorites)
+        is_in_favorites = plugin.name in self.manager.config.get_option('favorite_plugins', [])
+        self.plugin_is_favorite.setChecked(is_in_favorites)
         self.is_ready = True
 
     def set_favorite(self, is_checked):
         if not self.is_ready:
             return
         is_checked = True if is_checked else False
-        fav_tools = self.manager.config.get_option('favorite_tools', [])
-        tool_name = str(self.tool_name_edit.text())
-        in_favorites = tool_name in fav_tools
+        favorites = self.manager.config.get_option('favorite_plugins', [])
+        name = str(self.name_label.text())
+        in_favorites = name in favorites
 
         # No need to do anything.
         if (is_checked and in_favorites) or (not is_checked and not in_favorites):
             return
         # Add to favorites.
         elif is_checked and not in_favorites:
-            fav_tools.append(tool_name)
+            favorites.append(name)
         # Remove from favorites.
         elif not is_checked and in_favorites:
-            fav_tools.remove(tool_name)
+            favorites.remove(name)
 
-        self.manager.config.set_option('favorite_tools', fav_tools)
+        self.manager.config.set_option('favorite_plugins', favorites)
 
 class PluginManager(QDialog):
     def __init__(self, main_window):
@@ -172,25 +168,14 @@ class PluginManager(QDialog):
         self.view.selectRow(0)
 
     def create_details_area(self):
-        self.details_plugin_name = QLabel()
-
-        self.tool_widget = ToolWidget(self)
-
-        form = QFormLayout()
-        form.addRow('Plugin:', self.details_plugin_name)
-        form.addRow(self.tool_widget)
-
-        w = QWidget()
-        w.setLayout(form)
-
-        return w
+        self.plugin_details = PluginDetails(self)
+        return self.plugin_details
 
     def update_details_area(self, selected, deselected):
         """Update the plugin details area."""
         index = selected.indexes()[0]
         plugin = self.model.plugin_for_index(index)
-        if str(self.details_plugin_name.text()) == plugin.name:
+        if str(self.plugin_details.name_label.text()) == plugin.name:
             return
-        self.details_plugin_name.setText(plugin.name)
-        self.tool_widget.set_tool(plugin.dock)
+        self.plugin_details.set_plugin(plugin)
 

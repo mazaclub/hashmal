@@ -33,14 +33,11 @@ class HashmalMain(QMainWindow):
         active_params = self.config.get_option('chainparams', 'Bitcoin')
         chainparams.set_to_preset(active_params)
 
-        # Plugin Handler loads plugins.
+        self.setDockNestingEnabled(True)
+        # Plugin Handler loads plugins and handles their dock widgets.
         self.plugin_handler = PluginHandler(self)
         self.plugin_handler.load_plugins()
-
-        self.setDockNestingEnabled(True)
-        # Plugin Handler also creates the dock widget handler.
-        self.dock_handler = self.plugin_handler.create_dock_handler()
-        self.dock_handler.do_default_layout()
+        self.plugin_handler.do_default_layout()
 
         # Filename of script being edited.
         self.filename = ''
@@ -83,7 +80,7 @@ class HashmalMain(QMainWindow):
 
         # Script actions
         script_menu = menubar.addMenu('&Script')
-        script_menu.addAction('&Evaluate', self.dock_handler.evaluate_current_script)
+        script_menu.addAction('&Evaluate', self.plugin_handler.evaluate_current_script)
         script_menu.addAction('&Copy Hex', self.script_editor.copy_hex)
 
         # Settings and tool toggling
@@ -91,8 +88,8 @@ class HashmalMain(QMainWindow):
         tools_menu.addAction('&Settings', lambda: SettingsDialog(self).exec_())
         tools_menu.addAction('&Plugin Manager', lambda: PluginManager(self).exec_())
         tools_menu.addSeparator()
-        for i, name in enumerate(sorted(self.dock_handler.dock_widgets)):
-            tools_menu.addAction(self.dock_handler.dock_widgets[name].toggleViewAction())
+        for i, plugin in enumerate(sorted(self.plugin_handler.loaded_plugins, key = lambda i: i.name)):
+            tools_menu.addAction(plugin.dock.toggleViewAction())
 
         help_menu = menubar.addMenu('&Help')
         help_menu.addAction('&About', self.do_about)

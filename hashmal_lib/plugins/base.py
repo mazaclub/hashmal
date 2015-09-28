@@ -37,8 +37,8 @@ class Plugin(object):
         # name is set when the entry point is loaded.
         self.name = ''
 
-    def instantiate_dock(self, dock_handler):
-        instance = self.dock_class(dock_handler)
+    def instantiate_dock(self, plugin_handler):
+        instance = self.dock_class(plugin_handler)
         self.dock = instance
 
 

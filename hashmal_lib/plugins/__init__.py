@@ -1,4 +1,5 @@
 import base
+from base import augmenter
 from base import BaseDock
 from base import Plugin
 

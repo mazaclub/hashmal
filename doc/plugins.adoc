@@ -10,3 +10,11 @@ the class `Plugin` defined in `hashmal_lib.plugins.base`.
 
 A `Plugin` instance is initialized with a class representing a dock widget.
 This is subject to change.
+
+== Augmenters
+
+Augmenters are a way for plugins to enhance other plugins. Effectively, meta-plugins.
+The decorator `@augmenter` defined in `hashmal_lib.plugins.base` is used to mark a
+dock's method as being an augmenter. When a dock is doing something that can be augmented,
+it will call the base class method `augment()` with arguments specifying what can be augmented.
+The Dock Handler will then iterate through docks, looking for relevant augmenters and calling them.

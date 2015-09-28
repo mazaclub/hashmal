@@ -1,7 +1,29 @@
+from functools import wraps
+
 from PyQt4.QtGui import QDockWidget, QWidget, QVBoxLayout
 from PyQt4 import QtCore
 
 from hashmal_lib import config
+
+def augmenter(func):
+    """Decorator for augmenters.
+
+    Augmenters allow plugins to augment one another.
+    """
+    cls = func.__class__
+    func_name = func.__name__
+
+    # Initialize augmenters class attribute.
+    if cls.augmenters is None:
+        cls.augmenters = []
+
+    cls.augmenters.append(func_name)
+
+    @wraps(func)
+    def func_wrapper(*args):
+        return func(*args)
+    return func_wrapper
+
 
 class Plugin(object):
     """A plugin.
@@ -31,6 +53,9 @@ class BaseDock(QDockWidget):
     # If True, dock will be placed on the bottom by default.
     # Otherwise, dock will be placed on the right.
     is_large = False
+
+    # List of method names
+    augmenters = None
 
     def __init__(self, handler):
         super(BaseDock, self).__init__('', handler)
@@ -110,3 +135,10 @@ class BaseDock(QDockWidget):
         """
         msg = ''.join([ '[%s] --> %s' % (self.tool_name, msg) ])
         self.statusMessage.emit(msg, error)
+
+    def augment(self, target, *args):
+        """Ask other plugins if they have anything to contribute.
+
+        Allows plugins to enhance other plugins.
+        """
+        return self.handler.do_augment_hook(self.__class__.__name__, hook_name, *args)

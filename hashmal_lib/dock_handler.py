@@ -81,6 +81,19 @@ class DockHandler(QWidget):
                 for action_name, action_receiver in dock_actions:
                     dock_menu.addAction(action_name, partial(action_receiver, data))
 
+    def do_augment_hook(self, class_name, hook_name, *args):
+        for dock in self.dock_widgets.values():
+            if class_name == dock.__class__.__name__:
+                continue
+            cls = dock.__class__
+            if cls.augmenters is None:
+                cls.augmenters = []
+            if hook_name in cls.augmenters:
+                # Call the augmenter method.
+                method_name = cls.augmenters.index(hook_name)
+                func = getattr(dock, method_name)
+                return func(*args)
+
     def get_dock(self, dock_name, raise_if_none=False):
         dock = self.dock_widgets.get(dock_name)
         if dock and not dock.is_enabled:

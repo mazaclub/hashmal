@@ -1,8 +1,11 @@
+import chainparams
 import my_config
-import utils
 import script
 import stack
 import transaction
-import chainparams
+import utils
 
+from script import Script
+from stack import Stack
 from transaction import Transaction
+

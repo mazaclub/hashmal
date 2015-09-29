@@ -122,6 +122,8 @@ hashmal_entry_points = {
 }
 
 
+required_plugins = ['Stack Evaluator', 'Variables']
+"""These plugins are needed and cannot be disabled."""
 
 
 hashmal_style = '''

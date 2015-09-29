@@ -1,5 +1,6 @@
 import os
 import json
+from copy import deepcopy
 
 class Config(object):
     """Configuration state."""
@@ -37,7 +38,8 @@ class Config(object):
     def get_option(self, key, default=None):
         value = self.options.get(key, default)
         if isinstance(value, unicode): value = str(value)
-        return value
+        # Return a copy
+        return deepcopy(value)
 
     def set_option(self, key, value, do_save=True):
         self.options[key] = value

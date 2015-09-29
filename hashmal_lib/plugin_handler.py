@@ -5,12 +5,10 @@ import sys
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-
-required_plugins = ['Stack Evaluator', 'Variables']
-"""These plugins are needed and cannot be disabled."""
+from gui_utils import required_plugins
 
 class PluginHandler(QWidget):
-    """Handles loading/unloading plugins."""
+    """Handles loading/unloading plugins and managing their dock widgets."""
     def __init__(self, main_window):
         super(PluginHandler, self).__init__(main_window)
         self.gui = main_window
@@ -57,6 +55,8 @@ class PluginHandler(QWidget):
         dock = plugin.dock
         self.set_dock_signals(dock, is_enabled)
         dock.is_enabled = is_enabled
+        if not is_enabled:
+            dock.setVisible(False)
         self.assign_dock_shortcuts()
 
     def bring_to_front(self, dock):
@@ -71,8 +71,11 @@ class PluginHandler(QWidget):
             dock.needsFocus.connect(partial(self.bring_to_front, dock))
             dock.statusMessage.connect(self.gui.show_status_message)
         else:
-            dock.needsFocus.disconnect()
-            dock.statusMessage.disconnect()
+            try:
+                dock.needsFocus.disconnect()
+                dock.statusMessage.disconnect()
+            except TypeError:
+                pass
 
     def assign_dock_shortcuts(self):
         """Assign shortcuts to visibility-toggling actions."""

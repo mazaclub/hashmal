@@ -5,19 +5,16 @@ from PyQt4 import QtCore
 
 from hashmal_lib import config
 
+known_augmenters = []
+
 def augmenter(func):
     """Decorator for augmenters.
 
     Augmenters allow plugins to augment one another.
     """
-    cls = func.__class__
     func_name = func.__name__
-
-    # Initialize augmenters class attribute.
-    if cls.augmenters is None:
-        cls.augmenters = []
-
-    cls.augmenters.append(func_name)
+    if func_name not in known_augmenters:
+        known_augmenters.append(func_name)
 
     @wraps(func)
     def func_wrapper(*args):
@@ -54,9 +51,6 @@ class BaseDock(QDockWidget):
     # Otherwise, dock will be placed on the right.
     is_large = False
 
-    # List of method names
-    augmenters = None
-
     def __init__(self, handler):
         super(BaseDock, self).__init__('', handler)
         self.handler = handler
@@ -79,6 +73,11 @@ class BaseDock(QDockWidget):
         self.setObjectName(self.tool_name)
         self.setWindowTitle(self.tool_name)
         self.setWhatsThis(self.description)
+
+        self.augmenters = []
+        for name in dir(self):
+            if name in known_augmenters:
+                self.augmenters.append(name)
 
     def init_data(self):
         """Initialize attributes such as data containers."""
@@ -136,9 +135,9 @@ class BaseDock(QDockWidget):
         msg = ''.join([ '[%s] --> %s' % (self.tool_name, msg) ])
         self.statusMessage.emit(msg, error)
 
-    def augment(self, target, *args):
+    def augment(self, target, data, callback=None):
         """Ask other plugins if they have anything to contribute.
 
         Allows plugins to enhance other plugins.
         """
-        return self.handler.do_augment_hook(self.__class__.__name__, hook_name, *args)
+        return self.handler.do_augment_hook(self.__class__.__name__, target, data, callback)

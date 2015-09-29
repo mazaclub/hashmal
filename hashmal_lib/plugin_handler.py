@@ -15,6 +15,10 @@ class PluginHandler(QWidget):
         self.config = main_window.config
         self.loaded_plugins = []
         self.config.optionChanged.connect(self.on_option_changed)
+        # Whether the initial plugin loading is done.
+        self.plugins_loaded = False
+        # Augmentations waiting until all plugins load.
+        self.waiting_augmentations = []
 
     def get_plugin(self, plugin_name):
         for plugin in self.loaded_plugins:
@@ -41,6 +45,9 @@ class PluginHandler(QWidget):
                 sys.exit(1)
 
         self.update_enabled_plugins()
+        self.plugins_loaded = True
+        for i in self.waiting_augmentations:
+            self.do_augment_hook(*i)
 
     def set_plugin_enabled(self, plugin_name, is_enabled):
         """Enable or disable a plugin and its dock."""
@@ -115,20 +122,23 @@ class PluginHandler(QWidget):
                 for action_name, action_receiver in dock_actions:
                     dock_menu.addAction(action_name, partial(action_receiver, data))
 
-    def do_augment_hook(self, class_name, hook_name, *args):
+    def do_augment_hook(self, class_name, hook_name, data, callback=None):
         """Consult plugins that can augment hook_name."""
+        if not self.plugins_loaded:
+            augmentation = (class_name, hook_name, data, callback)
+            if not augmentation in self.waiting_augmentations:
+                self.waiting_augmentations.append(augmentation)
+            return
         for plugin in self.loaded_plugins:
             dock = plugin.dock
             if class_name == dock.__class__.__name__:
                 continue
-            cls = dock.__class__
-            if cls.augmenters is None:
-                cls.augmenters = []
-            if hook_name in cls.augmenters:
+            if hook_name in dock.augmenters:
                 # Call the augmenter method.
-                method_name = cls.augmenters.index(hook_name)
-                func = getattr(dock, method_name)
-                return func(*args)
+                func = getattr(dock, hook_name)
+                data = func(data)
+                if callback:
+                    callback(data)
 
     def evaluate_current_script(self):
         """Evaluate the script being edited with the Stack Evaluator tool."""

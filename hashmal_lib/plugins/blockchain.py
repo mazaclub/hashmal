@@ -2,7 +2,7 @@ from collections import namedtuple, OrderedDict
 import requests
 
 from PyQt4.QtGui import *
-from PyQt4 import QtCore
+from PyQt4.QtCore import *
 
 from hashmal_lib.gui_utils import floated_buttons
 from base import BaseDock, Plugin
@@ -10,36 +10,20 @@ from base import BaseDock, Plugin
 def make_plugin():
     return Plugin(Blockchain)
 
-ApiType = namedtuple('ApiType', ('name', 'default_domain', 'rawtx_route', 'rawtx_parse'))
-"""Structure of a blockchain API."""
+class BlockExplorer(object):
+    """Blockchain API base class."""
+    name = ''
+    domain = ''
+    raw_tx_route = None
 
-insight_api = ApiType('insight', 'https://insight.bitpay.com', '/api/rawtx/', lambda d: d.get('rawtx'))
-known_api_types = [insight_api]
+    parse_raw_tx_lambda = None
+    """If parse_raw_tx_lambda is not None, it will be used
+    instead of parse_raw_tx().
+    """
 
-class Downloader(QtCore.QObject):
-    start = QtCore.pyqtSignal()
-    finished = QtCore.pyqtSignal(str, str, str, name='finished')
-    def __init__(self, api, txid):
-        super(Downloader, self).__init__()
-        self.api = api
-        self.txid = txid
-        self.start.connect(self.download)
-
-    @QtCore.pyqtSlot()
-    def download(self):
-        raw_tx = ''
-        error = ''
-        try:
-            raw_tx = self.api.get_raw_tx(self.txid)
-        except Exception as e:
-            error = '{}: {}'.format(str(e.__class__.__name__), str(e))
-        self.finished.emit(self.txid, raw_tx, error)
-
-class BApi(object):
-    """Blockchain API."""
-    def __init__(self, api_type, domain=''):
-        self.api_type = api_type
-        self.domain = domain
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def request(self, url):
         r = requests.get(url)
@@ -49,14 +33,53 @@ class BApi(object):
     def get_raw_tx(self, txid):
         """Download a raw transaction."""
         s = [self.domain]
-        s.append(self.api_type.rawtx_route)
+        s.append(self.raw_tx_route)
         s.append(txid)
         s = ''.join(s)
-        d = self.request(s)
-        return self.api_type.rawtx_parse(d)
+        res = self.request(s)
+        # If present, use the lambda.
+        if self.parse_raw_tx_lambda is not None:
+            return self.parse_raw_tx_lambda(res)
+        return self.parse_raw_tx(res)
 
-    def api_name(self):
-        return self.api_type.name
+    def parse_raw_tx(self, res):
+        """Abstract method.
+
+        This does not need to be implemented in a subclass if the
+        'parse_raw_tx_lambda' argument is passed to their constructor.
+
+        Args:
+            res: Response from raw_tx_route request.
+
+        Returns:
+            Hex-encoded raw transaction.
+        """
+        pass
+
+insight_explorer = BlockExplorer(name='insight',domain='https://insight.bitpay.com',
+                raw_tx_route='/api/rawtx/', parse_raw_tx_lambda = lambda d: d.get('rawtx'))
+
+known_explorers = {'Bitcoin': [insight_explorer]}
+
+class Downloader(QObject):
+    """Asynchronous downloading via QThreads."""
+    start = pyqtSignal()
+    finished = pyqtSignal(str, str, str, name='finished')
+    def __init__(self, explorer, txid):
+        super(Downloader, self).__init__()
+        self.explorer = explorer
+        self.txid = txid
+        self.start.connect(self.download)
+
+    @pyqtSlot()
+    def download(self):
+        raw_tx = ''
+        error = ''
+        try:
+            raw_tx = self.explorer.get_raw_tx(self.txid)
+        except Exception as e:
+            error = '{}: {}'.format(str(e.__class__.__name__), str(e))
+        self.finished.emit(self.txid, raw_tx, error)
 
 class Blockchain(BaseDock):
 
@@ -64,77 +87,68 @@ class Blockchain(BaseDock):
     description = 'Blockchain allows you to download data from block explorers.'
     is_large = True
 
+    def __init__(self, handler):
+        super(Blockchain, self).__init__(handler)
+        self.augment('block_explorers', {'known_explorers': self.known_explorers}, callback=self.on_explorers_augmented)
+
     def init_data(self):
-        config_apis = self.config.get_option('blockchain_apis', {})
-        if not config_apis:
-            config_apis['insight'] = 'https://insight.bitpay.com'
-        self.config.set_option('blockchain_apis', config_apis)
-
-        config_api_type = self.config.get_option('blockchain_api', 'insight')
-        for i in known_api_types:
-            if i.name == config_api_type:
-                api_type = i
-
-        domain = config_apis.get(config_api_type, api_type.default_domain)
-        self.api = BApi(api_type, domain)
+        self.known_explorers = OrderedDict(known_explorers)
+        config_explorer = self.config.get_option('block_explorer', 'Bitcoin:insight')
+        chain, explorer_name = config_explorer.split(':')
+        explorer = (dict((i.name, i) for i in self.known_explorers.get(chain, []))).get(explorer_name)
+        if not explorer:
+            chain = 'Bitcoin'
+            explorer = self.known_explorers['Bitcoin'][0]
+        self.chain = chain
+        self.explorer = explorer
         # Cache of recently downloaded txs
         self.recent_transactions = OrderedDict()
-
 
     def create_layout(self):
         """Two tabs:
 
         Download: Interface for actually downloading data.
-        API Settings: Settings for where to get data.
+        Block Explorer: Settings for where to get data.
         """
         vbox = QVBoxLayout()
 
         tabs = QTabWidget()
         tabs.addTab(self.create_download_tab(), 'Download')
-        tabs.addTab(self.create_api_tab(), 'API Settings')
+        tabs.addTab(self.create_explorer_tab(), 'Block Explorer')
         tabs.addTab(self.create_options_tab(), 'Settings')
 
         vbox.addWidget(tabs)
         return vbox
 
-    def create_api_tab(self):
+    def create_explorer_tab(self):
         form = QFormLayout()
 
-        config_apis = self.config.get_option('blockchain_apis')
-        config_domain = config_apis.get(self.api.api_name(), self.api.api_type.default_domain)
+        set_default_button = QPushButton('Save as default')
+        set_default_button.setToolTip('Save this block explorer as default')
 
-        api_domain_edit = QLineEdit()
-        api_domain_edit.setText(config_domain)
-        reset_domain_button = QPushButton('Reset to Default')
-        reset_domain_button.setToolTip('Reset domain to the API\'s default')
-        save_domain_button = QPushButton('Save Domain')
-        save_domain_button.setToolTip('Save domain to use with this API')
+        def set_default():
+            chain = str(chain_combo.currentText())
+            txt = str(explorer_combo.currentText())
+            self.config.set_option('block_explorer', ':'.join([chain, txt]))
+        set_default_button.clicked.connect(set_default)
 
-        api_type_combo = QComboBox()
-        api_type_combo.addItems([i.name for i in known_api_types])
 
-        def change_api_type(idx):
-            new_api = known_api_types[idx]
-            self.set_api_type(new_api)
-            api_domain_edit.setText(self.api.domain)
-        api_type_combo.currentIndexChanged.connect(change_api_type)
+        self.chain_combo = chain_combo = QComboBox()
+        chain_combo.addItems(self.known_explorers.keys())
+        chain_combo.setCurrentIndex(self.known_explorers.keys().index(self.chain))
 
-        def change_api_domain():
-            txt = str(api_domain_edit.text())
-            if not txt: return
-            self.set_api_domain(txt)
+        chain_combo.currentIndexChanged.connect(self.on_chain_combo_changed)
 
-        def reset_api_domain():
-            default = self.api.api_type.default_domain
-            api_domain_edit.setText(default)
-            change_api_domain()
+        self.explorer_combo = explorer_combo = QComboBox()
+        explorer_names_list = [i.name for i in self.known_explorers[self.chain]]
+        explorer_combo.addItems(explorer_names_list)
+        explorer_combo.setCurrentIndex(explorer_names_list.index(self.explorer.name))
 
-        reset_domain_button.clicked.connect(reset_api_domain)
-        save_domain_button.clicked.connect(change_api_domain)
+        explorer_combo.currentIndexChanged.connect(self.on_explorer_combo_changed)
 
-        form.addRow('API:', api_type_combo)
-        form.addRow('Domain:', api_domain_edit)
-        form.addRow(floated_buttons([reset_domain_button, save_domain_button]))
+        form.addRow('Chain:', chain_combo)
+        form.addRow('Explorer:', explorer_combo)
+        form.addRow(floated_buttons([set_default_button]))
 
         w = QWidget()
         w.setLayout(form)
@@ -168,10 +182,16 @@ class Blockchain(BaseDock):
         self.tx_id_edit = QLineEdit()
         self.raw_tx_edit = QTextEdit()
         self.raw_tx_edit.setReadOnly(True)
-        self.raw_tx_edit.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.raw_tx_edit.setContextMenuPolicy(Qt.CustomContextMenu)
         self.raw_tx_edit.customContextMenuRequested.connect(self.context_menu)
         self.download_button = QPushButton('Download')
         self.download_button.clicked.connect(self.do_download)
+        self.download_button.setEnabled(False)
+
+        def validate_txid(txt):
+            valid = len(str(txt)) == 64
+            self.download_button.setEnabled(valid)
+        self.tx_id_edit.textChanged.connect(validate_txid)
 
         form.addRow('Tx ID:', self.tx_id_edit)
         form.addRow(floated_buttons([self.download_button]))
@@ -196,8 +216,8 @@ class Blockchain(BaseDock):
             self.recent_transactions.popitem(False)
 
     def make_downloader(self, txid):
-        self.downloader_thread = QtCore.QThread()
-        self.downloader = Downloader(self.api, txid)
+        self.downloader_thread = QThread()
+        self.downloader = Downloader(self.explorer, txid)
         self.downloader.moveToThread(self.downloader_thread)
         self.downloader.finished.connect(self.downloader_thread.quit)
 
@@ -236,24 +256,53 @@ class Blockchain(BaseDock):
         if self.recent_transactions.get(txid):
             return self.recent_transactions.get(txid)
 
-        rawtx = self.api.get_raw_tx(txid)
+        rawtx = self.explorer.get_raw_tx(txid)
         if rawtx:
             self.update_cache(txid, rawtx)
         return rawtx
 
-    def set_api_type(self, api):
-        """Set the base API type and save."""
-        self.api.api_type = new_api
-        # save change
-        self.config.set_option('blockchain_api', self.api.api_name())
-        # update domain
-        domains = self.config.get_option('blockchain_apis', {})
-        self.api.domain = domains.get(self.api.api_name(), api.default_domain)
+    def on_explorer_combo_changed(self, idx):
+        new_explorer = self.known_explorers[self.chain][idx]
+        self.set_explorer(new_explorer)
 
-    def set_api_domain(self, domain):
-        """Set the domain for an API type and save."""
-        self.api.domain = domain
-        # save change
-        config_apis = self.config.get_option('blockchain_apis', {})
-        config_apis[self.api.api_name()] = domain
-        self.config.set_option('blockchain_apis', config_apis)
+    def set_explorer(self, new_explorer):
+        """Set the block explorer."""
+        self.explorer = new_explorer
+
+    def on_chain_combo_changed(self, idx):
+        new_chain = self.known_explorers.keys()[idx]
+        self.set_chain(new_chain)
+
+    def set_chain(self, new_chain):
+        """Set the current chain and update the explorer combo box."""
+        self.chain = new_chain
+        self.explorer_combo.currentIndexChanged.disconnect(self.on_explorer_combo_changed)
+        self.explorer_combo.clear()
+        explorer_names_list = [i.name for i in self.known_explorers[self.chain]]
+        self.explorer_combo.addItems(explorer_names_list)
+        self.explorer_combo.currentIndexChanged.connect(self.on_explorer_combo_changed)
+
+        index = 0
+        if self.explorer.name in explorer_names_list:
+            index = explorer_names_list.index(self.explorer.name)
+        self.explorer_combo.setCurrentIndex(index)
+        self.explorer_combo.currentIndexChanged.emit(index)
+
+    def on_explorers_augmented(self, arg):
+        """Update combo boxes after augmentation."""
+        config_explorer = self.config.get_option('block_explorer', 'Bitcoin:insight')
+        chain, explorer_name = config_explorer.split(':')
+
+        explorer = (dict((i.name, i) for i in self.known_explorers.get(chain, []))).get(explorer_name)
+        if not explorer:
+            chain = 'Bitcoin'
+            explorer = self.known_explorers['Bitcoin'][0]
+        self.chain = chain
+        self.explorer = explorer
+
+        self.chain_combo.currentIndexChanged.disconnect(self.on_chain_combo_changed)
+        self.chain_combo.clear()
+        self.chain_combo.addItems(self.known_explorers.keys())
+        self.chain_combo.setCurrentIndex(self.known_explorers.keys().index(self.chain))
+        self.chain_combo.currentIndexChanged.connect(self.on_chain_combo_changed)
+        self.set_chain(self.chain)

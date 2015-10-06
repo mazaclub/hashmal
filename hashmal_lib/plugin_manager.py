@@ -3,7 +3,7 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from gui_utils import Separator, required_plugins
+from gui_utils import Separator, required_plugins, default_plugins
 
 class PluginsModel(QAbstractTableModel):
     def __init__(self, gui, parent=None):
@@ -12,7 +12,7 @@ class PluginsModel(QAbstractTableModel):
         self.plugins = gui.plugin_handler.loaded_plugins
         self.config = gui.config
         self.config.optionChanged.connect(self.on_option_changed)
-        self.disabled_plugins = self.config.get_option('disabled_plugins', [])
+        self.enabled_plugins = self.config.get_option('enabled_plugins', default_plugins)
 
     def columnCount(self, parent=QModelIndex()):
         return 2
@@ -50,7 +50,7 @@ class PluginsModel(QAbstractTableModel):
             if role in [Qt.DisplayRole, Qt.ToolTipRole]:
                 data = plugin.name
         elif col == 1:
-            is_enabled = plugin.name not in self.disabled_plugins
+            is_enabled = plugin.name in self.enabled_plugins
             if role in [Qt.DisplayRole]:
                 data = 'Yes' if is_enabled else 'No'
 
@@ -63,11 +63,11 @@ class PluginsModel(QAbstractTableModel):
         return plugin
 
     def on_option_changed(self, key):
-        if key == 'disabled_plugins':
-            new_disabled = self.config.get_option('disabled_plugins', [])
+        if key == 'enabled_plugins':
+            new_enabled = self.config.get_option('enabled_plugins', default_plugins)
             # Update view if necessary.
-            if self.disabled_plugins != new_disabled:
-                self.disabled_plugins = new_disabled
+            if self.enabled_plugins != new_enabled:
+                self.enabled_plugins = new_enabled
                 self.dataChanged.emit(QModelIndex(), QModelIndex())
 
 class PluginDetails(QWidget):
@@ -121,21 +121,21 @@ class PluginDetails(QWidget):
         if not self.is_ready:
             return
         is_checked = True if is_checked else False
-        disabled = self.manager.config.get_option('disabled_plugins', [])
+        enabled = self.manager.config.get_option('enabled_plugins', default_plugins)
         name = str(self.name_label.text())
-        is_enabled = name not in disabled
+        is_enabled = name in enabled
 
         # No need to do anything.
         if (is_checked and is_enabled) or (not is_checked and not is_enabled):
             return
         # Enable plugin.
         elif is_checked and not is_enabled:
-            disabled.remove(name)
+            enabled.append(name)
         # Disable plugin.
         elif not is_checked and is_enabled:
-            disabled.append(name)
+            enabled.remove(name)
 
-        self.manager.config.set_option('disabled_plugins', disabled)
+        self.manager.config.set_option('enabled_plugins', enabled)
 
     def set_favorite(self, is_checked):
         if not self.is_ready:

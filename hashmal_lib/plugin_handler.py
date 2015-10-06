@@ -5,7 +5,7 @@ import sys
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from gui_utils import required_plugins
+from gui_utils import required_plugins, default_plugins
 
 class PluginHandler(QWidget):
     """Handles loading/unloading plugins and managing their dock widgets."""
@@ -93,6 +93,7 @@ class PluginHandler(QWidget):
             shortcut = 'Alt+' + str(1 + favorites.index(plugin.name)) if plugin.name in favorites else ''
             dock.toggleViewAction().setShortcut(shortcut)
             dock.toggleViewAction().setEnabled(dock.is_enabled)
+            dock.toggleViewAction().setVisible(dock.is_enabled)
 
     def add_plugin_actions(self, instance, menu, category, data):
         """Add the relevant actions to a context menu.
@@ -171,13 +172,13 @@ class PluginHandler(QWidget):
 
     def update_enabled_plugins(self):
         """Enable or disable plugin docks according to config file."""
-        disabled_plugins = self.config.get_option('disabled_plugins', [])
+        enabled_plugins = self.config.get_option('enabled_plugins', default_plugins)
         for plugin in self.loaded_plugins:
-            is_enabled = plugin.name not in disabled_plugins
+            is_enabled = plugin.name in enabled_plugins
             self.set_plugin_enabled(plugin.name, is_enabled)
 
     def on_option_changed(self, key):
-        if key == 'disabled_plugins':
+        if key == 'enabled_plugins':
             self.update_enabled_plugins()
         elif self.loaded_plugins and key == 'favorite_plugins':
             self.assign_dock_shortcuts()

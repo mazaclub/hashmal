@@ -153,8 +153,10 @@ class BlockAnalyzer(BaseDock):
             if only_header:
                 block_header = CBlockHeader.deserialize(x(raw))
             else:
+                # We don't use block.get_header() in case the header is
+                # correct but the rest of the block isn't.
+                block_header = CBlockHeader.deserialize(x(raw[0:160]))
                 block = CBlock.deserialize(x(raw))
-                block_header = block.get_header()
         except Exception:
             pass
 

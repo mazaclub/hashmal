@@ -112,6 +112,7 @@ class AmountEdit(QLineEdit):
 hashmal_entry_points = {
     'hashmal.plugin': [
         'Address Encoder = hashmal_lib.plugins.addr_encoder:make_plugin',
+        'Block Analyzer = hashmal_lib.plugins.block_analyzer:make_plugin',
         'Blockchain = hashmal_lib.plugins.blockchain:make_plugin',
         'Script Generator = hashmal_lib.plugins.script_gen:make_plugin',
         'Stack Evaluator = hashmal_lib.plugins.stack:make_plugin',

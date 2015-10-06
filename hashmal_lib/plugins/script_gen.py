@@ -3,7 +3,7 @@ from bitcoin.base58 import CBase58Data
 
 from PyQt4.QtGui import *
 
-from base import BaseDock, Plugin
+from base import BaseDock, Plugin, Category
 from hashmal_lib.core.utils import push_script
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 
@@ -73,6 +73,7 @@ class ScriptGenerator(BaseDock):
 
     tool_name = 'Script Generator'
     description = 'Generates scripts from templates.'
+    category = Category.Script
 
     def __init__(self, handler):
         super(ScriptGenerator, self).__init__(handler)

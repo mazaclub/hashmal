@@ -8,7 +8,7 @@ from PyQt4.QtCore import *
 from hashmal_lib.core import Transaction
 from hashmal_lib.core.stack import Stack
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
-from base import BaseDock, Plugin
+from base import BaseDock, Plugin, Category
 
 def make_plugin():
     return Plugin(StackEval)
@@ -22,6 +22,7 @@ class StackEval(BaseDock):
             '"Be warned that there are highly likely to be consensus bugs in this code; it is unlikely to match Satoshi Bitcoin exactly. Think carefully before using this module."'
     ])
     is_large = True
+    category = Category.Script
 
     def __init__(self, handler):
         super(StackEval, self).__init__(handler)

@@ -15,7 +15,7 @@ class PluginsModel(QAbstractTableModel):
         self.enabled_plugins = self.config.get_option('enabled_plugins', default_plugins)
 
     def columnCount(self, parent=QModelIndex()):
-        return 2
+        return 3
 
     def rowCount(self, parent=QModelIndex()):
         return len(self.plugins)
@@ -26,6 +26,7 @@ class PluginsModel(QAbstractTableModel):
 
         headers = [
                 {Qt.DisplayRole: 'Plugin', Qt.ToolTipRole: 'Plugin Name'},
+                {Qt.DisplayRole: 'Category', Qt.ToolTipRole: 'Plugin Category'},
                 {Qt.DisplayRole: 'Enabled?', Qt.ToolTipRole: 'Whether the plugin is enabled'}
         ]
 
@@ -50,6 +51,12 @@ class PluginsModel(QAbstractTableModel):
             if role in [Qt.DisplayRole, Qt.ToolTipRole]:
                 data = plugin.name
         elif col == 1:
+            category_name, category_desc = plugin.dock.category
+            if role in [Qt.DisplayRole]:
+                data = category_name
+            elif role in [Qt.ToolTipRole]:
+                data = category_desc
+        elif col == 2:
             is_enabled = plugin.name in self.enabled_plugins
             if role in [Qt.DisplayRole]:
                 data = 'Yes' if is_enabled else 'No'
@@ -80,6 +87,7 @@ class PluginDetails(QWidget):
         self.is_ready = False
 
         self.name_label = QLabel()
+        self.category_label = QLabel()
         self.desc_edit = QTextEdit()
         self.name_label.setToolTip('Plugin name')
         self.desc_edit.setToolTip('Plugin description')
@@ -94,6 +102,7 @@ class PluginDetails(QWidget):
         form = QFormLayout()
         form.setContentsMargins(0,6,0,0)
         form.addRow('Plugin Name:', self.name_label)
+        form.addRow('Category:', self.category_label)
         form.addRow(self.plugin_is_enabled)
         form.addRow(self.plugin_is_favorite)
         form.addRow(self.desc_edit)
@@ -103,6 +112,8 @@ class PluginDetails(QWidget):
         """Set the plugin that this widget needs to represent."""
         self.is_ready = False
         self.name_label.setText(plugin.name)
+        self.category_label.setText(plugin.dock.category[0])
+        self.category_label.setToolTip(plugin.dock.category[1])
         desc = []
         for i in plugin.dock.description.split('\n'):
             desc.append('<p>{}</p>'.format(i))
@@ -173,9 +184,12 @@ class PluginManager(QDialog):
         vbox = QVBoxLayout()
 
         self.model = PluginsModel(self.gui)
+        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model.setSourceModel(self.model)
 
         self.view = QTableView()
-        self.view.setModel(self.model)
+        self.view.setModel(self.proxy_model)
+        self.view.setSortingEnabled(True)
         self.view.setAlternatingRowColors(True)
         self.view.setWordWrap(True)
         self.view.horizontalHeader().setResizeMode(0, QHeaderView.Stretch)
@@ -187,6 +201,7 @@ class PluginManager(QDialog):
         self.view.setSelectionMode(QAbstractItemView.SingleSelection)
         self.view.selectionModel().selectionChanged.connect(self.update_details_area)
         self.view.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        self.view.sortByColumn(0, Qt.AscendingOrder)
 
         details_area = self.create_details_area()
 
@@ -203,6 +218,7 @@ class PluginManager(QDialog):
 
     def update_details_area(self, selected, deselected):
         """Update the plugin details area when selection changes."""
+        selected = self.proxy_model.mapSelectionToSource(selected)
         index = selected.indexes()[0]
         plugin = self.model.plugin_for_index(index)
         if str(self.plugin_details.name_label.text()) == plugin.name:

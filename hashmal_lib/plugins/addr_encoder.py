@@ -4,7 +4,7 @@ from bitcoin.base58 import CBase58Data
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from base import BaseDock, Plugin
+from base import BaseDock, Plugin, Category
 from hashmal_lib.gui_utils import monospace_font, Separator
 
 def make_plugin():
@@ -17,6 +17,7 @@ class AddrEncoder(BaseDock):
             'Address Encoder encodes/decodes addresses with version bytes (blockchain identifiers).',
             'Addresses are decoded into their 20-byte RIPEMD-160 hashes.'
     ])
+    category = Category.Key
 
     def __init__(self, handler):
         super(AddrEncoder, self).__init__(handler)

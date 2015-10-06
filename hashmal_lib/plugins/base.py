@@ -5,6 +5,17 @@ from PyQt4 import QtCore
 
 from hashmal_lib import config
 
+class Category(object):
+    """Plugin category.
+
+    Use one of the below class attributes for a dock's category attribute
+    e.g. 'category = Category.Script'.
+    """
+    General = ('General', 'Misc. plugin.')
+    Script = ('Scripts', 'Plugin that involves scripts.')
+    Key = ('Keys', 'Plugin that involves keys.')
+    Tx = ('Transactions', 'Plugin that involves transactions.')
+
 known_augmenters = []
 
 def augmenter(func):
@@ -50,6 +61,7 @@ class BaseDock(QDockWidget):
     # If True, dock will be placed on the bottom by default.
     # Otherwise, dock will be placed on the right.
     is_large = False
+    category = Category.General
 
     def __init__(self, handler):
         super(BaseDock, self).__init__('', handler)

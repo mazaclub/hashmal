@@ -8,7 +8,7 @@ from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction, chainparams
 from hashmal_lib.tx_widget import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font
-from base import BaseDock, Plugin
+from base import BaseDock, Plugin, Category
 
 def make_plugin():
     return Plugin(TxBuilder)
@@ -18,6 +18,7 @@ class TxBuilder(BaseDock):
     tool_name = 'Transaction Builder'
     description = 'Transaction Builder helps you create transactions.'
     is_large = True
+    category = Category.Tx
 
     def __init__(self, handler):
         super(TxBuilder, self).__init__(handler)

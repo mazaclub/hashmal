@@ -3,6 +3,7 @@ import requests
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+from bitcoin.core import x, lx, b2x, CBlockHeader
 
 from hashmal_lib.gui_utils import floated_buttons
 from base import BaseDock, Plugin
@@ -10,76 +11,82 @@ from base import BaseDock, Plugin
 def make_plugin():
     return Plugin(Blockchain)
 
+known_data_types = OrderedDict()
+known_data_types.update({'Transaction': 'raw_tx'})
+known_data_types.update({'Block Header': 'raw_header'})
+
 class BlockExplorer(object):
-    """Blockchain API base class."""
+    """Blockchain API base class.
+
+    Attributes:
+        name (str): Identifying name.
+        domain (str): Base URL.
+        routes (dict): URL routes for data (e.g. {'raw_tx': '/tx/'}).
+        parsers (dict): Lambdas for parsing request responses.
+
+    """
     name = ''
     domain = ''
-    raw_tx_route = None
-
-    parse_raw_tx_lambda = None
-    """If parse_raw_tx_lambda is not None, it will be used
-    instead of parse_raw_tx().
-    """
+    routes = None
+    parsers = None
 
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
+        if self.routes is None:
+            self.routes = {}
+        if self.parsers is None:
+            self.parsers = {}
 
     def request(self, url):
         r = requests.get(url)
         r.raise_for_status()
         return r.json()
 
-    def get_raw_tx(self, txid):
-        """Download a raw transaction."""
+    def get_data(self, data_type, identifier):
+        if not self.routes.get(data_type) or not self.parsers.get(data_type):
+            return
         s = [self.domain]
-        s.append(self.raw_tx_route)
-        s.append(txid)
+        s.append(self.routes[data_type])
+        s.append(identifier)
         s = ''.join(s)
         res = self.request(s)
-        # If present, use the lambda.
-        if self.parse_raw_tx_lambda is not None:
-            return self.parse_raw_tx_lambda(res)
-        return self.parse_raw_tx(res)
+        return self.parsers[data_type](res)
 
-    def parse_raw_tx(self, res):
-        """Abstract method.
+def header_from_insight_block(d):
+    version = int(d['version'])
+    prev_block = lx(d['previousblockhash'])
+    merkle_root = lx(d['merkleroot'])
+    time = int(d['time'])
+    bits = int(d['bits'], 16)
+    nonce = int(d['nonce'])
+    return b2x(CBlockHeader(version, prev_block, merkle_root, time, bits, nonce).serialize())
 
-        This does not need to be implemented in a subclass if the
-        'parse_raw_tx_lambda' argument is passed to their constructor.
-
-        Args:
-            res: Response from raw_tx_route request.
-
-        Returns:
-            Hex-encoded raw transaction.
-        """
-        pass
-
-insight_explorer = BlockExplorer(name='insight',domain='https://insight.bitpay.com',
-                raw_tx_route='/api/rawtx/', parse_raw_tx_lambda = lambda d: d.get('rawtx'))
-
-known_explorers = {'Bitcoin': [insight_explorer]}
+insight_explorer = type('insight_explorer', (BlockExplorer,), dict(name='insight',domain='https://insight.bitpay.com',
+                routes = {'raw_tx':'/api/rawtx/', 'raw_header':'/api/block/'},
+                parsers = {'raw_tx':lambda d: d.get('rawtx'), 'raw_header': header_from_insight_block}))
+known_explorers = {'Bitcoin': [insight_explorer()]}
 
 class Downloader(QObject):
     """Asynchronous downloading via QThreads."""
     start = pyqtSignal()
-    finished = pyqtSignal(str, str, str, name='finished')
-    def __init__(self, explorer, txid):
+    finished = pyqtSignal(str, str, str, str, name='finished')
+    def __init__(self, explorer, data_type, identifier):
         super(Downloader, self).__init__()
         self.explorer = explorer
-        self.txid = txid
+        self.data_type = data_type
+        self.identifier = identifier
         self.start.connect(self.download)
 
     @pyqtSlot()
     def download(self):
-        raw_tx = ''
+        raw = ''
         error = ''
         try:
-            raw_tx = self.explorer.get_raw_tx(self.txid)
+            raw = self.explorer.get_data(self.data_type, self.identifier)
         except Exception as e:
             error = '{}: {}'.format(str(e.__class__.__name__), str(e))
-        self.finished.emit(self.txid, raw_tx, error)
+        self.finished.emit(self.data_type, self.identifier, raw, error)
 
 class Blockchain(BaseDock):
 
@@ -90,6 +97,7 @@ class Blockchain(BaseDock):
     def __init__(self, handler):
         super(Blockchain, self).__init__(handler)
         self.augment('block_explorers', {'known_explorers': self.known_explorers}, callback=self.on_explorers_augmented)
+        self.data_group.button(0).setChecked(True)
 
     def init_data(self):
         self.known_explorers = OrderedDict(known_explorers)
@@ -102,7 +110,7 @@ class Blockchain(BaseDock):
         self.chain = chain
         self.explorer = explorer
         # Cache of recently downloaded txs
-        self.recent_transactions = OrderedDict()
+        self.recent_data = OrderedDict()
 
     def create_layout(self):
         """Two tabs:
@@ -162,7 +170,7 @@ class Blockchain(BaseDock):
         cache_size_box = QSpinBox()
         cache_size_box.setRange(0, 100)
         cache_size_box.setValue(cache_size)
-        cache_size_box.setToolTip('Number of recent raw transactions to keep in memory')
+        cache_size_box.setToolTip('Number of recent raw transactions/blocks to keep in memory')
 
         def change_cache_size():
             new_size = cache_size_box.value()
@@ -178,88 +186,120 @@ class Blockchain(BaseDock):
 
     def create_download_tab(self):
         form = QFormLayout()
-        
-        self.tx_id_edit = QLineEdit()
-        self.raw_tx_edit = QTextEdit()
-        self.raw_tx_edit.setReadOnly(True)
-        self.raw_tx_edit.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.raw_tx_edit.customContextMenuRequested.connect(self.context_menu)
+        form.setRowWrapPolicy(QFormLayout.WrapAllRows)
+
+        self.data_group = QButtonGroup()
+        self.data_box = QGroupBox()
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0,0,0,6)
+        for i, data_type in enumerate(known_data_types.keys()):
+            btn = QRadioButton(data_type)
+            self.data_group.addButton(btn, i)
+            hbox.addWidget(btn)
+        hbox.addStretch(1)
+        self.data_box.setLayout(hbox)
+
+        self.id_edit = QLineEdit()
+        self.raw_edit = QTextEdit()
+        self.raw_edit.setReadOnly(True)
+        self.raw_edit.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.raw_edit.customContextMenuRequested.connect(self.context_menu)
         self.download_button = QPushButton('Download')
         self.download_button.clicked.connect(self.do_download)
         self.download_button.setEnabled(False)
 
-        def validate_txid(txt):
+        def validate_identifier(txt):
             valid = len(str(txt)) == 64
             self.download_button.setEnabled(valid)
-        self.tx_id_edit.textChanged.connect(validate_txid)
+        self.id_edit.textChanged.connect(validate_identifier)
 
-        form.addRow('Tx ID:', self.tx_id_edit)
+        form.addRow(self.data_box)
+        form.addRow('Identifier (Transaction ID or Block Hash):', self.id_edit)
         form.addRow(floated_buttons([self.download_button]))
-        form.addRow('Raw Tx:', self.raw_tx_edit)
+        form.addRow('Result:', self.raw_edit)
+
+        self.data_group.buttonClicked.connect(lambda: self.raw_edit.clear())
 
         w = QWidget()
         w.setLayout(form)
         return w
 
     def context_menu(self, position):
-        menu = self.raw_tx_edit.createStandardContextMenu(position)
+        menu = self.raw_edit.createStandardContextMenu(position)
 
-        txt = str(self.raw_tx_edit.toPlainText())
-        if txt:
+        txt = str(self.raw_edit.toPlainText())
+        data_type = known_data_types[str(self.data_group.checkedButton().text())]
+        if txt and data_type == 'raw_tx':
             self.handler.add_plugin_actions(self, menu, 'raw_transaction', txt)
 
-        menu.exec_(self.raw_tx_edit.viewport().mapToGlobal(position))
+        menu.exec_(self.raw_edit.viewport().mapToGlobal(position))
 
-    def update_cache(self, txid, rawtx):
-        self.recent_transactions[txid] = rawtx
-        while len(self.recent_transactions.keys()) > int(self.config.get_option('blockchain_cache_size', 25)):
-            self.recent_transactions.popitem(False)
+    def update_cache(self, identifier, raw):
+        self.recent_data[identifier] = raw
+        while len(self.recent_data.keys()) > int(self.config.get_option('blockchain_cache_size', 25)):
+            self.recent_data.popitem(False)
 
-    def make_downloader(self, txid):
+    def make_downloader(self, data_type, identifier):
         self.downloader_thread = QThread()
-        self.downloader = Downloader(self.explorer, txid)
+        self.downloader = Downloader(self.explorer, data_type, identifier)
         self.downloader.moveToThread(self.downloader_thread)
         self.downloader.finished.connect(self.downloader_thread.quit)
 
     def do_download(self):
         self.download_button.setEnabled(False)
-        txid = str(self.tx_id_edit.text())
+        identifier = str(self.id_edit.text())
+        data_type = known_data_types[str(self.data_group.checkedButton().text())]
 
-        cached_tx = self.recent_transactions.get(txid)
-        if cached_tx:
-            self.set_result(txid, cached_tx, '')
+        cached_data = self.recent_data.get(identifier)
+        if cached_data:
+            self.set_result(data_type, identifier, cached_data, '')
             return
 
-        self.raw_tx_edit.setText('Downloading...')
-        self.make_downloader(txid)
+        self.raw_edit.setText('Downloading...')
+        self.make_downloader(data_type, identifier)
         self.downloader.finished.connect(self.set_result)
         self.downloader_thread.start()
         self.downloader.start.emit()
 
-    def set_result(self, txid, rawtx, error):
+    def set_result(self, data_type, identifier, raw, error):
         """Set result of tx downloader thread."""
         if error:
             self.status_message(error, True)
-            self.raw_tx_edit.clear()
-        elif not rawtx:
+            self.raw_edit.clear()
+        elif not raw:
             self.status_message('Unknown error. Failed to retrieve transaction.', True)
-            self.raw_tx_edit.clear()
+            self.raw_edit.clear()
         else:
-            self.raw_tx_edit.setText(rawtx)
-            self.update_cache(txid, rawtx)
-            self.status_message('Downloaded transaction %s' % txid)
+            self.raw_edit.setText(raw)
+            self.update_cache(identifier, raw)
+            # Get human-friendly name for data type.
+            word = 'data'
+            for k, v in known_data_types.items():
+                if v == data_type:
+                    word = k
+            self.status_message('Downloaded %s %s.' % (word.lower(), identifier))
 
         self.download_button.setEnabled(True)
 
     def download_raw_tx(self, txid):
         """This is for use by other widgets."""
-        if self.recent_transactions.get(txid):
-            return self.recent_transactions.get(txid)
+        if self.recent_data.get(txid):
+            return self.recent_data.get(txid)
 
-        rawtx = self.explorer.get_raw_tx(txid)
+        rawtx = self.explorer.get_data('raw_tx', txid)
         if rawtx:
             self.update_cache(txid, rawtx)
         return rawtx
+
+    def download_block_header(self, blockhash):
+        """This is for use by other widgets."""
+        if self.recent_data.get(blockhash):
+            return self.recent_data.get(blockhash)
+
+        rawheader = self.explorer.get_data('raw_header', blockhash)
+        if rawheader:
+            self.update_cache(blockhash, rawheader)
+        return rawheader
 
     def on_explorer_combo_changed(self, idx):
         new_explorer = self.known_explorers[self.chain][idx]

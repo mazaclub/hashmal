@@ -117,6 +117,10 @@ class BlockAnalyzer(BaseDock):
     def init_data(self):
         self.block = None
 
+    def init_actions(self):
+        deserialize = ('Deserialize', self.deserialize_raw)
+        self.advertised_actions['raw_block'] = [deserialize]
+
     def create_layout(self):
         self.block_widget = BlockWidget()
         self.block_widget.header_widget.view.selectionModel().selectionChanged.connect(self.select_block_field)
@@ -139,6 +143,12 @@ class BlockAnalyzer(BaseDock):
 
         # Clears the widget if block_header is None.
         self.block_widget.set_block(block_header, self.block)
+
+    def deserialize_raw(self, txt):
+        """This is for context menus."""
+        self.needsFocus.emit()
+        self.raw_block_edit.setPlainText(txt)
+        self.check_raw_block()
 
     def deserialize(self, raw):
         """Deserialize hex-encoded block/block header."""

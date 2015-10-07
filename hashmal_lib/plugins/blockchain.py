@@ -229,8 +229,10 @@ class Blockchain(BaseDock):
 
         txt = str(self.raw_edit.toPlainText())
         data_type = known_data_types[str(self.data_group.checkedButton().text())]
-        if txt and data_type == 'raw_tx':
-            self.handler.add_plugin_actions(self, menu, 'raw_transaction', txt)
+        categories = {'raw_tx': 'raw_transaction', 'raw_header': 'raw_block'}
+        category = categories.get(data_type, '')
+        if txt and category:
+            self.handler.add_plugin_actions(self, menu, category, txt)
 
         menu.exec_(self.raw_edit.viewport().mapToGlobal(position))
 

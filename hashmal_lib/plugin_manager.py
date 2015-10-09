@@ -13,9 +13,10 @@ class PluginsModel(QAbstractTableModel):
         self.config = gui.config
         self.config.optionChanged.connect(self.on_option_changed)
         self.enabled_plugins = self.config.get_option('enabled_plugins', default_plugins)
+        self.favorite_plugins = self.config.get_option('favorite_plugins', [])
 
     def columnCount(self, parent=QModelIndex()):
-        return 3
+        return 4
 
     def rowCount(self, parent=QModelIndex()):
         return len(self.plugins)
@@ -27,7 +28,8 @@ class PluginsModel(QAbstractTableModel):
         headers = [
                 {Qt.DisplayRole: 'Plugin', Qt.ToolTipRole: 'Plugin Name'},
                 {Qt.DisplayRole: 'Category', Qt.ToolTipRole: 'Plugin Category'},
-                {Qt.DisplayRole: 'Enabled?', Qt.ToolTipRole: 'Whether the plugin is enabled'}
+                {Qt.DisplayRole: 'Enabled?', Qt.ToolTipRole: 'Whether the plugin is enabled'},
+                {Qt.DisplayRole: 'Favorite?', Qt.ToolTipRole: 'Whether the plugin is a favorite'},
         ]
 
         data = None
@@ -60,6 +62,10 @@ class PluginsModel(QAbstractTableModel):
             is_enabled = plugin.name in self.enabled_plugins
             if role in [Qt.DisplayRole]:
                 data = 'Yes' if is_enabled else 'No'
+        elif col == 3:
+            is_favorite = plugin.name in self.favorite_plugins
+            if role in [Qt.DisplayRole]:
+                data = 'Yes' if is_favorite else 'No'
 
         return QVariant(data)
 
@@ -75,6 +81,11 @@ class PluginsModel(QAbstractTableModel):
             # Update view if necessary.
             if self.enabled_plugins != new_enabled:
                 self.enabled_plugins = new_enabled
+                self.dataChanged.emit(QModelIndex(), QModelIndex())
+        elif key == 'favorite_plugins':
+            new_favorites = self.config.get_option('favorite_plugins', [])
+            if self.favorite_plugins != new_favorites:
+                self.favorite_plugins = new_favorites
                 self.dataChanged.emit(QModelIndex(), QModelIndex())
 
 class PluginDetails(QWidget):

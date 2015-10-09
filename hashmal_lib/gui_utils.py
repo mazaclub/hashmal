@@ -35,6 +35,25 @@ def floated_buttons(btns, left=False):
         hbox.insertStretch(0, 1)
     return hbox
 
+def add_shortcuts(items):
+    """Add shortcuts (ampersands) to items."""
+    used = [] # assigned shortcuts
+    items = list(items)
+    for i, item in enumerate(items):
+        char_index = 0
+        # Loop through letters to find an unused shortcut.
+        while item[char_index] in used:
+            char_index += 1
+            if char_index >= len(item):
+                char_index = 0
+                break
+        used.append(item[char_index])
+        if char_index == 0:
+            items[i] = ''.join(['&', item])
+        else:
+            items[i] = ''.join([item[0:char_index], '&', item[char_index:]])
+    return items
+
 class Separator(QFrame):
     """A raised horizontal line to separate widgets."""
     def __init__(self, parent=None):

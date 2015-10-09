@@ -88,8 +88,7 @@ class HashmalMain(QMainWindow):
         tools_menu.addAction('&Settings', lambda: SettingsDialog(self).exec_())
         tools_menu.addAction('&Plugin Manager', lambda: PluginManager(self).exec_())
         tools_menu.addSeparator()
-        for i, plugin in enumerate(sorted(self.plugin_handler.loaded_plugins, key = lambda i: i.name)):
-            tools_menu.addAction(plugin.dock.toggleViewAction())
+        self.plugin_handler.create_menu(tools_menu)
 
         help_menu = menubar.addMenu('&Help')
         help_menu.addAction('&About', self.do_about)

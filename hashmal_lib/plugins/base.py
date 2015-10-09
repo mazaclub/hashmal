@@ -16,6 +16,16 @@ class Category(object):
     Key = ('Keys', 'Plugin that involves keys.')
     Tx = ('Transactions', 'Plugin that involves transactions.')
 
+    @classmethod
+    def categories(cls):
+        category_list = [
+                cls.General,
+                cls.Script,
+                cls.Key,
+                cls.Tx
+        ]
+        return category_list
+
 known_augmenters = []
 
 def augmenter(func):
@@ -132,6 +142,7 @@ class BaseDock(QDockWidget):
 
         category can be one of:
             - raw_transaction
+            - raw_block
 
         """
         if self.advertised_actions.get(category):

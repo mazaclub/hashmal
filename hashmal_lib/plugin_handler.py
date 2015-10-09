@@ -1,11 +1,13 @@
 from functools import partial
 from pkg_resources import iter_entry_points
+from collections import OrderedDict
 import sys
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from gui_utils import required_plugins, default_plugins
+from gui_utils import required_plugins, default_plugins, add_shortcuts
+from plugins.base import Category
 
 class PluginHandler(QWidget):
     """Handles loading/unloading plugins and managing their dock widgets."""
@@ -25,6 +27,26 @@ class PluginHandler(QWidget):
             if plugin.name == plugin_name:
                 return plugin
         return None
+
+    def create_menu(self, menu):
+        """Add plugins to menu."""
+        _categories = OrderedDict()
+        for c in sorted([x[0] for x in Category.categories()]):
+            _categories[c] = []
+        for plugin in self.loaded_plugins:
+            _categories[plugin.dock.category[0]].append(plugin)
+
+        shortcuts = add_shortcuts(_categories.keys())
+        categories = OrderedDict()
+        for k, v in zip(shortcuts, _categories.values()):
+            categories[k] = v
+        for i in categories.keys():
+            plugins = categories[i]
+            if len(plugins) == 0:
+                continue
+            category_menu = menu.addMenu(i)
+            for plugin in sorted(plugins, key = lambda x: x.name):
+                category_menu.addAction(plugin.dock.toggleViewAction())
 
     def load_plugins(self):
         """Load plugins from entry points."""

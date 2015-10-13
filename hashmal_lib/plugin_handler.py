@@ -9,6 +9,49 @@ from PyQt4.QtCore import *
 from gui_utils import required_plugins, default_plugins, add_shortcuts
 from plugins.base import Category
 
+
+class Augmentation(object):
+    """Model of an augmentation.
+
+    Attributes:
+        - augmenter_plugin: Plugin instance that has the augmenter.
+        - hook_name: Augmentation hook name.
+        - requester: Class name of object that requested augmentation.
+        - data: Data passed to the augmenter.
+        - callback: Function to call after augmenting.
+        - has_run: Whether the augmentation has been done.
+        - is_enabled: Whether the augmentation can be done.
+    """
+    def __init__(self, augmenter_plugin, hook_name, requester=None, data=None, callback=None):
+        self.augmenter_plugin = augmenter_plugin
+        self.hook_name = hook_name
+        self.requester = requester
+        self.data = data
+        self.callback = callback
+
+        self.has_run = False
+        self.is_enabled = True
+
+    def __str__(self):
+        return '%s.%s' % (self.augmenter_plugin.name, self.hook_name)
+
+class Augmentations(list):
+    """Container for Augmentation instances."""
+    def get(self, plugin_name, hook_name):
+        for i in self:
+            if i.augmenter_plugin.name == plugin_name and i.hook_name == hook_name:
+                return i
+        return None
+
+    def for_plugin(self, plugin_name):
+        """Return an Augmentations instance with augmenters in plugin_name."""
+        return Augmentations(filter(lambda i: i.augmenter_plugin.name == plugin_name, self))
+
+    def disabled(self):
+        """Return an Augmentations instance with disabled augmentations."""
+        return Augmentations(filter(lambda i: i.is_enabled == False, self))
+
+
 class PluginHandler(QWidget):
     """Handles loading/unloading plugins and managing their dock widgets."""
     def __init__(self, main_window):
@@ -21,6 +64,8 @@ class PluginHandler(QWidget):
         self.plugins_loaded = False
         # Augmentations waiting until all plugins load.
         self.waiting_augmentations = []
+        # Augmentations collection.
+        self.augmentations = Augmentations()
 
     def get_plugin(self, plugin_name):
         for plugin in self.loaded_plugins:
@@ -84,8 +129,15 @@ class PluginHandler(QWidget):
         dock = plugin.dock
         self.set_dock_signals(dock, is_enabled)
         dock.is_enabled = is_enabled
+
         if not is_enabled:
             dock.setVisible(False)
+        else:
+            # Run augmentations that were disabled.
+            for i in self.augmentations.disabled().for_plugin(plugin.name):
+                if not i.has_run:
+                    i.is_enabled = True
+                    self.do_augment(i)
         self.assign_dock_shortcuts()
 
     def bring_to_front(self, dock):
@@ -147,6 +199,7 @@ class PluginHandler(QWidget):
 
     def do_augment_hook(self, class_name, hook_name, data, callback=None):
         """Consult plugins that can augment hook_name."""
+        # Don't hook until initial plugin loading is done.
         if not self.plugins_loaded:
             augmentation = (class_name, hook_name, data, callback)
             if not augmentation in self.waiting_augmentations:
@@ -154,14 +207,42 @@ class PluginHandler(QWidget):
             return
         for plugin in self.loaded_plugins:
             dock = plugin.dock
-            if class_name == dock.__class__.__name__:
-                continue
             if hook_name in dock.augmenters:
+
+                # Set up augmentations.
+                for i in dock.augmenters:
+                    augmentation = self.augmentations.get(plugin.name, i)
+                    if augmentation is None:
+                        augmentation = Augmentation(plugin, i, requester=class_name, data=data, callback=callback)
+                        self.augmentations.append(augmentation)
+
+                augmentation = self.augmentations.get(plugin.name, hook_name)
+                if augmentation is None:
+                    continue
+
+                # Don't hook disabled plugins.
+                if plugin.name not in self.config.get_option('enabled_plugins', default_plugins):
+                    augmentation.is_enabled = False
+                    continue
+
                 # Call the augmenter method.
-                func = getattr(dock, hook_name)
-                data = func(data)
-                if callback:
-                    callback(data)
+                self.do_augment(augmentation)
+
+    def do_augment(self, augmentation):
+        """Call the augmenter for an Augmentation."""
+        # Don't run augmentations that have been run, aren't enabled,
+        # or are from the same class that wants augmenting.
+        if (
+            augmentation.has_run or
+            not augmentation.is_enabled or
+            augmentation.requester == augmentation.augmenter_plugin.dock.__class__.__name__
+        ): return
+        dock = augmentation.augmenter_plugin.dock
+        func = getattr(dock, augmentation.hook_name)
+        data = func(augmentation.data)
+        if augmentation.callback:
+            augmentation.callback(data)
+        augmentation.has_run = True
 
     def evaluate_current_script(self):
         """Evaluate the script being edited with the Stack Evaluator tool."""

@@ -6,7 +6,7 @@ from PyQt4.QtCore import *
 from bitcoin.core import x, lx, b2x, CBlockHeader
 
 from hashmal_lib.gui_utils import floated_buttons
-from base import BaseDock, Plugin
+from base import BaseDock, Plugin, Category
 
 def make_plugin():
     return Plugin(Blockchain)
@@ -93,6 +93,7 @@ class Blockchain(BaseDock):
     tool_name = 'Blockchain'
     description = 'Blockchain allows you to download data from block explorers.'
     is_large = True
+    category = Category.Data
 
     def __init__(self, handler):
         super(Blockchain, self).__init__(handler)

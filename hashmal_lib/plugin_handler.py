@@ -102,6 +102,9 @@ class PluginHandler(QWidget):
             dock_tool_name = plugin_instance.dock_class.tool_name
             plugin_instance.name = dock_tool_name if dock_tool_name else entry_point.name
             plugin_instance.instantiate_dock(self)
+            # Don't load plugins with unknown category metadata.
+            if plugin_instance.dock.category not in Category.categories():
+                continue
 
             self.loaded_plugins.append(plugin_instance)
 

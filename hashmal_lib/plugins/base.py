@@ -12,16 +12,18 @@ class Category(object):
     e.g. 'category = Category.Script'.
     """
     General = ('General', 'Misc. plugin.')
-    Script = ('Scripts', 'Plugin that involves scripts.')
+    Data = ('Data', 'Plugin that retrieves data.')
     Key = ('Keys', 'Plugin that involves keys.')
+    Script = ('Scripts', 'Plugin that involves scripts.')
     Tx = ('Transactions', 'Plugin that involves transactions.')
 
     @classmethod
     def categories(cls):
         category_list = [
                 cls.General,
-                cls.Script,
+                cls.Data,
                 cls.Key,
+                cls.Script,
                 cls.Tx
         ]
         return category_list

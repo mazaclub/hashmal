@@ -1,7 +1,7 @@
 import base
 from base import augmenter
 from base import BaseDock
-from base import Plugin
+from base import Plugin, Category
 
 import addr_encoder
 import block_analyzer

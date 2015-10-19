@@ -27,7 +27,6 @@ class StackEval(BaseDock):
     def __init__(self, handler):
         super(StackEval, self).__init__(handler)
         self.widget().setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        self.has_spending_tx.setChecked(False)
 
     def init_data(self):
         self.stack = Stack()
@@ -56,32 +55,17 @@ class StackEval(BaseDock):
 
     def create_layout(self):
         form = QFormLayout()
+
+        tabs = QTabWidget()
+        tabs.addTab(self.create_main_tab(), 'Stack')
+        tabs.addTab(self.create_tx_tab(), 'Transaction')
+        form.addRow(tabs)
+
+        return form
+
+    def create_main_tab(self):
+        form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.WrapAllRows)
-
-        # Whether there is a spending transaction.
-        self.has_spending_tx = QCheckBox('Specify transaction being spent.')
-        self.has_spending_tx.stateChanged.connect(self.set_show_tx)
-        # Spending transaction
-        self.tx_edit = QPlainTextEdit()
-        self.tx_edit.setFont(monospace_font)
-        self.tx_edit.textChanged.connect(self.set_tx)
-        # Input with scriptSig to include
-        self.input_idx = QSpinBox()
-        self.input_idx.setEnabled(False)
-        self.input_idx.valueChanged.connect(self.set_input_index)
-        self.input_idx.setToolTip('Input in the spending transaction with the relevant scriptSig.')
-        in_idx_box = QHBoxLayout()
-        in_idx_box.addWidget(QLabel('Input containing scriptSig:'))
-        in_idx_box.addWidget(self.input_idx)
-        in_idx_box.addStretch(1)
-
-        self.tx_frame = QFrame()
-        tx_layout = QVBoxLayout()
-        tx_layout.addWidget(self.tx_edit)
-        tx_layout.addLayout(in_idx_box)
-        self.tx_frame.setLayout(tx_layout)
-        self.tx_frame.setVisible(False)
-
 
         # Raw script input.
         self.tx_script = QPlainTextEdit()
@@ -114,8 +98,7 @@ class StackEval(BaseDock):
         self.do_button.setToolTip('Evaluate the entire script')
         self.do_button.clicked.connect(self.do_evaluate)
 
-        form.addRow(self.has_spending_tx)
-        form.addRow('Spending Transaction:', self.tx_frame)
+
         form.addRow('Script:', self.tx_script)
         form.addRow('Stack:', self.stack_view)
         form.addRow('Stack log:', self.stack_log)
@@ -123,35 +106,60 @@ class StackEval(BaseDock):
 
         btn_hbox = floated_buttons([self.step_button, self.reset_button, self.do_button], left=True)
         form.addRow(btn_hbox)
-        return form
 
-    def set_show_tx(self, do_show):
-        do_show = True if do_show else False
-        if do_show:
-            self.tx_frame.setVisible(True)
-        else:
-            self.tx_frame.setVisible(False)
+        w = QWidget()
+        w.setLayout(form)
+        return w
+
+    def create_tx_tab(self):
+        form = QFormLayout()
+
+        # Spending transaction
+        self.tx_edit = QPlainTextEdit()
+        self.tx_edit.setFont(monospace_font)
+        self.tx_edit.textChanged.connect(self.set_tx)
+        # Input with scriptSig to include
+        self.input_idx = QSpinBox()
+        self.input_idx.setEnabled(False)
+        self.input_idx.valueChanged.connect(self.set_input_index)
+        self.input_idx.setToolTip('Input in the containing transaction with the relevant scriptSig.')
+        in_idx_box = QHBoxLayout()
+        in_idx_box.addWidget(QLabel('Input containing scriptSig:'))
+        in_idx_box.addWidget(self.input_idx)
+        in_idx_box.addStretch(1)
+
+
+        desc = QLabel(' '.join(['You can specify the transaction that contains the script you\'re testing.',
+                        'This allows you to evaluate whether an input is spent successfully.']))
+        desc.setWordWrap(True)
+        form.addRow(desc)
+        form.addRow('Raw Transaction:', self.tx_edit)
+        form.addRow('Input to spend:', self.input_idx)
+
+        w = QWidget()
+        w.setLayout(form)
+        return w
 
     def set_spending_tx(self, txt):
         """Called from other tools to set the spending transaction."""
         if not txt:
             return
         self.needsFocus.emit()
-        self.has_spending_tx.setChecked(True)
         self.tx_edit.setPlainText(txt)
 
     def set_tx(self):
         """Set the spending transaction and (en|dis)able the input index box."""
         txt = str(self.tx_edit.toPlainText())
-        if not txt:
+        try:
+            assert txt
+            self.tx = Transaction.deserialize(txt.decode('hex'))
+            self.tx_edit.setToolTip(''.join(['Tx ID: ', bitcoin.core.b2lx(self.tx.GetHash())]))
+            self.input_idx.setRange(0, len(self.tx.vin) - 1)
+            self.input_idx.setEnabled(True)
+        except Exception:
             self.tx = None
-            self.input_idx.setEnabled(False)
             self.tx_edit.setToolTip('')
-            return
-        self.tx = Transaction.deserialize(txt.decode('hex'))
-        self.tx_edit.setToolTip(''.join(['Tx ID: ', bitcoin.core.b2lx(self.tx.GetHash())]))
-        self.input_idx.setRange(0, len(self.tx.vin) - 1)
-        self.input_idx.setEnabled(True)
+            self.input_idx.setEnabled(False)
 
     def set_input_index(self, idx):
         self.inIdx = idx

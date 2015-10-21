@@ -152,7 +152,7 @@ default_plugins = ['Blockchain', 'Script Generator', 'Stack Evaluator', 'Transac
 hashmal_style = '''
 
 QStatusBar[hasError=true], QLineEdit[hasError=true],
-QLabel[hasError=true] {
+QLabel[hasError=true], QTextEdit[hasError=true], QPlainTextEdit[hasError=true] {
   background: rgba(255, 0, 0, 25%);
 }
 '''

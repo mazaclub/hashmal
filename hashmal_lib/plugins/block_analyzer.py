@@ -2,7 +2,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import bitcoin
 from bitcoin.core import CBlockHeader, CBlock, x, b2x, lx, b2lx
-from base import BaseDock, Plugin
+from base import BaseDock, Plugin, Category
 from hashmal_lib.gui_utils import Separator
 
 def make_plugin():
@@ -112,6 +112,7 @@ class BlockAnalyzer(BaseDock):
 
     tool_name = 'Block Analyzer'
     description = 'Deserializes raw blocks.'
+    category = Category.Block
     is_large = True
 
     def init_data(self):

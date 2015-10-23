@@ -1,31 +1,32 @@
 from functools import wraps
+from collections import namedtuple
 
 from PyQt4.QtGui import QDockWidget, QWidget, QVBoxLayout
 from PyQt4 import QtCore
 
 from hashmal_lib import config
 
+PluginCategory = namedtuple('PluginCategory', ('name', 'description'))
 class Category(object):
     """Plugin category.
 
     Use one of the below class attributes for a dock's category attribute
     e.g. 'category = Category.Script'.
     """
-    General = ('General', 'Misc. plugin.')
-    Data = ('Data', 'Plugin that retrieves data.')
-    Key = ('Keys', 'Plugin that involves keys.')
-    Script = ('Scripts', 'Plugin that involves scripts.')
-    Tx = ('Transactions', 'Plugin that involves transactions.')
+    General = PluginCategory('General', 'General or uncategorized plugin.')
+    Block = PluginCategory('Blocks', 'Plugin that involves blocks and/or block headers.')
+    Data = PluginCategory('Data', 'Plugin that retrieves blockchain data.')
+    Key = PluginCategory('Keys', 'Plugin that involves keys, addresses, etc.')
+    Script = PluginCategory('Scripts', 'Plugin that involves scripts.')
+    Tx = PluginCategory('Transactions', 'Plugin that involves transactions.')
 
     @classmethod
     def categories(cls):
-        category_list = [
-                cls.General,
-                cls.Data,
-                cls.Key,
-                cls.Script,
-                cls.Tx
-        ]
+        category_list = []
+        for i in dir(cls):
+            attr = getattr(cls, i)
+            if attr.__class__.__name__ == 'PluginCategory':
+                category_list.append(attr)
         return category_list
 
 known_augmenters = []

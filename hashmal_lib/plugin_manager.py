@@ -123,8 +123,8 @@ class PluginDetails(QWidget):
         """Set the plugin that this widget needs to represent."""
         self.is_ready = False
         self.name_label.setText(plugin.name)
-        self.category_label.setText(plugin.dock.category[0])
-        self.category_label.setToolTip(plugin.dock.category[1])
+        self.category_label.setText(plugin.dock.category.name)
+        self.category_label.setToolTip(plugin.dock.category.description)
         desc = []
         for i in plugin.dock.description.split('\n'):
             desc.append('<p>{}</p>'.format(i))

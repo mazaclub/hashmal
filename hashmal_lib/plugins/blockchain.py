@@ -284,6 +284,15 @@ class Blockchain(BaseDock):
 
         self.download_button.setEnabled(True)
 
+    def retrieve_blockchain_data(self, data_type, identifier):
+        """Signifies that this plugin is a data retriever."""
+        if data_type == 'raw_transaction':
+            return self.download_raw_tx(identifier)
+        elif data_type == 'raw_header':
+            return self.download_block_header(identifier)
+        else:
+            raise Exception('Unsupported data type "%s"' % data_type)
+
     def download_raw_tx(self, txid):
         """This is for use by other widgets."""
         if self.recent_data.get(txid):

@@ -247,6 +247,30 @@ class PluginHandler(QWidget):
             augmentation.callback(data)
         augmentation.has_run = True
 
+    def get_data_retrievers(self):
+        """Get a list of plugins that claim to be able to retrieve blockchain data."""
+        retrievers = []
+        for plugin in self.loaded_plugins:
+            dock = plugin.dock
+            if not dock.is_enabled: continue
+            if getattr(dock, 'retrieve_blockchain_data', None):
+                retrievers.append(plugin)
+        return retrievers
+
+    def download_blockchain_data(self, data_type, identifier):
+        """Download blockchain data with the pre-chosen plugin.
+
+        Args:
+            data_type (str): Type of data (e.g. 'raw_transaction').
+            identifier (str): Data identifier (e.g. transaction ID).
+        """
+        plugin_name = self.config.get_option('data_retriever', 'Blockchain')
+        plugin = self.get_plugin(plugin_name)
+        dock = plugin.dock
+        if plugin is None or not getattr(plugin.dock, 'retrieve_blockchain_data', None):
+            plugin = self.get_plugin('Blockchain')
+        return plugin.dock.retrieve_blockchain_data(data_type, identifier)
+
     def evaluate_current_script(self):
         """Evaluate the script being edited with the Stack Evaluator tool."""
         script_hex = self.gui.script_editor.get_data('Hex')

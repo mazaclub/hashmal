@@ -217,7 +217,28 @@ class SettingsDialog(QDialog):
         amnt_format.currentIndexChanged.connect(set_amount_format)
         amnt_format.setToolTip('Format that transaction amounts are shown in')
 
+
+        data_retriever = QComboBox()
+        retrievers = self.gui.plugin_handler.get_data_retrievers()
+        retriever_names = [i.name for i in retrievers]
+        data_retriever.addItems(retriever_names)
+
+        current_data_retriever = self.config.get_option('data_retriever', 'Blockchain')
+        try:
+            idx = retriever_names.index(current_data_retriever)
+            data_retriever.setCurrentIndex(idx)
+        except ValueError:
+            idx = retriever_names.index('Blockchain')
+            data_retriever.setCurrentIndex(idx)
+
+        def set_retriever(idx):
+            new_retriever = retriever_names[idx]
+            self.config.set_option('data_retriever', new_retriever)
+        data_retriever.currentIndexChanged.connect(set_retriever)
+        data_retriever.setToolTip('Plugin used to download blockchain data')
+
         form.addRow('Amount format:', amnt_format)
+        form.addRow('Data Retriever:', data_retriever)
 
         w = QWidget()
         w.setLayout(form)

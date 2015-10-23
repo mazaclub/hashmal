@@ -63,7 +63,13 @@ class Plugin(object):
 
 
 class BaseDock(QDockWidget):
-    """Base class for docks."""
+    """Base class for docks.
+
+    Optional methods:
+        retrieve_blockchain_data(data_type, identifier): Signifies that
+            this dock is a data retriever, and can be used when the user
+            wants to download blockchain data such as transactions.
+    """
     needsFocus = QtCore.pyqtSignal()
     needsUpdate = QtCore.pyqtSignal()
     statusMessage = QtCore.pyqtSignal(str, bool, name='statusMessage')

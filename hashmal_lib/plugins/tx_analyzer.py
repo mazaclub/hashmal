@@ -165,7 +165,7 @@ class TxAnalyzer(BaseDock):
         prev_out_n = tx_in.prevout.n
 
         try:
-            raw_prev_tx = self.handler.get_plugin('Blockchain').dock.download_raw_tx(txid)
+            raw_prev_tx = self.handler.download_blockchain_data('raw_transaction', txid)
         except Exception as e:
             self.status_message(str(e), True)
             return False

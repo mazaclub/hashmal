@@ -103,6 +103,7 @@ class PluginDetails(QWidget):
         self.name_label.setToolTip('Plugin name')
         self.desc_edit.setToolTip('Plugin description')
         self.desc_edit.setReadOnly(True)
+        self.desc_edit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         self.plugin_is_enabled = QCheckBox('Enabled plugin')
         self.plugin_is_enabled.setToolTip('Whether this plugin is enabled')
         self.plugin_is_enabled.stateChanged.connect(self.set_enabled)
@@ -187,6 +188,7 @@ class PluginManager(QDialog):
         self.config = self.gui.config
         self.create_layout()
         self.setWindowTitle('Plugin Manager')
+        self.view.setFocus()
 
     def sizeHint(self):
         return QSize(500, 400)
@@ -207,7 +209,7 @@ class PluginManager(QDialog):
         self.view.horizontalHeader().setResizeMode(1, QHeaderView.ResizeToContents)
         self.view.horizontalHeader().setHighlightSections(False)
         self.view.verticalHeader().setDefaultSectionSize(22)
-        self.view.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.view.verticalHeader().setVisible(False)
         self.view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.view.setSelectionMode(QAbstractItemView.SingleSelection)
         self.view.selectionModel().selectionChanged.connect(self.update_details_area)
@@ -216,6 +218,18 @@ class PluginManager(QDialog):
 
         details_area = self.create_details_area()
 
+        filter_edit = QLineEdit()
+        def filter_view():
+            regexp = QRegExp(str(filter_edit.text()), Qt.CaseInsensitive)
+            self.proxy_model.setFilterRegExp(regexp)
+        filter_edit.textChanged.connect(filter_view)
+        filter_label = QLabel('&Find:')
+        filter_label.setBuddy(filter_edit)
+        filter_box = QHBoxLayout()
+        filter_box.addWidget(filter_label)
+        filter_box.addWidget(filter_edit, stretch=1)
+
+        vbox.addLayout(filter_box)
         vbox.addWidget(self.view)
         vbox.addWidget(Separator())
         vbox.addWidget(details_area)
@@ -230,7 +244,10 @@ class PluginManager(QDialog):
     def update_details_area(self, selected, deselected):
         """Update the plugin details area when selection changes."""
         selected = self.proxy_model.mapSelectionToSource(selected)
-        index = selected.indexes()[0]
+        try:
+            index = selected.indexes()[0]
+        except IndexError:
+            return
         plugin = self.model.plugin_for_index(index)
         if str(self.plugin_details.name_label.text()) == plugin.name:
             return

@@ -13,6 +13,44 @@ from hashmal_lib.core import Transaction
 def make_plugin():
     return Plugin(TxAnalyzer)
 
+class InputStatusTable(QWidget):
+    def __init__(self):
+        super(InputStatusTable, self).__init__()
+        self.tx = None
+
+        self.model = model = QStandardItemModel()
+        model.setColumnCount(1)
+        model.setRowCount(0)
+        model.setHorizontalHeaderLabels(['Input Status'])
+        self.view = view = QTableView()
+        view.setModel(model)
+        view.horizontalHeader().setResizeMode(0, QHeaderView.Stretch)
+        view.horizontalHeader().setHighlightSections(False)
+        view.verticalHeader().setHighlightSections(False)
+
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.addWidget(view)
+        self.setLayout(vbox)
+
+    def set_tx(self, tx):
+        if not tx:
+            self.clear()
+            return
+        self.model.setRowCount(len(tx.vin))
+        for i in range(len(tx.vin)):
+            self.model.setHeaderData(i, Qt.Vertical, str(i))
+            item = QStandardItem('Unverified')
+            self.model.setItem(i, 0, item)
+
+    def set_verified(self, idx, verified):
+        verified = 'Verified' if verified else 'Unverified'
+        item = QStandardItem(verified)
+        self.model.setItem(idx, 0, item)
+
+    def clear(self):
+        self.model.setRowCount(0)
+
 class TxAnalyzer(BaseDock):
 
     tool_name = 'Transaction Analyzer'
@@ -88,9 +126,12 @@ class TxAnalyzer(BaseDock):
         self.result_edit = QLineEdit()
         self.result_edit.setReadOnly(True)
 
+        self.inputs_table = InputStatusTable()
+
         form.addRow('Verify Input:', floated_buttons([self.inputs_box, self.verify_button]))
         form.addRow(floated_buttons([self.verify_all_button]))
         form.addRow('Result:', self.result_edit)
+        form.addRow(self.inputs_table)
 
         w = QWidget()
         w.setLayout(form)
@@ -120,7 +161,9 @@ class TxAnalyzer(BaseDock):
         menu.exec_(inputs.view.viewport().mapToGlobal(position))
 
     def clear(self):
+        self.result_edit.clear()
         self.tx_widget.clear()
+        self.inputs_table.clear()
 
     def check_raw_tx(self):
         txt = str(self.raw_tx_edit.toPlainText())
@@ -156,6 +199,7 @@ class TxAnalyzer(BaseDock):
     def deserialize(self):
         self.clear()
         self.tx_widget.set_tx(self.tx)
+        self.inputs_table.set_tx(self.tx)
         self.status_message('Deserialized transaction {}'.format(bitcoin.core.b2lx(self.tx.GetHash())))
 
     def do_verify_input(self, tx, in_idx):
@@ -174,8 +218,10 @@ class TxAnalyzer(BaseDock):
             prev_tx = Transaction.deserialize(raw_prev_tx.decode('hex'))
             result = bitcoin.core.scripteval.VerifyScript(tx_in.scriptSig, prev_tx.vout[prev_out_n].scriptPubKey, tx, in_idx)
             self.result_edit.setText('Successfully verified input {}'.format(in_idx))
+            self.inputs_table.set_verified(in_idx, True)
         except Exception as e:
             self.result_edit.setText(str(e))
+            self.inputs_table.set_verified(in_idx, False)
             self.status_message(str(e), True)
             return False
 

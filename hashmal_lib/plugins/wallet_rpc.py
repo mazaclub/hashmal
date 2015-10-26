@@ -1,6 +1,7 @@
 import json
 import urllib
 import shlex
+from collections import namedtuple
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -9,9 +10,22 @@ import hashmal_lib
 from hashmal_lib.plugins import BaseDock, Plugin, Category
 from hashmal_lib.gui_utils import floated_buttons
 
-import rpc_methods
-known_methods = list(rpc_methods.known_methods)
-known_methods_dict = dict(rpc_methods.known_methods_dict)
+RPCMethod = namedtuple('RPCMethod', ('method', 'get_result_type'))
+"""RPC method.
+
+An RPCMethod instance is not necessary for a given RPC method to be used.
+This class is just for special cases.
+
+get_result_type is a function that takes the parameters used in a call, and returns
+the kind of data the result is. This way, context menus can have relevant actions (e.g. Deserialize transaction).
+"""
+
+known_methods = [
+            RPCMethod('getblock', lambda params: 'raw_block' if len(params) > 1 and params[1] == False else None), # non-verbose
+            RPCMethod('getrawtransaction', lambda params: 'raw_transaction' if len(params) == 1 or (len(params) > 1 and params[1] == 0) else None) # non-verbose
+]
+
+known_methods_dict = dict((i.method, i) for i in known_methods)
 
 def make_plugin():
     return Plugin(WalletRPC)
@@ -74,7 +88,7 @@ class WalletRPC(BaseDock):
         self.host_edit.setText(self.profile.host)
         self.port_edit = QSpinBox()
         self.port_edit.setRange(0, 65535)
-        self.port_edit.setValue(self.profile.port)
+        self.port_edit.setValue(int(self.profile.port))
 
         for i in [self.user_edit, self.pass_edit, self.host_edit]:
             i.textChanged.connect(self.update_profile)
@@ -125,15 +139,19 @@ class WalletRPC(BaseDock):
 
     def retrieve_blockchain_data(self, data_type, identifier):
         """Signifies that this plugin is a data retriever."""
+        params = [identifier]
         method_name = ''
         if data_type == 'raw_transaction':
             method_name = 'getrawtransaction'
+            params.append(0)
         elif data_type in ('raw_block', 'raw_header'):
             method_name = 'getblock'
+            params.append(False)
+        elif data_type == 'block_hash':
+            method_name = 'getblockhash'
         else:
             raise Exception('Unsupported data type "%s"' % data_type)
 
-        params = [identifier]
 
         result = None
         try:

@@ -2,3 +2,4 @@
 *.swp
 *.coinscript
 *.conf
+Hashmal*.egg-info

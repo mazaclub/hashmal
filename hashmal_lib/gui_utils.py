@@ -137,7 +137,8 @@ hashmal_entry_points = {
         'Stack Evaluator = hashmal_lib.plugins.stack:make_plugin',
         'Transaction Analyzer = hashmal_lib.plugins.tx_analyzer:make_plugin',
         'Transaction Builder = hashmal_lib.plugins.tx_builder:make_plugin',
-        'Variables = hashmal_lib.plugins.variables:make_plugin'
+        'Variables = hashmal_lib.plugins.variables:make_plugin',
+        'Wallet RPC = hashmal_lib.plugins.wallet_rpc:make_plugin'
     ]
 }
 

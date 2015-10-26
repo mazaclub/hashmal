@@ -11,4 +11,5 @@ import stack
 import tx_analyzer
 import tx_builder
 import variables
+import wallet_rpc
 

@@ -205,7 +205,7 @@ class Blockchain(BaseDock):
         self.raw_edit.setReadOnly(True)
         self.raw_edit.setContextMenuPolicy(Qt.CustomContextMenu)
         self.raw_edit.customContextMenuRequested.connect(self.context_menu)
-        self.download_button = QPushButton('Download')
+        self.download_button = QPushButton('&Download')
         self.download_button.clicked.connect(self.do_download)
         self.download_button.setEnabled(False)
 

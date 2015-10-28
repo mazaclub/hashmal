@@ -2,11 +2,13 @@ from functools import partial
 from pkg_resources import iter_entry_points
 from collections import OrderedDict
 import sys
+import __builtin__
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from gui_utils import required_plugins, default_plugins, add_shortcuts
+from gui_utils import required_plugins, default_plugins, add_shortcuts, hashmal_entry_points
+import plugins
 from plugins.base import Category
 
 
@@ -93,20 +95,31 @@ class PluginHandler(QWidget):
             for plugin in sorted(plugins, key = lambda x: x.name):
                 category_menu.addAction(plugin.dock.toggleViewAction())
 
+    def load_plugin(self, plugin_maker, name):
+        plugin_instance = plugin_maker()
+
+        dock_tool_name = plugin_instance.dock_class.tool_name
+        plugin_instance.name = dock_tool_name if dock_tool_name else name
+        plugin_instance.instantiate_dock(self)
+        # Don't load plugins with unknown category metadata.
+        if plugin_instance.dock.category not in Category.categories():
+            return
+
+        self.loaded_plugins.append(plugin_instance)
+
     def load_plugins(self):
         """Load plugins from entry points."""
-        for entry_point in iter_entry_points(group='hashmal.plugin'):
-            plugin_maker = entry_point.load()
-            plugin_instance = plugin_maker()
-
-            dock_tool_name = plugin_instance.dock_class.tool_name
-            plugin_instance.name = dock_tool_name if dock_tool_name else entry_point.name
-            plugin_instance.instantiate_dock(self)
-            # Don't load plugins with unknown category metadata.
-            if plugin_instance.dock.category not in Category.categories():
-                continue
-
-            self.loaded_plugins.append(plugin_instance)
+        if __builtin__.use_local_modules:
+            for i in hashmal_entry_points['hashmal.plugin']:
+                plugin_name = i[:i.find(' = ')]
+                module_name, plugin_maker_name = i[i.find('plugins.') + 8:].split(':')
+                module = getattr(plugins, module_name)
+                plugin_maker = getattr(module, plugin_maker_name)
+                self.load_plugin(plugin_maker, plugin_name)
+        else:
+            for entry_point in iter_entry_points(group='hashmal.plugin'):
+                plugin_maker = entry_point.load()
+                self.load_plugin(plugin_maker, entry_point.name)
 
         # Fail if core plugins aren't present.
         for req in required_plugins:

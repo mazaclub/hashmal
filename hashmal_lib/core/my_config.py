@@ -1,6 +1,22 @@
 import os
+import sys
 import json
 from copy import deepcopy
+
+# From Encompass
+def config_file_path():
+    """Return the filesystem path for the Hashmal config file."""
+    path = os.getcwd()
+    if 'HOME' in os.environ:
+        path = os.path.join(os.environ['HOME'], '.config', 'Hashmal')
+    elif 'APPDATA' in os.environ:
+        path = os.path.join(os.environ['APPDATA'], 'Hashmal')
+    elif 'LOCALAPPDATA' in os.environ:
+        path = os.path.join(os.environ['LOCALAPPDATA'], 'Hashmal')
+
+    if not os.path.exists(path):
+        os.mkdir(path)
+    return os.path.join(path, 'hashmal.conf')
 
 class Config(object):
     """Configuration state."""
@@ -10,7 +26,7 @@ class Config(object):
 
     def load(self, filename=None):
         if not filename:
-            filename = os.path.abspath('hashmal.conf')
+            filename = config_file_path()
         if not os.path.exists(filename):
             open(filename, 'w').close()
             self.options = {'filename': filename}

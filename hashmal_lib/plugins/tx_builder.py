@@ -221,13 +221,8 @@ class TxBuilder(BaseDock):
 
         self.tx_widget = TxWidget()
 
-        build_button = QPushButton('Build transaction')
-        build_button.setToolTip('Build a tx from the data in the previous tabs')
-        build_button.clicked.connect(self.build_transaction)
-
         form.addRow('Raw Tx:', self.raw_tx)
         form.addRow(self.tx_widget)
-        form.addRow(floated_buttons([build_button]))
 
         w = QWidget()
         w.setLayout(form)

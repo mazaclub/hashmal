@@ -1,4 +1,4 @@
-
+import __builtin__
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -229,6 +229,10 @@ class PluginManager(QDialog):
         filter_box.addWidget(filter_label)
         filter_box.addWidget(filter_edit, stretch=1)
 
+        is_local = QLabel('Hashmal is being run locally.\n\nInstall Hashmal to use third-party plugins.\n')
+        is_local.setVisible(__builtin__.use_local_modules)
+
+        vbox.addWidget(is_local)
         vbox.addLayout(filter_box)
         vbox.addWidget(self.view)
         vbox.addWidget(Separator())

@@ -1,7 +1,6 @@
 import unittest
 
-from hashmal_lib.core.script import Script
-from hashmal_lib.script_widget import transform_human
+from hashmal_lib.core.script import Script, transform_human
 
 class ParsingTest(unittest.TestCase):
 

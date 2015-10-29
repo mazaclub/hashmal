@@ -5,8 +5,8 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4 import QtCore
 
-from core.script import Script
-from script_widget import transform_human, ScriptEdit
+from core.script import Script, transform_human
+from script_widget import ScriptEdit
 
 
 def transform_human_script(text, main_window):

@@ -3,8 +3,7 @@ import unittest
 import bitcoin
 from bitcoin.core.scripteval import EvalScript
 
-from hashmal_lib.scriptedit import transform_human
-from hashmal_lib.core.script import Script
+from hashmal_lib.core.script import Script, transform_human
 from hashmal_lib.core.stack import Stack
 
 class StackTest(unittest.TestCase):

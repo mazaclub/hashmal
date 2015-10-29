@@ -98,6 +98,7 @@ class OutputsTree(QWidget):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(self.view)
         self.setLayout(vbox)
+        config.get_config().optionChanged.connect(self.on_option_changed)
 
     def clear(self):
         self.model.setRowCount(0)
@@ -148,14 +149,15 @@ class OutputsTree(QWidget):
         return vout
 
     def amount_format_changed(self):
-        """Parents should call this when config.amount_format changes.
-
-        Refreshes TxOut amounts with the new format.
-        """
+        """Refreshes TxOut amounts with the new format."""
         vout = self.get_outputs()
         self.clear()
         for o in vout:
             self.add_output(o)
+
+    def on_option_changed(self, key):
+        if key == 'amount_format':
+            self.amount_format_changed()
 
 class LockTimeWidget(QWidget):
     """Displays a transaction's locktime.

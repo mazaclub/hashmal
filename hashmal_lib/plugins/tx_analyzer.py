@@ -5,7 +5,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from base import BaseDock, Plugin, Category
-from hashmal_lib.gui_utils import monospace_font, floated_buttons, Separator, Amount
+from hashmal_lib.gui_utils import monospace_font, floated_buttons, Separator
 from hashmal_lib.tx_widget import TxWidget
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction
@@ -265,10 +265,6 @@ class TxAnalyzer(BaseDock):
     def verify_inputs(self):
         txt = str(self.raw_tx_edit.toPlainText())
         self.do_verify_inputs(txt)
-
-    def on_option_changed(self, key):
-        if key == 'amount_format':
-            self.needsUpdate.emit()
 
     def refresh_data(self):
         if self.tx:

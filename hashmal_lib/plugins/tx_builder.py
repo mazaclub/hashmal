@@ -6,7 +6,7 @@ from PyQt4 import QtCore
 
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction, chainparams
-from hashmal_lib.tx_widget import TxWidget, InputsTree, OutputsTree, TimestampWidget
+from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font
 from base import BaseDock, Plugin, Category
 

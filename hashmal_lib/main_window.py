@@ -9,7 +9,7 @@ from hashmal_lib.core import chainparams
 from config import Config
 from plugin_handler import PluginHandler
 from settings_dialog import SettingsDialog, ChainparamsComboBox
-from scriptedit import MyScriptEdit
+from script_editor import MyScriptEdit
 from help_widgets import QuickTips
 from gui_utils import script_file_filter, hashmal_style, floated_buttons, monospace_font
 from plugin_manager import PluginManager

@@ -5,10 +5,10 @@ from bitcoin.core import COutPoint, CTxIn, CTxOut, lx
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from gui_utils import Amount, monospace_font, HBox, floated_buttons, RawRole
+from hashmal_lib.gui_utils import Amount, monospace_font, HBox, floated_buttons, RawRole
 from hashmal_lib.core import chainparams
 from hashmal_lib.core.script import Script
-import config
+from hashmal_lib import config
 
 class InputsTree(QWidget):
     """Model and View showing a transaction's inputs."""

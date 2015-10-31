@@ -28,7 +28,8 @@ setup(
     packages=[
         'hashmal_lib',
         'hashmal_lib.core',
-        'hashmal_lib.plugins'
+        'hashmal_lib.plugins',
+        'hashmal_lib.widgets'
     ],
     entry_points = hashmal_entry_points
 )

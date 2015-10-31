@@ -273,8 +273,7 @@ class HashmalMain(QMainWindow):
         docks = filter(lambda dock: dock.isVisible(), self.tabifiedDockWidgets(w))
         w.toggleViewAction().trigger()
         if docks:
-            self.plugin_handler.bring_to_front(docks[0])
-            docks[0].widget().setFocus()
+            docks[0].needsFocus.emit()
 
 def get_active_dock():
     w = QApplication.focusWidget()

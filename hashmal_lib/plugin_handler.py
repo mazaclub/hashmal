@@ -162,6 +162,7 @@ class PluginHandler(QWidget):
             return
         dock.setVisible(True)
         dock.raise_()
+        dock.setFocus()
 
     def set_dock_signals(self, dock, do_connect):
         if do_connect:

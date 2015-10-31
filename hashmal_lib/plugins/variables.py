@@ -110,9 +110,8 @@ class Variables(BaseDock):
         self.dataChanged.connect(maybe_save)
 
     def init_data(self):
-        options = self.config.get_option('variables', {})
-        self.data = OrderedDict(options.get('data', {}))
-        self.auto_save = options.get('auto_save', False)
+        self.data = OrderedDict(self.option('data', {}))
+        self.auto_save = self.option('auto_save', False)
         self.filters = ['None', 'Hex', 'Raw Transaction', 'Text']
 
     def init_actions(self):
@@ -161,9 +160,7 @@ class Variables(BaseDock):
         def change_auto_save(is_checked):
             is_checked = True if is_checked else False
             self.auto_save = is_checked
-            options = self.config.get_option('variables', {})
-            options['auto_save'] = self.auto_save
-            self.config.set_option('variables', options)
+            self.set_option('auto_save', self.auto_save)
         self.auto_save_check.stateChanged.connect(change_auto_save)
         self.save_button = QPushButton('Save')
         self.save_button.clicked.connect(self.save_variables)
@@ -223,9 +220,7 @@ class Variables(BaseDock):
         self.dataChanged.emit()
 
     def save_variables(self):
-        options = self.config.get_option('variables', {})
-        options['data'] = self.data
-        self.config.set_option('variables', options)
+        self.set_option('data', self.data)
         if not self.auto_save:
             self.status_message('Saved variables to config file.')
 

@@ -65,8 +65,7 @@ class WalletRPC(BaseDock):
         self.augment('rpc_methods', {'known_rpc_methods': known_methods}, callback=self.on_methods_augmented)
 
     def init_data(self):
-        options = self.config.get_option('wallet_rpc', {})
-        self.profile = RPCProfile(options)
+        self.profile = RPCProfile(self.options())
 
     def create_layout(self):
         vbox = QVBoxLayout()
@@ -238,7 +237,7 @@ class WalletRPC(BaseDock):
 
     def save_options(self):
         options = self.profile.as_dict()
-        self.config.set_option('wallet_rpc', options)
+        self.save_options(options)
         self.status_message('Saved RPC options.')
 
     def on_methods_augmented(self, data):

@@ -173,3 +173,23 @@ class BaseDock(QDockWidget):
         Allows plugins to enhance other plugins.
         """
         return self.handler.do_augment_hook(self.__class__.__name__, target, data, callback)
+
+    def options(self):
+        """Return the config dict for this plugin."""
+        return self.config.get_option(self.tool_name, {})
+
+    def option(self, key, default=None):
+        """Return a config option for this plugin."""
+        options = self.options()
+        return options.get(key, default)
+
+    def set_option(self, key, value):
+        """Set a plugin-specific config option."""
+        options = self.options()
+        options[key] = value
+        self.save_options(options)
+
+    def save_options(self, options):
+        """Save options to config file."""
+        self.config.set_option(self.tool_name, options)
+

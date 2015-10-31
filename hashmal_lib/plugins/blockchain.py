@@ -102,8 +102,8 @@ class Blockchain(BaseDock):
 
     def init_data(self):
         self.known_explorers = OrderedDict(known_explorers)
-        config_explorer = self.config.get_option('block_explorer', 'Bitcoin:insight')
-        chain, explorer_name = config_explorer.split(':')
+        chain = self.option('chain', 'Bitcoin')
+        explorer_name = self.option('explorer', 'insight')
         explorer = (dict((i.name, i) for i in self.known_explorers.get(chain, []))).get(explorer_name)
         if not explorer:
             chain = 'Bitcoin'
@@ -138,7 +138,8 @@ class Blockchain(BaseDock):
         def set_default():
             chain = str(chain_combo.currentText())
             txt = str(explorer_combo.currentText())
-            self.config.set_option('block_explorer', ':'.join([chain, txt]))
+            self.set_option('chain', chain)
+            self.set_option('explorer', txt)
         set_default_button.clicked.connect(set_default)
 
 
@@ -166,7 +167,7 @@ class Blockchain(BaseDock):
     def create_options_tab(self):
         form = QFormLayout()
 
-        cache_size = int(self.config.get_option('blockchain_cache_size', 25))
+        cache_size = int(self.option('cache_size', 25))
 
         cache_size_box = QSpinBox()
         cache_size_box.setRange(0, 100)
@@ -175,7 +176,7 @@ class Blockchain(BaseDock):
 
         def change_cache_size():
             new_size = cache_size_box.value()
-            self.config.set_option('blockchain_cache_size', new_size)
+            self.set_option('cache_size', new_size)
         cache_size_box.valueChanged.connect(change_cache_size)
 
         form.addRow('Transaction cache size:', cache_size_box)
@@ -239,7 +240,7 @@ class Blockchain(BaseDock):
 
     def update_cache(self, identifier, raw):
         self.recent_data[identifier] = raw
-        while len(self.recent_data.keys()) > int(self.config.get_option('blockchain_cache_size', 25)):
+        while len(self.recent_data.keys()) > int(self.option('cache_size', 25)):
             self.recent_data.popitem(False)
 
     def make_downloader(self, data_type, identifier):
@@ -342,8 +343,8 @@ class Blockchain(BaseDock):
 
     def on_explorers_augmented(self, arg):
         """Update combo boxes after augmentation."""
-        config_explorer = self.config.get_option('block_explorer', 'Bitcoin:insight')
-        chain, explorer_name = config_explorer.split(':')
+        chain = self.option('chain', 'Bitcoin')
+        explorer_name = self.option('explorer', 'insight')
 
         explorer = (dict((i.name, i) for i in self.known_explorers.get(chain, []))).get(explorer_name)
         if not explorer:

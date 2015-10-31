@@ -1,4 +1,4 @@
-
+from collections import defaultdict
 import os
 import time
 
@@ -24,6 +24,8 @@ class HashmalMain(QMainWindow):
         self.app = app
         self.app.setStyleSheet(hashmal_style)
         self.changes_saved = True
+        # {Qt.DockWidgetArea: [dock0, dock1, ...], ...}
+        self.dock_orders = defaultdict(list)
 
         self.config = Config()
 
@@ -236,6 +238,39 @@ class HashmalMain(QMainWindow):
         hide_dock.setShortcut(QKeySequence(QKeySequence.Close))
         hide_dock.triggered.connect(self.hide_current_dock)
         self.addAction(hide_dock)
+
+        move_left_dock = QAction('Move Left', self)
+        move_left_dock.setShortcut(QKeySequence(QKeySequence.Back))
+        move_left_dock.triggered.connect(lambda: self.move_one_dock(reverse=True))
+        self.addAction(move_left_dock)
+
+        move_right_dock = QAction('Move Right', self)
+        move_right_dock.setShortcut(QKeySequence(QKeySequence.Forward))
+        move_right_dock.triggered.connect(self.move_one_dock)
+        self.addAction(move_right_dock)
+
+    def move_one_dock(self, reverse=False):
+        w = get_active_dock()
+        if not w: return
+        docks = filter(lambda dock: dock.isVisible(), self.dock_orders[self.dockWidgetArea(w)])
+        index = docks.index(w)
+        if reverse:
+            if index == 0:
+                index = len(docks)
+            docks[index - 1].needsFocus.emit()
+        else:
+            if index >= len(docks) - 1:
+                index = -1
+            docks[index + 1].needsFocus.emit()
+
+    def tabifyDockWidget(self, bottom, top):
+        docks = self.dock_orders[self.dockWidgetArea(bottom)]
+        area = self.dockWidgetArea(bottom)
+        if len(docks) == 0:
+            docks.append(bottom)
+        super(HashmalMain, self).tabifyDockWidget(bottom, top)
+        idx = docks.index(bottom)
+        docks.insert(idx + 1, top)
 
     def do_about(self):
         d = QDialog(self)

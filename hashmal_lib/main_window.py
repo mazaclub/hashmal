@@ -13,6 +13,7 @@ from scriptedit import MyScriptEdit
 from help_widgets import QuickTips
 from gui_utils import script_file_filter, hashmal_style, floated_buttons, monospace_font
 from plugin_manager import PluginManager
+from plugins import BaseDock
 
 known_script_formats = ['Human', 'Hex']
 
@@ -55,6 +56,7 @@ class HashmalMain(QMainWindow):
 
         self.create_menubar()
         self.create_toolbar()
+        self.create_actions()
         self.new_script()
         self.statusBar().setVisible(True)
         self.statusBar().messageChanged.connect(self.change_status_bar)
@@ -229,6 +231,12 @@ class HashmalMain(QMainWindow):
 
         self.addToolBar(toolbar)
 
+    def create_actions(self):
+        hide_dock = QAction('Hide Dock', self)
+        hide_dock.setShortcut(QKeySequence(QKeySequence.Close))
+        hide_dock.triggered.connect(self.hide_current_dock)
+        self.addAction(hide_dock)
+
     def do_about(self):
         d = QDialog(self)
         vbox = QVBoxLayout()
@@ -258,3 +266,19 @@ class HashmalMain(QMainWindow):
 
     def do_quick_tips(self):
         QuickTips(self).exec_()
+
+    def hide_current_dock(self):
+        w = get_active_dock()
+        if not w: return
+        docks = filter(lambda dock: dock.isVisible(), self.tabifiedDockWidgets(w))
+        w.toggleViewAction().trigger()
+        if docks:
+            self.plugin_handler.bring_to_front(docks[0])
+            docks[0].widget().setFocus()
+
+def get_active_dock():
+    w = QApplication.focusWidget()
+    while w and w.__class__:
+        if issubclass(w.__class__, BaseDock):
+            return w
+        w = w.parentWidget()

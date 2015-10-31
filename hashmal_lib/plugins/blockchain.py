@@ -125,6 +125,7 @@ class Blockchain(BaseDock):
         tabs.addTab(self.create_download_tab(), 'Download')
         tabs.addTab(self.create_explorer_tab(), 'Block Explorer')
         tabs.addTab(self.create_options_tab(), 'Settings')
+        self.setFocusProxy(tabs)
 
         vbox.addWidget(tabs)
         return vbox

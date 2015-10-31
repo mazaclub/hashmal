@@ -36,6 +36,7 @@ class TxBuilder(BaseDock):
         tabs.addTab(self.create_inputs_tab(), '&Inputs')
         tabs.addTab(self.create_outputs_tab(), '&Outputs')
         tabs.addTab(self.create_review_tab(), '&Review')
+        self.setFocusProxy(self.tabs)
 
         self.tx_field_widgets = []
         tabs.insertTab(3, self.create_other_tab(), 'Ot&her')

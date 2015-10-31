@@ -74,10 +74,12 @@ class TxAnalyzer(BaseDock):
         form = QFormLayout()
 
         self.raw_tx_edit = QPlainTextEdit()
+        self.raw_tx_edit.setTabChangesFocus(True)
         self.raw_tx_edit.setFont(monospace_font)
         self.raw_tx_edit.setContextMenuPolicy(Qt.CustomContextMenu)
         self.raw_tx_edit.customContextMenuRequested.connect(self.context_menu)
         self.raw_tx_edit.textChanged.connect(self.check_raw_tx)
+        self.setFocusProxy(self.raw_tx_edit)
 
         self.raw_tx_invalid = QLabel('Cannot parse transaction.')
         self.raw_tx_invalid.setProperty('hasError', True)

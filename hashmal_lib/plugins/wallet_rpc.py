@@ -72,6 +72,7 @@ class WalletRPC(BaseDock):
         tabs = QTabWidget()
         tabs.addTab(self.create_rpc_tab(), 'RPC')
         tabs.addTab(self.create_settings_tab(), 'Settings')
+        self.setFocusProxy(tabs)
 
         vbox.addWidget(tabs)
         return vbox

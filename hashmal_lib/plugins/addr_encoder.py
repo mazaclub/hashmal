@@ -32,6 +32,7 @@ class AddrEncoder(BaseDock):
 
         self.address_line = QLineEdit()
         self.address_line.setFont(monospace_font)
+        self.setFocusProxy(self.address_line)
         self.decode_button = QPushButton('Decode')
         self.decode_button.clicked.connect(self.decode_address)
 

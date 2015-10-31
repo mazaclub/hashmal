@@ -145,6 +145,7 @@ class Variables(BaseDock):
         # Controls for adding/removing variables
 
         self.new_var_key = QLineEdit()
+        self.setFocusProxy(self.new_var_key)
         self.new_var_value = QLineEdit()
         add_var_btn = QPushButton('Set')
         add_var_btn.clicked.connect(self.add_new_var)

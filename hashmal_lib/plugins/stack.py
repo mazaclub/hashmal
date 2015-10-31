@@ -59,6 +59,7 @@ class StackEval(BaseDock):
         tabs = QTabWidget()
         tabs.addTab(self.create_main_tab(), 'Stack')
         tabs.addTab(self.create_tx_tab(), 'Transaction')
+        self.setFocusProxy(tabs)
         form.addRow(tabs)
 
         return form

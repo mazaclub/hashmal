@@ -114,6 +114,7 @@ class ScriptGenerator(BaseDock):
         # ComboBox for selecting which template to use.
         self.template_combo = QComboBox()
         self.template_combo.addItems([i.name for i in known_templates])
+        self.setFocusProxy(self.template_combo)
 
         template = known_templates[0]
         self.template_widget = TemplateWidget(template)

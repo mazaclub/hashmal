@@ -28,6 +28,7 @@ class BlockAnalyzer(BaseDock):
         self.block_widget.header_widget.view.selectionModel().selectionChanged.connect(self.select_block_field)
         self.raw_block_edit = QPlainTextEdit()
         self.raw_block_edit.textChanged.connect(self.check_raw_block)
+        self.setFocusProxy(self.raw_block_edit)
 
         self.block_widget.txs_widget.view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.block_widget.txs_widget.view.customContextMenuRequested.connect(self.txs_context_menu)

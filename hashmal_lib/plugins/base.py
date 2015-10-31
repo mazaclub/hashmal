@@ -95,6 +95,7 @@ class BaseDock(QDockWidget):
         self.main_widget = QWidget()
         self.main_widget.setLayout(my_layout)
         self.needsUpdate.connect(self.refresh_data)
+        self.toggleViewAction().triggered.connect(self.visibility_toggled)
         self.setWidget(self.main_widget)
 
         self.config.optionChanged.connect(self.on_option_changed)
@@ -193,3 +194,7 @@ class BaseDock(QDockWidget):
         """Save options to config file."""
         self.config.set_option(self.tool_name, options)
 
+    def visibility_toggled(self):
+        """Called when toggleViewAction() is triggered so this dock can get focus."""
+        if self.isVisible():
+            self.needsFocus.emit()

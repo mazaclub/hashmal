@@ -101,13 +101,18 @@ class Variables(BaseDock):
     tool_name = 'Variables'
     description = 'Variables records data for later access.'
 
+    dataChanged = QtCore.pyqtSignal()
     def __init__(self, handler):
         super(Variables, self).__init__(handler)
-        self.needsUpdate.emit()
+        def maybe_save():
+            if self.auto_save:
+                self.save_variables()
+        self.dataChanged.connect(maybe_save)
 
     def init_data(self):
-        data = self.config.get_option('variables', {})
-        self.data = OrderedDict(data)
+        options = self.config.get_option('variables', {})
+        self.data = OrderedDict(options.get('data', {}))
+        self.auto_save = options.get('auto_save', False)
         self.filters = ['None', 'Hex', 'Raw Transaction', 'Text']
 
     def init_actions(self):
@@ -122,7 +127,9 @@ class Variables(BaseDock):
         self.view = QTableView()
         self.view.setModel(self.model)
         self.view.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
+        self.view.horizontalHeader().setHighlightSections(False)
         self.view.verticalHeader().setDefaultSectionSize(22)
+        self.view.verticalHeader().setVisible(False)
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.view.customContextMenuRequested.connect(self.context_menu)
         self.view.setSizePolicy(QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding))
@@ -140,7 +147,7 @@ class Variables(BaseDock):
 
         self.new_var_key = QLineEdit()
         self.new_var_value = QLineEdit()
-        add_var_btn = QPushButton('Add')
+        add_var_btn = QPushButton('Set')
         add_var_btn.clicked.connect(self.add_new_var)
         add_var_hbox = HBox(self.new_var_key, QLabel(':'), self.new_var_value, add_var_btn)
 
@@ -149,13 +156,22 @@ class Variables(BaseDock):
         del_var_button.clicked.connect(self.remove_var)
         del_var_hbox = HBox(self.del_var_key, del_var_button)
 
+        self.auto_save_check = QCheckBox('Automatically save')
+        self.auto_save_check.setChecked(self.auto_save)
+        def change_auto_save(is_checked):
+            is_checked = True if is_checked else False
+            self.auto_save = is_checked
+            options = self.config.get_option('variables', {})
+            options['auto_save'] = self.auto_save
+            self.config.set_option('variables', options)
+        self.auto_save_check.stateChanged.connect(change_auto_save)
         self.save_button = QPushButton('Save')
         self.save_button.clicked.connect(self.save_variables)
         self.save_button.setToolTip('Save variables to config file')
 
         form.addRow('Add:', add_var_hbox)
         form.addRow('Delete:', del_var_hbox)
-        form.addRow(floated_buttons([self.save_button]))
+        form.addRow(floated_buttons([self.auto_save_check, self.save_button]))
         return form
 
     def is_valid_key(self, key):
@@ -196,7 +212,7 @@ class Variables(BaseDock):
     def set_key(self, key, value):
         """Store a new variable."""
         self.model.set_key(key, value)
-        self.needsUpdate.emit()
+        self.dataChanged.emit()
 
     def remove_key(self, key):
         """Remove a key."""
@@ -204,11 +220,14 @@ class Variables(BaseDock):
             self.model.remove_key(key)
         except ValueError:
             self.status_message('No variable named "{}"'.format(key), True)
-        self.needsUpdate.emit()
+        self.dataChanged.emit()
 
     def save_variables(self):
-        self.config.set_option('variables', self.data)
-        self.status_message('Saved variables to config file.')
+        options = self.config.get_option('variables', {})
+        options['data'] = self.data
+        self.config.set_option('variables', options)
+        if not self.auto_save:
+            self.status_message('Saved variables to config file.')
 
     def context_menu(self, position):
         menu = QMenu()
@@ -224,7 +243,6 @@ class Variables(BaseDock):
             row = index.row()
             name = self.model.dataAt(row, 0).toString()
             self.remove_key(str(name))
-            self.needsUpdate.emit()
         menu.addAction('Delete', delete)
 
         menu.exec_(self.view.viewport().mapToGlobal(position))

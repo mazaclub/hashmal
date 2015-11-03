@@ -41,6 +41,72 @@ class ChainparamsComboBox(QComboBox):
         self.config.set_option('chainparams', new_name)
         self.paramsChanged.emit()
 
+class LayoutChanger(QWidget):
+    def __init__(self, main_window, parent=None):
+        super(LayoutChanger, self).__init__(parent)
+        self.gui = main_window
+        self.qt_settings = main_window.qt_settings
+        self.load_layout_names()
+        self.create_layout()
+        self.gui.layoutsChanged.connect(self.refresh_layout_combobox)
+
+    def load_layout_names(self):
+        self.qt_settings.beginGroup('toolLayout')
+        self.layout_names = self.qt_settings.childKeys()
+        self.qt_settings.endGroup()
+
+    def create_layout(self):
+        # QComboBox for loading/deleting/saving a layout.
+        self.layout_combo = layout_combo = QComboBox()
+        layout_combo.addItems(self.layout_names)
+        # Load layout
+        self.load_button = load_button = QPushButton('Load')
+        load_button.setToolTip('Load the selected layout')
+        load_button.clicked.connect(lambda: self.load_layout(str(layout_combo.currentText())))
+        # Delete layout
+        self.delete_button = delete_button = QPushButton('Delete')
+        delete_button.setToolTip('Delete the selected layout')
+        delete_button.clicked.connect(lambda: self.delete_layout(str(layout_combo.currentText())))
+        # Save layout button
+        self.save_button = save_button = QPushButton('Save')
+        save_button.setToolTip('Save current layout as the selected layout')
+        save_button.clicked.connect(lambda: self.save_layout(str(layout_combo.currentText())))
+
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(layout_combo)
+        hbox.addWidget(load_button)
+        hbox.addWidget(save_button)
+        hbox.addWidget(delete_button)
+
+        self.setLayout(hbox)
+
+    def save_layout(self, name='default'):
+        key = '/'.join(['toolLayout', name])
+        self.qt_settings.setValue(key, self.gui.saveState())
+        self.gui.show_status_message('Saved layout "{}".'.format(name))
+        self.gui.layoutsChanged.emit()
+
+    def load_layout(self, name='default'):
+        key = '/'.join(['toolLayout', name])
+        self.gui.restoreState(self.qt_settings.value(key).toByteArray())
+        self.gui.show_status_message('Loaded layout "{}".'.format(name))
+
+    def delete_layout(self, name):
+        key = '/'.join(['toolLayout', name])
+        self.qt_settings.remove(key)
+        self.gui.show_status_message('Deleted layout "{}".'.format(name))
+        self.gui.layoutsChanged.emit()
+
+    def refresh_layout_combobox(self):
+        # Skip if things aren't set up yet.
+        if not getattr(self, 'layout_combo', None):
+            return
+        self.load_layout_names()
+        self.layout_combo.clear()
+        self.layout_combo.addItems(self.layout_names)
+
+
 class SettingsDialog(QDialog):
     """Configuration interface.
 
@@ -51,30 +117,15 @@ class SettingsDialog(QDialog):
         self.gui = main_window
         self.config = main_window.config
         self.qt_settings = main_window.qt_settings
+        self.layout_changer = LayoutChanger(self.gui)
         if not self.qt_settings.contains('/'.join(['toolLayout', 'default'])):
-            self.save_layout()
-
-        # load saved layouts
-        self.load_layout_names()
+            self.layout_changer.save_layout()
 
         self.setup_layout()
         self.setWindowTitle('Settings')
 
     def sizeHint(self):
         return QSize(375, 270)
-
-    def load_layout_names(self):
-        self.qt_settings.beginGroup('toolLayout')
-        self.layout_names = self.qt_settings.childKeys()
-        self.qt_settings.endGroup()
-
-    def refresh_layout_combobox(self):
-        # Skip if things aren't set up yet.
-        if not getattr(self, 'layout_combo', None):
-            return
-        self.load_layout_names()
-        self.layout_combo.clear()
-        self.layout_combo.addItems(self.layout_names)
 
     def setup_layout(self):
         vbox = QVBoxLayout()
@@ -97,36 +148,20 @@ class SettingsDialog(QDialog):
         self.setLayout(vbox)
 
     def create_qt_tab(self):
-        # QComboBox for loading/deleting a layout
-        self.layout_combo = layout_combo = QComboBox()
-        layout_combo.addItems(self.layout_names)
-        # Load layout
-        load_button = QPushButton('Load')
-        load_button.setToolTip('Load the selected layout')
-        load_button.clicked.connect(lambda: self.load_layout(str(layout_combo.currentText())))
-        # Delete layout
-        delete_button = QPushButton('Delete')
-        delete_button.setToolTip('Delete the selected layout')
-        delete_button.clicked.connect(lambda: self.delete_layout(str(layout_combo.currentText())))
-
+        self.layout_changer.layout().setStretch(0, 1)
+        self.layout_changer.save_button.setVisible(False)
         # QLineEdit for saving a layout
         layout_name_edit = QLineEdit()
         layout_name_edit.setText('default')
         # Save layout button
         save_button = QPushButton('Save')
-        save_button.clicked.connect(lambda: self.save_layout(str(layout_name_edit.text())))
+        save_button.clicked.connect(lambda: self.layout_changer.save_layout(str(layout_name_edit.text())))
 
         form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.WrapAllRows)
         form.setVerticalSpacing(10)
 
-        hbox = QHBoxLayout()
-        hbox.setSpacing(10)
-        hbox.addWidget(layout_combo, stretch=1)
-        hbox.addWidget(load_button)
-        hbox.addWidget(delete_button)
-
-        form.addRow('Layout:', hbox)
+        form.addRow('Layout:', self.layout_changer)
 
         hbox = QHBoxLayout()
         hbox.setSpacing(10)
@@ -269,24 +304,6 @@ class SettingsDialog(QDialog):
         w = QWidget()
         w.setLayout(form)
         return w
-
-
-    def save_layout(self, name='default'):
-        key = '/'.join(['toolLayout', name])
-        self.qt_settings.setValue(key, self.gui.saveState())
-        self.gui.show_status_message('Saved layout "{}".'.format(name))
-        self.refresh_layout_combobox()
-
-    def load_layout(self, name='default'):
-        key = '/'.join(['toolLayout', name])
-        self.gui.restoreState(self.qt_settings.value(key).toByteArray())
-        self.gui.show_status_message('Loaded layout "{}".'.format(name))
-
-    def delete_layout(self, name):
-        key = '/'.join(['toolLayout', name])
-        self.qt_settings.remove(key)
-        self.gui.show_status_message('Deleted layout "{}".'.format(name))
-        self.refresh_layout_combobox()
 
     def change_editor_font(self, font):
         self.gui.script_editor.setFont(font)

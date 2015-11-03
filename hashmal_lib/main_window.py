@@ -8,7 +8,7 @@ from PyQt4 import QtCore
 from hashmal_lib.core import chainparams
 from config import Config
 from plugin_handler import PluginHandler
-from settings_dialog import SettingsDialog, ChainparamsComboBox
+from settings_dialog import SettingsDialog, ChainparamsComboBox, LayoutChanger
 from script_editor import MyScriptEdit
 from help_widgets import QuickTips
 from gui_utils import script_file_filter, hashmal_style, floated_buttons, monospace_font
@@ -18,6 +18,9 @@ from plugins import BaseDock
 known_script_formats = ['Human', 'Hex']
 
 class HashmalMain(QMainWindow):
+    # Signals
+    # Emitted when the list of user's layouts changes.
+    layoutsChanged = QtCore.pyqtSignal()
 
     def __init__(self, app):
         super(HashmalMain, self).__init__()
@@ -222,6 +225,7 @@ class HashmalMain(QMainWindow):
         toolbar.setObjectName('Toolbar')
 
         params_combo = ChainparamsComboBox(self.config)
+        params_combo.setMinimumWidth(120)
         params_form = QFormLayout()
         params_form.setContentsMargins(0, 0, 0, 0)
         params_form.addRow('Chainparams:', params_combo)
@@ -230,6 +234,21 @@ class HashmalMain(QMainWindow):
         params_selector.setToolTip('Change chainparams preset')
 
         toolbar.addWidget(params_selector)
+        toolbar.addSeparator()
+
+        layout_changer = LayoutChanger(self)
+        layout_changer.layout_combo.setMinimumWidth(120)
+        layout_changer.delete_button.setVisible(False)
+        for i in [layout_changer.load_button, layout_changer.save_button]:
+            i.setMaximumWidth(50)
+            i.setMaximumHeight(23)
+        layout_form = QFormLayout()
+        layout_form.setContentsMargins(0, 0, 0, 0)
+        layout_form.addRow('Layout:', layout_changer)
+        layout_widget = QWidget()
+        layout_widget.setLayout(layout_form)
+        layout_widget.setToolTip('Load or save a layout')
+        toolbar.addWidget(layout_widget)
 
         self.addToolBar(toolbar)
 

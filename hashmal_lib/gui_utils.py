@@ -1,3 +1,4 @@
+import decimal
 from decimal import Decimal
 
 from PyQt4.QtGui import QFont, QHBoxLayout, QFrame, QLineEdit
@@ -95,6 +96,65 @@ class Amount(object):
             value = str(self.satoshis)
         return value
 
+class OutputAmountEdit(QLineEdit):
+    def __init__(self, parent=None):
+        super(OutputAmountEdit, self).__init__(parent)
+        self.config = config.get_config()
+        self.config.optionChanged.connect(self.on_option_changed)
+        self.amount_format = self.config.get_option('amount_format', 'coins')
+        self.textChanged.connect(self.check_text)
+
+    @QtCore.pyqtProperty(str)
+    def satoshis(self):
+        return str(self.get_satoshis())
+
+    @satoshis.setter
+    def satoshis(self, value):
+        # QString --> str
+        self.set_satoshis(str(value))
+
+    def get_satoshis(self):
+        """Get amount in satoshis."""
+        amount = str(self.text())
+        if not amount:
+            return 0
+        if self.amount_format == 'satoshis':
+            return int(amount)
+        elif self.amount_format == 'coins':
+            return int(float(amount) * pow(10, 8))
+
+    def set_satoshis(self, amount):
+        if self.amount_format == 'satoshis':
+            self.setText(str(amount))
+        elif self.amount_format == 'coins':
+            amount = Decimal(amount) / pow(10, 8)
+            amount = amount.quantize(Decimal('0.00000001'), rounding=decimal.ROUND_DOWN)
+            self.setText('{:f}'.format(amount))
+
+    def check_text(self):
+        try:
+            i = self.get_satoshis()
+        except Exception as e:
+            print(e)
+            self.setProperty('hasError', True)
+            return
+        else:
+            if i < 0:
+                self.setProperty('hasError', True)
+                return
+            self.setProperty('hasError', False)
+        finally:
+            self.style().polish(self)
+
+    def update_format(self):
+        satoshis = self.get_satoshis()
+        self.amount_format = self.config.get_option('amount_format', 'coins')
+        self.set_satoshis(satoshis)
+
+    def on_option_changed(self, key):
+        if key == 'amount_format':
+            self.update_format()
+
 class AmountEdit(QLineEdit):
     """QSpinBox does not support a maximum value
     of 0xffffffff. This class can be used in cases where a
@@ -104,22 +164,28 @@ class AmountEdit(QLineEdit):
         self.max_value = max_value
         self.textChanged.connect(self.check_text)
 
+    @QtCore.pyqtProperty(str)
+    def amount(self):
+        return str(self.get_amount())
+
+    @amount.setter
+    def amount(self, value):
+        self.set_amount(value)
+
     def get_amount(self):
         txt = str(self.text())
         if len(txt) == 0:
             return 0
         if txt.startswith('0x'):
             i = int(txt, 16)
-            return i
-        i = int(txt)
+        else:
+            i = int(txt)
         return i
 
     def set_amount(self, amount):
         if isinstance(amount, QtCore.QVariant):
             amount = amount.toUInt()
         self.setText(str(amount))
-
-    amount = QtCore.pyqtProperty(QtCore.QVariant, get_amount, set_amount)
 
     def check_text(self):
         try:

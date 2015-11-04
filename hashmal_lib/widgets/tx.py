@@ -1,29 +1,127 @@
 import datetime
+import decimal
+from decimal import Decimal
 
 import bitcoin
-from bitcoin.core import COutPoint, CTxIn, CTxOut, lx
+from bitcoin.core import COutPoint, CTxIn, CTxOut, lx, x, b2x, b2lx, CMutableOutPoint, CMutableTxIn, CMutableTxOut
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
+from PyQt4.QtCore import *
 
 from hashmal_lib.gui_utils import Amount, monospace_font, HBox, floated_buttons, RawRole
 from hashmal_lib.core import chainparams
 from hashmal_lib.core.script import Script
+from hashmal_lib.core import Transaction
 from hashmal_lib import config
+
+class InputsModel(QAbstractTableModel):
+    """Model of a transaction's inputs."""
+    def __init__(self, tx=None, parent=None):
+        super(InputsModel, self).__init__(parent)
+        if tx is None:
+            tx = Transaction()
+        self.tx = tx
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self.tx.vin)
+
+    def columnCount(self, parent=QModelIndex()):
+        return 4
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if orientation != Qt.Horizontal: return QVariant(None)
+        headers = [
+            {Qt.DisplayRole: 'Prev Tx', Qt.ToolTipRole: 'Previous Transaction Hash'},
+            {Qt.DisplayRole: 'Prev Output', Qt.ToolTipRole: 'Previous Transaction Output'},
+            {Qt.DisplayRole: 'scriptSig', Qt.ToolTipRole: 'Input script'},
+            {Qt.DisplayRole: 'Sequence', Qt.ToolTipRole: 'Input sequence'}
+        ]
+        try:
+            data = QVariant(headers[section][role])
+            return data
+        except (IndexError, KeyError):
+            return QVariant(None)
+
+    def data(self, index, role = Qt.DisplayRole):
+        if not index.isValid() or not self.tx: return QVariant(None)
+        if role not in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole, RawRole]:
+            return None
+        tx_input = self.tx.vin[index.row()]
+        col = index.column()
+        data = None
+        if col == 0:
+            data = b2x(tx_input.prevout.hash)
+        elif col == 1:
+            data = tx_input.prevout.n
+        elif col == 2:
+            if role == RawRole:
+                data = Script(tx_input.scriptSig).get_hex()
+            else:
+                data = Script(tx_input.scriptSig).get_human()
+        elif col == 3:
+            data = tx_input.nSequence
+
+        return QVariant(data)
+
+    def setData(self, index, value, role = Qt.EditRole):
+        if not index.isValid() or not self.tx: return False
+        tx_input = self.tx.vin[index.row()]
+        col = index.column()
+        if col == 0:
+            tx_input.prevout.hash = x(str(value.toString()))
+        elif col == 1:
+            tx_input.prevout.n, _ = value.toUInt()
+        elif col == 2:
+            tx_input.scriptSig = x(Script.from_human(str(value.toString())).get_hex())
+        elif col == 3:
+            tx_input.nSequence, _ = value.toUInt()
+        self.dataChanged.emit(self.index(index.row(), col), self.index(index.row(), col))
+        return True
+
+    def add_input(self, tx_input=None, input_index=None):
+        """Add an input at input_index, or append one if input_index is None."""
+        if tx_input is None:
+            tx_input = CMutableTxIn()
+        elif tx_input.__class__ == CTxIn:
+            tx_input = CMutableTxIn.from_txin(tx_input)
+
+        if input_index is None:
+            input_index = len(self.tx.vin)
+        self.beginInsertRows(QModelIndex(), input_index, input_index)
+        self.tx.vin.insert(input_index, tx_input)
+        self.endInsertRows()
+
+    def get_inputs(self):
+        return list(self.tx.vin)
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        self.beginRemoveRows(QModelIndex(), row, row + count - 1)
+        for i in range(row, row + count):
+            self.tx.vin.pop(row)
+        self.endRemoveRows()
+        return True
+
+    def clear(self):
+        self.removeRows(0, len(self.tx.vin))
 
 class InputsTree(QWidget):
     """Model and View showing a transaction's inputs."""
     def __init__(self, parent=None):
         super(InputsTree, self).__init__(parent)
-        self.model = QStandardItemModel()
-        self.view = QTreeView()
-        self.model.setColumnCount(3)
-        self.model.setHorizontalHeaderLabels(['Prev Output', 'scriptSig', 'Sequence'])
+        self.model = InputsModel()
+        self.view = QTableView()
         self.view.setAlternatingRowColors(True)
         self.view.setModel(self.model)
-        self.view.header().setStretchLastSection(False)
-        self.view.header().setResizeMode(0, QHeaderView.Interactive)
-        self.view.header().setResizeMode(1, QHeaderView.Stretch)
-        self.view.header().setResizeMode(2, QHeaderView.Interactive)
+        self.view.horizontalHeader().setStretchLastSection(False)
+        self.view.horizontalHeader().setResizeMode(0, QHeaderView.Interactive)
+        self.view.horizontalHeader().setResizeMode(1, QHeaderView.ResizeToContents)
+        self.view.horizontalHeader().setResizeMode(2, QHeaderView.Stretch)
+        self.view.horizontalHeader().setResizeMode(3, QHeaderView.Interactive)
+        self.view.horizontalHeader().setHighlightSections(False)
+        self.view.verticalHeader().setDefaultSectionSize(22)
+        self.view.verticalHeader().setVisible(False)
+        self.view.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.view.customContextMenuRequested.connect(self.customContextMenu)
         vbox = QVBoxLayout()
@@ -32,18 +130,19 @@ class InputsTree(QWidget):
         self.setLayout(vbox)
 
     def clear(self):
-        self.model.setRowCount(0)
+        self.model.clear()
 
     def copy_script(self):
         """Copy the scriptSig to clipboard."""
-        item = self.model.itemFromIndex(self.view.selectedIndexes()[1])
-        QApplication.clipboard().setText(item.text())
+        idx = self.view.selectedIndexes()[2]
+        data = self.model.data(idx)
+        QApplication.clipboard().setText(data.toString())
 
     def copy_script_hex(self):
         """Copy the scriptSig to clipboard as hex."""
-        item = self.model.itemFromIndex(self.view.selectedIndexes()[1])
-        txt = item.data(RawRole).toString()
-        QApplication.clipboard().setText(txt)
+        idx = self.view.selectedIndexes()[2]
+        data = self.model.data(idx, RawRole)
+        QApplication.clipboard().setText(data.toString())
 
     def context_menu(self):
         menu = QMenu()
@@ -58,40 +157,125 @@ class InputsTree(QWidget):
         menu.exec_(self.view.viewport().mapToGlobal(pos))
 
     def add_input(self, i):
-        in_script = Script(i.scriptSig)
-        item = map(lambda x: QStandardItem(x), [
-            str(i.prevout),
-            in_script.get_human(),
-            str(i.nSequence)
-        ])
-        # Raw scriptSig is stored as RawRole.
-        item[1].setData(QtCore.QVariant(in_script.get_hex()), RawRole)
-        self.model.appendRow(item)
+        self.model.add_input(i)
+        return
 
     def get_inputs(self):
-        vin = []
-        for i in range(self.model.rowCount()):
-            prev_hash, prev_vout = str(self.model.item(i, 0).text()).split(':')
-            in_script = str(self.model.item(i, 1).data(RawRole).toString())
-            sequence = int(self.model.item(i, 2).text())
+        return self.model.get_inputs()
 
-            outpoint = COutPoint(lx(prev_hash), int(prev_vout))
-            i_input = CTxIn(outpoint, in_script.decode('hex'), sequence)
-            vin.append(i_input)
-        return vin
+class OutputsModel(QAbstractTableModel):
+    """Model of a transaction's outputs."""
+    def __init__(self, tx=None, parent=None):
+        super(OutputsModel, self).__init__(parent)
+        if tx is None:
+            tx = Transaction()
+        self.tx = tx
+        self.amount_format = config.get_config().get_option('amount_format', 'coins')
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self.tx.vout)
+
+    def columnCount(self, parent=QModelIndex()):
+        return 2
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if orientation != Qt.Horizontal: return QVariant(None)
+        headers = [
+            {Qt.DisplayRole: 'Value', Qt.ToolTipRole: 'Output amount'},
+            {Qt.DisplayRole: 'scriptPubKey', Qt.ToolTipRole: 'Output script'}
+        ]
+        try:
+            data = QVariant(headers[section][role])
+            return data
+        except (IndexError, KeyError):
+            return QVariant(None)
+
+    def data(self, index, role = Qt.DisplayRole):
+        if not index.isValid() or not self.tx: return QVariant(None)
+        if role not in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole, RawRole]:
+            return None
+        tx_out = self.tx.vout[index.row()]
+        col = index.column()
+        data = None
+        if col == 0:
+            if role in [Qt.EditRole, RawRole]:
+                data = tx_out.nValue
+            elif role in [Qt.ToolTipRole]:
+                data = ' '.join([str(tx_out.nValue), 'satoshis'])
+            else:
+                data = self.format_amount(tx_out.nValue)
+        elif col == 1:
+            if role == RawRole:
+                data = Script(tx_out.scriptPubKey).get_hex()
+            else:
+                data = Script(tx_out.scriptPubKey).get_human()
+
+        return QVariant(data)
+
+    def setData(self, index, value, role = Qt.EditRole):
+        if not index.isValid() or not self.tx: return False
+        tx_out = self.tx.vout[index.row()]
+        col = index.column()
+        if col == 0:
+            tx_out.nValue, _ = value.toULongLong()
+        elif col == 1:
+            tx_out.scriptPubKey = x(Script.from_human(str(value.toString())).get_hex())
+        self.dataChanged.emit(self.index(index.row(), col), self.index(index.row(), col))
+        return True
+
+    def add_output(self, tx_out=None, output_index=None):
+        """Add an output at output_index, or append one if output_index is None."""
+        if tx_out is None:
+            tx_out = CMutableTxOut()
+        elif tx_out.__class__ == CTxOut:
+            tx_out = CMutableTxOut.from_txout(tx_out)
+
+        if output_index is None:
+            output_index = len(self.tx.vout)
+        self.beginInsertRows(QModelIndex(), output_index, output_index)
+        self.tx.vout.insert(output_index, tx_out)
+        self.endInsertRows()
+
+    def get_outputs(self):
+        return list(self.tx.vout)
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        self.beginRemoveRows(QModelIndex(), row, row + count - 1)
+        for i in range(row, row + count):
+            self.tx.vout.pop(row)
+        self.endRemoveRows()
+        return True
+
+    def clear(self):
+        self.removeRows(0, len(self.tx.vout))
+
+    def format_amount(self, satoshis):
+        if self.amount_format == 'satoshis':
+            return str(satoshis)
+        elif self.amount_format == 'coins':
+            amount = Decimal(satoshis) / pow(10, 8)
+            amount = amount.quantize(Decimal('0.00000001'), rounding=decimal.ROUND_DOWN)
+            return '{:f}'.format(amount)
+
+    def amount_format_changed(self):
+        """Refreshes TxOut amounts with the new format."""
+        self.dataChanged.emit(QModelIndex(), QModelIndex())
 
 class OutputsTree(QWidget):
     """Model and View showing a transaction's outputs."""
     def __init__(self, parent=None):
         super(OutputsTree, self).__init__(parent)
-        self.model = QStandardItemModel()
-        self.view = QTreeView()
-        self.model.setColumnCount(2)
-        self.model.setHorizontalHeaderLabels(['Value', 'scriptPubKey'])
+        self.model = OutputsModel()
+        self.view = QTableView()
         self.view.setAlternatingRowColors(True)
         self.view.setModel(self.model)
-        self.view.header().setResizeMode(0, QHeaderView.Interactive)
-        self.view.header().setResizeMode(1, QHeaderView.Stretch)
+        self.view.horizontalHeader().setResizeMode(0, QHeaderView.Interactive)
+        self.view.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
+        self.view.horizontalHeader().setHighlightSections(False)
+        self.view.verticalHeader().setDefaultSectionSize(22)
+        self.view.verticalHeader().setVisible(False)
+        self.view.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.view.customContextMenuRequested.connect(self.customContextMenu)
         vbox = QVBoxLayout()
@@ -101,18 +285,19 @@ class OutputsTree(QWidget):
         config.get_config().optionChanged.connect(self.on_option_changed)
 
     def clear(self):
-        self.model.setRowCount(0)
+        self.model.clear()
 
     def copy_script(self):
         """Copy the scriptPubKey to clipboard."""
-        item = self.model.itemFromIndex(self.view.selectedIndexes()[1])
-        QApplication.clipboard().setText(item.text())
+        idx = self.view.selectedIndexes()[1]
+        data = self.model.data(idx)
+        QApplication.clipboard().setText(data.toString())
 
     def copy_script_hex(self):
         """Copy the scriptPubKey to clipboard as hex."""
-        item = self.model.itemFromIndex(self.view.selectedIndexes()[1])
-        txt = item.data(RawRole).toString()
-        QApplication.clipboard().setText(txt)
+        idx = self.view.selectedIndexes()[1]
+        data = self.model.data(idx, RawRole)
+        QApplication.clipboard().setText(data.toString())
 
     def customContextMenu(self, pos):
         if len(self.view.selectedIndexes()) == 0:
@@ -124,40 +309,15 @@ class OutputsTree(QWidget):
         menu.exec_(self.view.viewport().mapToGlobal(pos))
 
     def add_output(self, o):
-        out_script = Script(o.scriptPubKey)
-        value = Amount(o.nValue)
-        item = map(lambda x: QStandardItem(x), [
-            value.get_str(),
-            out_script.get_human()
-        ])
-        # Value in satoshis is stored as RawRole.
-        item[0].setData(QtCore.QVariant(value.satoshis), RawRole)
-        # Raw scriptPubKey is stored as RawRole.
-        item[1].setData(QtCore.QVariant(out_script.get_hex()), RawRole)
-        self.model.appendRow(item)
+        self.model.add_output(o)
 
     def get_outputs(self):
-        vout = []
-        for i in range(self.model.rowCount()):
-            value, ok = self.model.item(i, 0).data(RawRole).toInt()
-            if not ok:
-                raise Exception('Could not get satoshis for output %d' % i)
-                return
-            out_script = Script(str(self.model.item(i, 1).data(RawRole).toString()).decode('hex'))
-            i_output = CTxOut(value, out_script.get_hex().decode('hex'))
-            vout.append(i_output)
-        return vout
-
-    def amount_format_changed(self):
-        """Refreshes TxOut amounts with the new format."""
-        vout = self.get_outputs()
-        self.clear()
-        for o in vout:
-            self.add_output(o)
+        return self.model.get_outputs()
 
     def on_option_changed(self, key):
         if key == 'amount_format':
-            self.amount_format_changed()
+            self.model.amount_format = config.get_config().get_option('amount_format', 'coins')
+            self.model.amount_format_changed()
 
 class LockTimeWidget(QWidget):
     """Displays a transaction's locktime.

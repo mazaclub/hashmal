@@ -1,5 +1,5 @@
 import bitcoin
-from bitcoin.core import COutPoint, CTxIn, CTxOut, lx
+from bitcoin.core import COutPoint, CTxIn, CTxOut, lx, CMutableOutPoint, CMutableTxIn, CMutableTxOut
 
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
@@ -7,7 +7,7 @@ from PyQt4 import QtCore
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction, chainparams
 from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
-from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font
+from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font, OutputAmountEdit
 from base import BaseDock, Plugin, Category
 
 def make_plugin():
@@ -88,61 +88,43 @@ class TxBuilder(BaseDock):
     def create_inputs_tab(self):
         form = QFormLayout()
         self.inputs_tree = InputsTree()
-
-        input_prev_tx = QLineEdit()
-        input_prev_tx.setToolTip('Transaction ID of the tx with the output being spent')
-
-        input_prev_vout = AmountEdit()
-        input_prev_vout.setToolTip('Output index of the previous transaction')
-
-        input_script = QTextEdit()
-        input_script.setToolTip('Script that will be put on the stack before the previous output\'s script.')
-
-        input_sequence = AmountEdit()
-        input_sequence.setText('4294967295')
-        maxify_input_sequence = QPushButton('Max')
-        maxify_input_sequence.clicked.connect(lambda: input_sequence.setText('0xffffffff'))
+        self.inputs_editor = InputsEditor(self.inputs_tree)
+        self.inputs_editor.setEnabled(False)
 
         rm_input_edit = QSpinBox()
         rm_input_edit.setRange(0, 0)
         rm_input_button = QPushButton('Remove input')
 
         def add_input():
-            try:
-                outpoint = COutPoint(lx(str(input_prev_tx.text())), input_prev_vout.get_amount())
-                in_script = Script.from_human(str(input_script.toPlainText()))
-                new_input = CTxIn(outpoint, in_script.get_hex().decode('hex'), input_sequence.get_amount())
-            except Exception as e:
-                self.status_message(str(e), True)
-                return
+            outpoint = CMutableOutPoint(n=0)
+            new_input = CMutableTxIn(prevout=outpoint)
+            self.inputs_tree.add_input(new_input)
+
+            num_inputs = len(self.inputs_tree.get_inputs())
+            rm_input_edit.setRange(0, num_inputs - 1)
+            if num_inputs > 0:
+                self.inputs_editor.setEnabled(True)
+                self.inputs_tree.view.selectRow(self.inputs_tree.model.rowCount() - 1)
             else:
-                self.inputs_tree.add_input(new_input)
-                rm_input_edit.setRange(0, len(self.inputs_tree.get_inputs()) - 1)
+                self.inputs_editor.setEnabled(False)
 
         def rm_input():
             in_num = rm_input_edit.value()
-            self.inputs_tree.model.takeRow(in_num)
+            self.inputs_tree.model.removeRow(in_num)
+            if len(self.inputs_tree.get_inputs()) > 0:
+                self.inputs_tree.view.selectRow(0)
             rm_input_edit.setRange(0, len(self.inputs_tree.get_inputs()) - 1)
 
-        add_input_button = QPushButton('Add input')
-        add_input_button.setToolTip('Add the above input')
+        add_input_button = QPushButton('New input')
+        add_input_button.setToolTip('Add a new input')
         add_input_button.clicked.connect(add_input)
 
         rm_input_button.clicked.connect(rm_input)
 
-        for i in [input_prev_tx, input_prev_vout, input_script, input_sequence]:
-            i.setFont(monospace_font)
-
         form.addRow(self.inputs_tree)
         form.addRow(Separator())
 
-        form.addRow('Previous Transaction:', input_prev_tx)
-        form.addRow('Previous Tx Output:', input_prev_vout)
-        form.addRow('Input script:', input_script)
-        seq_desc = QLabel('Sequence is mostly deprecated.\nIf an input has a sequence that\'s not the maximum value, the transaction\'s locktime will apply.')
-        seq_desc.setWordWrap(True)
-        form.addRow(seq_desc)
-        form.addRow('Sequence:', HBox(input_sequence, maxify_input_sequence))
+        form.addRow(self.inputs_editor)
 
         form.addRow(Separator())
         form.addRow(floated_buttons([add_input_button]))
@@ -155,56 +137,42 @@ class TxBuilder(BaseDock):
     def create_outputs_tab(self):
         form = QFormLayout()
         self.outputs_tree = OutputsTree()
-
-        output_value = QLineEdit()
-
-        output_script = QTextEdit()
-        output_script.setToolTip('Script that will be put on the stack after the input that spends it.')
+        self.outputs_editor = OutputsEditor(self.outputs_tree)
+        self.outputs_editor.setEnabled(False)
 
         rm_output_edit = QSpinBox()
         rm_output_edit.setRange(0, 0)
         rm_output_button = QPushButton('Remove output')
 
         def add_output():
-            try:
-                val_str = str(output_value.text())
-                value = 0
-                if '.' in val_str:
-                    value = int(float(val_str) * pow(10, 8))
-                else:
-                    value = int(val_str)
-                out_script = Script.from_human(str(output_script.toPlainText()))
-                new_output = CTxOut(value, out_script.get_hex().decode('hex'))
-            except Exception as e:
-                self.status_message(str(e), True)
-                return
+            new_output = CMutableTxOut(0)
+            self.outputs_tree.add_output(new_output)
+
+            num_outputs = len(self.outputs_tree.get_outputs())
+            rm_output_edit.setRange(0, num_outputs - 1)
+            if num_outputs > 0:
+                self.outputs_editor.setEnabled(True)
+                self.outputs_tree.view.selectRow(self.outputs_tree.model.rowCount() - 1)
             else:
-                self.outputs_tree.add_output(new_output)
-                rm_output_edit.setRange(0, len(self.outputs_tree.get_outputs()) - 1)
+                self.outputs_editor.setEnabled(False)
 
         def rm_output():
-            out_n = rm_output_edit.value()
-            self.outputs_tree.model.takeRow(out_n)
+            out_num = rm_output_edit.value()
+            self.outputs_tree.model.removeRow(out_num)
+            if len(self.outputs_tree.get_outputs()) > 0:
+                self.outputs_tree.view.selectRow(0)
             rm_output_edit.setRange(0, len(self.outputs_tree.get_outputs()) - 1)
 
-        add_output_button = QPushButton('Add output')
-        add_output_button.setToolTip('Add the above output')
+        add_output_button = QPushButton('New output')
+        add_output_button.setToolTip('Add a new output')
         add_output_button.clicked.connect(add_output)
 
         rm_output_button.clicked.connect(rm_output)
 
-        value_desc = QLabel('Include a decimal point if this value is not in satoshis.')
-        value_desc.setWordWrap(True)
-
-        for i in [output_value, output_script]:
-            i.setFont(monospace_font)
-
         form.addRow(self.outputs_tree)
         form.addRow(Separator())
 
-        form.addRow(value_desc)
-        form.addRow('Value:', output_value)
-        form.addRow('Output script:', output_script)
+        form.addRow(self.outputs_editor)
 
         form.addRow(Separator())
         form.addRow(floated_buttons([add_output_button]))
@@ -304,4 +272,102 @@ class TxBuilder(BaseDock):
     def refresh_data(self):
         self.adjust_tx_fields()
         self.build_transaction()
-        self.outputs_tree.amount_format_changed()
+        self.outputs_tree.model.amount_format_changed()
+
+class InputsEditor(QWidget):
+    def __init__(self, tree, parent=None):
+        super(InputsEditor, self).__init__(parent)
+        self.tree = tree
+
+        self.prev_tx = QLineEdit()
+        self.prev_tx.setToolTip('Transaction ID of the tx with the output being spent')
+
+        self.prev_vout = AmountEdit()
+        self.prev_vout.setToolTip('Output index of the previous transaction')
+
+        self.script = QPlainTextEdit()
+        self.script.setToolTip('Script that will be put on the stack before the previous output\'s script.')
+
+        self.sequence = AmountEdit()
+        self.sequence.setText('4294967295')
+        maxify_input_sequence = QPushButton('Max')
+        maxify_input_sequence.clicked.connect(lambda: self.sequence.setText('0xffffffff'))
+
+        for i in [self.prev_tx, self.prev_vout, self.script, self.sequence]:
+            i.setFont(monospace_font)
+
+        self.mapper = QDataWidgetMapper()
+        self.mapper.setModel(self.tree.model)
+        self.mapper.setSubmitPolicy(QDataWidgetMapper.ManualSubmit)
+        self.mapper.addMapping(self.prev_tx, 0)
+        self.mapper.addMapping(self.prev_vout, 1, 'amount')
+        self.mapper.addMapping(self.script, 2)
+        self.mapper.addMapping(self.sequence, 3, 'amount')
+
+        def update_input_editor(selected, deselected):
+            try:
+                index = selected.indexes()[0]
+            except IndexError:
+                return
+            self.mapper.setCurrentIndex(index.row())
+        self.tree.view.selectionModel().selectionChanged.connect(update_input_editor)
+
+        submit_button = QPushButton('Save')
+        submit_button.setToolTip('Update input with the above data')
+        submit_button.clicked.connect(self.do_submit)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.addRow('Previous Transaction: ', self.prev_tx)
+        form.addRow('Previous Tx Output: ', self.prev_vout)
+        form.addRow('Input script: ', self.script)
+        seq_desc = QLabel('Sequence is mostly deprecated.\nIf an input has a sequence that\'s not the maximum value, the transaction\'s locktime will apply.')
+        seq_desc.setWordWrap(True)
+        form.addRow(seq_desc)
+        form.addRow('Sequence: ', HBox(self.sequence, maxify_input_sequence))
+        form.addRow(floated_buttons([submit_button]))
+
+        self.setLayout(form)
+
+    def do_submit(self):
+        result = self.mapper.submit()
+
+
+class OutputsEditor(QWidget):
+    def __init__(self, tree, parent=None):
+        super(OutputsEditor, self).__init__(parent)
+        self.tree = tree
+        self.out_value = OutputAmountEdit()
+        self.out_value.setToolTip('Output amount')
+        self.script = QPlainTextEdit()
+        self.script.setToolTip('Script that will be put on the stack after the input that spends it.')
+        for i in [self.out_value, self.script]:
+            i.setFont(monospace_font)
+
+        self.mapper = QDataWidgetMapper()
+        self.mapper.setModel(self.tree.model)
+        self.mapper.setSubmitPolicy(QDataWidgetMapper.ManualSubmit)
+        self.mapper.addMapping(self.out_value, 0, 'satoshis')
+        self.mapper.addMapping(self.script, 1)
+
+        def update_output_editor(selected, deselected):
+            try:
+                index = selected.indexes()[0]
+            except IndexError:
+                return
+            self.mapper.setCurrentIndex(index.row())
+        self.tree.view.selectionModel().selectionChanged.connect(update_output_editor)
+
+        submit_button = QPushButton('Save')
+        submit_button.setToolTip('Update input with the above data')
+        submit_button.clicked.connect(self.do_submit)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.addRow('Amount: ', self.out_value)
+        form.addRow('Output script: ', self.script)
+        form.addRow(floated_buttons([submit_button]))
+        self.setLayout(form)
+
+    def do_submit(self):
+        self.mapper.submit()

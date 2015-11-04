@@ -114,6 +114,13 @@ class AmountEdit(QLineEdit):
         i = int(txt)
         return i
 
+    def set_amount(self, amount):
+        if isinstance(amount, QtCore.QVariant):
+            amount = amount.toUInt()
+        self.setText(str(amount))
+
+    amount = QtCore.pyqtProperty(QtCore.QVariant, get_amount, set_amount)
+
     def check_text(self):
         try:
             i = self.get_amount()

@@ -7,6 +7,7 @@ from PyQt4 import QtCore
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction, chainparams
 from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
+from hashmal_lib.widgets.script import ScriptEditor
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font, OutputAmountEdit
 from base import BaseDock, Plugin, Category
 
@@ -88,32 +89,33 @@ class TxBuilder(BaseDock):
     def create_inputs_tab(self):
         form = QFormLayout()
         self.inputs_tree = InputsTree()
-        self.inputs_editor = InputsEditor(self.inputs_tree)
+        self.inputs_editor = InputsEditor(self.handler.gui, self.inputs_tree)
         self.inputs_editor.setEnabled(False)
 
         rm_input_edit = QSpinBox()
         rm_input_edit.setRange(0, 0)
         rm_input_button = QPushButton('Remove input')
 
+        def update_enabled_widgets():
+            num_inputs = len(self.inputs_tree.get_inputs())
+            rm_input_edit.setRange(0, num_inputs - 1)
+            for i in [rm_input_edit, rm_input_button, self.inputs_editor]:
+                i.setEnabled(num_inputs > 0)
+
         def add_input():
             outpoint = CMutableOutPoint(n=0)
             new_input = CMutableTxIn(prevout=outpoint)
             self.inputs_tree.add_input(new_input)
 
-            num_inputs = len(self.inputs_tree.get_inputs())
-            rm_input_edit.setRange(0, num_inputs - 1)
-            if num_inputs > 0:
-                self.inputs_editor.setEnabled(True)
+            update_enabled_widgets()
+            if len(self.inputs_tree.get_inputs()) > 0:
                 self.inputs_tree.view.selectRow(self.inputs_tree.model.rowCount() - 1)
-            else:
-                self.inputs_editor.setEnabled(False)
 
         def rm_input():
-            in_num = rm_input_edit.value()
-            self.inputs_tree.model.removeRow(in_num)
-            if len(self.inputs_tree.get_inputs()) > 0:
-                self.inputs_tree.view.selectRow(0)
-            rm_input_edit.setRange(0, len(self.inputs_tree.get_inputs()) - 1)
+            self.inputs_tree.model.removeRow(rm_input_edit.value())
+            update_enabled_widgets()
+
+        update_enabled_widgets()
 
         add_input_button = QPushButton('New input')
         add_input_button.setToolTip('Add a new input')
@@ -137,31 +139,32 @@ class TxBuilder(BaseDock):
     def create_outputs_tab(self):
         form = QFormLayout()
         self.outputs_tree = OutputsTree()
-        self.outputs_editor = OutputsEditor(self.outputs_tree)
+        self.outputs_editor = OutputsEditor(self.handler.gui, self.outputs_tree)
         self.outputs_editor.setEnabled(False)
 
         rm_output_edit = QSpinBox()
         rm_output_edit.setRange(0, 0)
         rm_output_button = QPushButton('Remove output')
 
+        def update_enabled_widgets():
+            num_outputs = len(self.outputs_tree.get_outputs())
+            rm_output_edit.setRange(0, num_outputs - 1)
+            for i in [rm_output_edit, rm_output_button, self.outputs_editor]:
+                i.setEnabled(num_outputs > 0)
+
         def add_output():
             new_output = CMutableTxOut(0)
             self.outputs_tree.add_output(new_output)
 
-            num_outputs = len(self.outputs_tree.get_outputs())
-            rm_output_edit.setRange(0, num_outputs - 1)
-            if num_outputs > 0:
-                self.outputs_editor.setEnabled(True)
+            update_enabled_widgets()
+            if len(self.outputs_tree.get_outputs()) > 0:
                 self.outputs_tree.view.selectRow(self.outputs_tree.model.rowCount() - 1)
-            else:
-                self.outputs_editor.setEnabled(False)
 
         def rm_output():
-            out_num = rm_output_edit.value()
-            self.outputs_tree.model.removeRow(out_num)
-            if len(self.outputs_tree.get_outputs()) > 0:
-                self.outputs_tree.view.selectRow(0)
-            rm_output_edit.setRange(0, len(self.outputs_tree.get_outputs()) - 1)
+            self.outputs_tree.model.removeRow(rm_output_edit.value())
+            update_enabled_widgets()
+
+        update_enabled_widgets()
 
         add_output_button = QPushButton('New output')
         add_output_button.setToolTip('Add a new output')
@@ -274,18 +277,38 @@ class TxBuilder(BaseDock):
         self.build_transaction()
         self.outputs_tree.model.amount_format_changed()
 
-class InputsEditor(QWidget):
+class BaseEditor(QWidget):
+    """Item editor for inputs or outputs."""
     def __init__(self, tree, parent=None):
-        super(InputsEditor, self).__init__(parent)
+        super(BaseEditor, self).__init__(parent)
         self.tree = tree
+        self.mapper = QDataWidgetMapper()
+        self.mapper.setModel(self.tree.model)
+        self.mapper.setSubmitPolicy(QDataWidgetMapper.ManualSubmit)
+        self.tree.view.selectionModel().selectionChanged.connect(self.selection_changed)
 
+    def selection_changed(self, selected, deselected):
+        try:
+            index = selected.indexes()[0]
+            self.setEnabled(True)
+        except IndexError:
+            self.setEnabled(False)
+            return
+        self.mapper.setCurrentIndex(index.row())
+
+    def do_submit(self):
+        self.mapper.submit()
+
+class InputsEditor(BaseEditor):
+    def __init__(self, main_window, tree, parent=None):
+        super(InputsEditor, self).__init__(tree, parent)
         self.prev_tx = QLineEdit()
         self.prev_tx.setToolTip('Transaction ID of the tx with the output being spent')
 
         self.prev_vout = AmountEdit()
         self.prev_vout.setToolTip('Output index of the previous transaction')
 
-        self.script = QPlainTextEdit()
+        self.script = ScriptEditor(main_window)
         self.script.setToolTip('Script that will be put on the stack before the previous output\'s script.')
 
         self.sequence = AmountEdit()
@@ -296,21 +319,10 @@ class InputsEditor(QWidget):
         for i in [self.prev_tx, self.prev_vout, self.script, self.sequence]:
             i.setFont(monospace_font)
 
-        self.mapper = QDataWidgetMapper()
-        self.mapper.setModel(self.tree.model)
-        self.mapper.setSubmitPolicy(QDataWidgetMapper.ManualSubmit)
         self.mapper.addMapping(self.prev_tx, 0)
         self.mapper.addMapping(self.prev_vout, 1, 'amount')
-        self.mapper.addMapping(self.script, 2)
+        self.mapper.addMapping(self.script, 2, 'humanText')
         self.mapper.addMapping(self.sequence, 3, 'amount')
-
-        def update_input_editor(selected, deselected):
-            try:
-                index = selected.indexes()[0]
-            except IndexError:
-                return
-            self.mapper.setCurrentIndex(index.row())
-        self.tree.view.selectionModel().selectionChanged.connect(update_input_editor)
 
         submit_button = QPushButton('Save')
         submit_button.setToolTip('Update input with the above data')
@@ -329,34 +341,19 @@ class InputsEditor(QWidget):
 
         self.setLayout(form)
 
-    def do_submit(self):
-        result = self.mapper.submit()
 
-
-class OutputsEditor(QWidget):
-    def __init__(self, tree, parent=None):
-        super(OutputsEditor, self).__init__(parent)
-        self.tree = tree
+class OutputsEditor(BaseEditor):
+    def __init__(self, main_window, tree, parent=None):
+        super(OutputsEditor, self).__init__(tree, parent)
         self.out_value = OutputAmountEdit()
         self.out_value.setToolTip('Output amount')
-        self.script = QPlainTextEdit()
+        self.script = ScriptEditor(main_window)
         self.script.setToolTip('Script that will be put on the stack after the input that spends it.')
         for i in [self.out_value, self.script]:
             i.setFont(monospace_font)
 
-        self.mapper = QDataWidgetMapper()
-        self.mapper.setModel(self.tree.model)
-        self.mapper.setSubmitPolicy(QDataWidgetMapper.ManualSubmit)
         self.mapper.addMapping(self.out_value, 0, 'satoshis')
-        self.mapper.addMapping(self.script, 1)
-
-        def update_output_editor(selected, deselected):
-            try:
-                index = selected.indexes()[0]
-            except IndexError:
-                return
-            self.mapper.setCurrentIndex(index.row())
-        self.tree.view.selectionModel().selectionChanged.connect(update_output_editor)
+        self.mapper.addMapping(self.script, 1, 'humanText')
 
         submit_button = QPushButton('Save')
         submit_button.setToolTip('Update input with the above data')
@@ -369,5 +366,3 @@ class OutputsEditor(QWidget):
         form.addRow(floated_buttons([submit_button]))
         self.setLayout(form)
 
-    def do_submit(self):
-        self.mapper.submit()

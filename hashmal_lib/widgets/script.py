@@ -145,3 +145,11 @@ class ScriptEditor(ScriptEdit):
             script = Script.from_human(txt)
         self.script = script
 
+    @pyqtProperty(str)
+    def humanText(self):
+        return self.get_data(fmt='Human')
+
+    @humanText.setter
+    def humanText(self, value):
+        self.setText(str(value))
+

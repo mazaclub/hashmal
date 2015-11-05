@@ -9,7 +9,7 @@ from hashmal_lib.core import chainparams
 from config import Config
 from plugin_handler import PluginHandler
 from settings_dialog import SettingsDialog, ChainparamsComboBox, LayoutChanger
-from script_editor import MyScriptEdit
+from widgets.script import ScriptEditor
 from help_widgets import QuickTips
 from gui_utils import script_file_filter, hashmal_style, floated_buttons, monospace_font
 from plugin_manager import PluginManager
@@ -204,7 +204,7 @@ class HashmalMain(QMainWindow):
         vbox = QVBoxLayout()
         self.format_combo = QComboBox()
         self.format_combo.addItems(known_script_formats)
-        self.script_editor = MyScriptEdit(self)
+        self.script_editor = ScriptEditor(self)
         self.script_editor.textChanged.connect(self.on_text_changed)
 
         self.format_combo.currentIndexChanged.connect(lambda index: self.script_editor.set_format(known_script_formats[index]))

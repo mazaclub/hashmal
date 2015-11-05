@@ -8,6 +8,13 @@ from PyQt4 import QtCore
 from hashmal_lib.core.script import Script, transform_human
 from hashmal_lib.gui_utils import monospace_font
 
+def transform_human_script(text, main_window):
+    """Transform user input into something Script can read.
+
+    Main window is needed for tool integration."""
+    variables = main_window.plugin_handler.get_plugin('Variables').dock.data
+    return transform_human(text, variables)
+
 class ScriptEdit(QTextEdit):
     """Script editor.
 
@@ -81,13 +88,6 @@ class ScriptEdit(QTextEdit):
                 return '{} ({})'.format(value, match_type)
 
 
-def transform_human_script(text, main_window):
-    """Transform user input into something Script can read.
-
-    Main window is needed for tool integration."""
-    variables = main_window.plugin_handler.get_plugin('Variables').dock.data
-    return transform_human(text, variables)
-
 class ScriptHighlighter(QSyntaxHighlighter):
     """Highlights variables, etc. with colors from QSettings."""
     def __init__(self, gui, script_edit):
@@ -118,13 +118,13 @@ class ScriptHighlighter(QSyntaxHighlighter):
             self.setFormat(idx, length, fmt)
         return
 
-class MyScriptEdit(ScriptEdit):
+class ScriptEditor(ScriptEdit):
     """Main script editor.
 
     Requires the main window as an argument so it can integrate tools.
     """
-    def __init__(self, gui=None):
-        super(MyScriptEdit, self).__init__(gui)
+    def __init__(self, gui, parent=None):
+        super(ScriptEditor, self).__init__(gui)
         self.gui = gui
         self.highlighter = ScriptHighlighter(self.gui, self)
 

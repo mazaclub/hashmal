@@ -1,5 +1,5 @@
 import bitcoin
-from bitcoin.core import COutPoint, CTxIn, CTxOut, lx, CMutableOutPoint, CMutableTxIn, CMutableTxOut
+from bitcoin.core import COutPoint, CTxIn, CTxOut, x, lx, CMutableOutPoint, CMutableTxIn, CMutableTxOut
 
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
@@ -28,6 +28,9 @@ class TxBuilder(BaseDock):
 
     def init_data(self):
         self.tx = None
+
+    def init_actions(self):
+        self.advertised_actions['raw_transaction'] = [('Edit', self.deserialize_raw)]
 
     def create_layout(self):
         vbox = QVBoxLayout()
@@ -92,15 +95,9 @@ class TxBuilder(BaseDock):
         self.inputs_editor = InputsEditor(self.handler.gui, self.inputs_tree)
         self.inputs_editor.setEnabled(False)
 
-        rm_input_edit = QSpinBox()
-        rm_input_edit.setRange(0, 0)
-        rm_input_button = QPushButton('Remove input')
-
         def update_enabled_widgets():
             num_inputs = len(self.inputs_tree.get_inputs())
-            rm_input_edit.setRange(0, num_inputs - 1)
-            for i in [rm_input_edit, rm_input_button, self.inputs_editor]:
-                i.setEnabled(num_inputs > 0)
+            self.inputs_editor.setEnabled(num_inputs > 0)
 
         def add_input():
             outpoint = CMutableOutPoint(n=0)
@@ -111,17 +108,11 @@ class TxBuilder(BaseDock):
             if len(self.inputs_tree.get_inputs()) > 0:
                 self.inputs_tree.view.selectRow(self.inputs_tree.model.rowCount() - 1)
 
-        def rm_input():
-            self.inputs_tree.model.removeRow(rm_input_edit.value())
-            update_enabled_widgets()
-
         update_enabled_widgets()
 
         add_input_button = QPushButton('New input')
         add_input_button.setToolTip('Add a new input')
         add_input_button.clicked.connect(add_input)
-
-        rm_input_button.clicked.connect(rm_input)
 
         form.addRow(self.inputs_tree)
         form.addRow(Separator())
@@ -130,7 +121,6 @@ class TxBuilder(BaseDock):
 
         form.addRow(Separator())
         form.addRow(floated_buttons([add_input_button]))
-        form.addRow('Remove input:', HBox(rm_input_edit, rm_input_button))
 
         w = QWidget()
         w.setLayout(form)
@@ -142,15 +132,9 @@ class TxBuilder(BaseDock):
         self.outputs_editor = OutputsEditor(self.handler.gui, self.outputs_tree)
         self.outputs_editor.setEnabled(False)
 
-        rm_output_edit = QSpinBox()
-        rm_output_edit.setRange(0, 0)
-        rm_output_button = QPushButton('Remove output')
-
         def update_enabled_widgets():
             num_outputs = len(self.outputs_tree.get_outputs())
-            rm_output_edit.setRange(0, num_outputs - 1)
-            for i in [rm_output_edit, rm_output_button, self.outputs_editor]:
-                i.setEnabled(num_outputs > 0)
+            self.outputs_editor.setEnabled(num_outputs > 0)
 
         def add_output():
             new_output = CMutableTxOut(0)
@@ -160,17 +144,11 @@ class TxBuilder(BaseDock):
             if len(self.outputs_tree.get_outputs()) > 0:
                 self.outputs_tree.view.selectRow(self.outputs_tree.model.rowCount() - 1)
 
-        def rm_output():
-            self.outputs_tree.model.removeRow(rm_output_edit.value())
-            update_enabled_widgets()
-
         update_enabled_widgets()
 
         add_output_button = QPushButton('New output')
         add_output_button.setToolTip('Add a new output')
         add_output_button.clicked.connect(add_output)
-
-        rm_output_button.clicked.connect(rm_output)
 
         form.addRow(self.outputs_tree)
         form.addRow(Separator())
@@ -179,7 +157,6 @@ class TxBuilder(BaseDock):
 
         form.addRow(Separator())
         form.addRow(floated_buttons([add_output_button]))
-        form.addRow('Remove output:', HBox(rm_output_edit, rm_output_button))
 
         w = QWidget()
         w.setLayout(form)
@@ -207,14 +184,34 @@ class TxBuilder(BaseDock):
         w.setLayout(self.tx_fields_layout)
         return w
 
+    def deserialize_raw(self, rawtx):
+        """Update editor widgets with rawtx's data."""
+        self.needsFocus.emit()
+        try:
+            tx = Transaction.deserialize(x(rawtx))
+        except Exception:
+            return
+        else:
+            self.version_edit.set_amount(tx.nVersion)
+            self.inputs_tree.model.set_tx(tx)
+            self.outputs_tree.model.set_tx(tx)
+            self.locktime_edit.set_amount(tx.nLockTime)
+            for name, w in self.tx_field_widgets:
+                if name in ['nVersion', 'vin', 'vout', 'nLockTime']:
+                    continue
+                value = getattr(tx, name)
+                if isinstance(w, AmountEdit):
+                    w.set_amount(value)
+                else:
+                    w.setText(str(value))
+            self.build_transaction()
+
     def build_transaction(self):
         self.tx_widget.clear()
         self.tx = tx = Transaction()
         tx.nVersion = self.version_edit.get_amount()
-        for i in self.inputs_tree.get_inputs():
-            tx.vin.append(i)
-        for o in self.outputs_tree.get_outputs():
-            tx.vout.append(o)
+        tx.vin = self.inputs_tree.get_inputs()
+        tx.vout = self.outputs_tree.get_outputs()
         tx.nLockTime = self.locktime_edit.get_amount()
 
         for name, w in self.tx_field_widgets:
@@ -231,7 +228,7 @@ class TxBuilder(BaseDock):
         self.tx_widget.set_tx(tx)
 
     def on_option_changed(self, key):
-        if key in ['amount_format', 'chainparams']:
+        if key in ['chainparams']:
             self.needsUpdate.emit()
 
     def adjust_tx_fields(self):
@@ -275,7 +272,6 @@ class TxBuilder(BaseDock):
     def refresh_data(self):
         self.adjust_tx_fields()
         self.build_transaction()
-        self.outputs_tree.model.amount_format_changed()
 
 class BaseEditor(QWidget):
     """Item editor for inputs or outputs."""
@@ -295,6 +291,10 @@ class BaseEditor(QWidget):
             self.setEnabled(False)
             return
         self.mapper.setCurrentIndex(index.row())
+
+    def do_delete(self):
+        index = self.mapper.currentIndex()
+        self.tree.model.removeRow(index)
 
     def do_submit(self):
         self.mapper.submit()
@@ -324,6 +324,9 @@ class InputsEditor(BaseEditor):
         self.mapper.addMapping(self.script, 2, 'humanText')
         self.mapper.addMapping(self.sequence, 3, 'amount')
 
+        delete_button = QPushButton('Remove Input')
+        delete_button.setToolTip('Remove this input from the transaction')
+        delete_button.clicked.connect(self.do_delete)
         submit_button = QPushButton('Save')
         submit_button.setToolTip('Update input with the above data')
         submit_button.clicked.connect(self.do_submit)
@@ -337,7 +340,7 @@ class InputsEditor(BaseEditor):
         seq_desc.setWordWrap(True)
         form.addRow(seq_desc)
         form.addRow('Sequence: ', HBox(self.sequence, maxify_input_sequence))
-        form.addRow(floated_buttons([submit_button]))
+        form.addRow(floated_buttons([delete_button, submit_button]))
 
         self.setLayout(form)
 
@@ -358,11 +361,14 @@ class OutputsEditor(BaseEditor):
         submit_button = QPushButton('Save')
         submit_button.setToolTip('Update input with the above data')
         submit_button.clicked.connect(self.do_submit)
+        delete_button = QPushButton('Remove Output')
+        delete_button.setToolTip('Remove this output from the transaction')
+        delete_button.clicked.connect(self.do_delete)
 
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
         form.addRow('Amount: ', self.out_value)
         form.addRow('Output script: ', self.script)
-        form.addRow(floated_buttons([submit_button]))
+        form.addRow(floated_buttons([delete_button, submit_button]))
         self.setLayout(form)
 

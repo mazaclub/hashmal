@@ -78,6 +78,12 @@ class InputsModel(QAbstractTableModel):
         self.dataChanged.emit(self.index(index.row(), col), self.index(index.row(), col))
         return True
 
+    def set_tx(self, tx):
+        """Reset the model to reflect tx."""
+        self.beginResetModel()
+        self.tx = Transaction.from_tx(tx)
+        self.endResetModel()
+
     def add_input(self, tx_input=None, input_index=None):
         """Add an input at input_index, or append one if input_index is None."""
         if tx_input is None:
@@ -102,7 +108,7 @@ class InputsModel(QAbstractTableModel):
         return True
 
     def clear(self):
-        self.removeRows(0, len(self.tx.vin))
+        self.set_tx(Transaction())
 
 class InputsTree(QWidget):
     """Model and View showing a transaction's inputs."""
@@ -223,6 +229,12 @@ class OutputsModel(QAbstractTableModel):
         self.dataChanged.emit(self.index(index.row(), col), self.index(index.row(), col))
         return True
 
+    def set_tx(self, tx):
+        """Reset the model to reflect tx."""
+        self.beginResetModel()
+        self.tx = Transaction.from_tx(tx)
+        self.endResetModel()
+
     def add_output(self, tx_out=None, output_index=None):
         """Add an output at output_index, or append one if output_index is None."""
         if tx_out is None:
@@ -247,7 +259,7 @@ class OutputsModel(QAbstractTableModel):
         return True
 
     def clear(self):
-        self.removeRows(0, len(self.tx.vout))
+        self.set_tx(Transaction())
 
     def format_amount(self, satoshis):
         if self.amount_format == 'satoshis':
@@ -476,11 +488,8 @@ class TxWidget(QWidget):
     def set_tx(self, tx):
         self.version_edit.setText(str(tx.nVersion))
 
-        for i in tx.vin:
-            self.add_input(i)
-
-        for o in tx.vout:
-            self.add_output(o)
+        self.inputs_tree.model.set_tx(tx)
+        self.outputs_tree.model.set_tx(tx)
 
         self.locktime_edit.set_locktime(tx.nLockTime)
 

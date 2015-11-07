@@ -95,7 +95,7 @@ class WalletRPC(BaseDock):
         self.port_edit.valueChanged.connect(self.update_profile)
 
         save_profile_button = QPushButton('Save')
-        save_profile_button.clicked.connect(self.save_options)
+        save_profile_button.clicked.connect(self.save_rpc_options)
 
         form.addRow('RPC Username:', self.user_edit)
         form.addRow('RPC Password:', self.pass_edit)
@@ -236,7 +236,7 @@ class WalletRPC(BaseDock):
         self.profile.host = str(self.host_edit.text())
         self.profile.port = self.port_edit.value()
 
-    def save_options(self):
+    def save_rpc_options(self):
         options = self.profile.as_dict()
         self.save_options(options)
         self.status_message('Saved RPC options.')

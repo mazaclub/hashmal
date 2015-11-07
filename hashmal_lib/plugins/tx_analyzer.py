@@ -151,8 +151,7 @@ class TxAnalyzer(BaseDock):
         inputs = self.tx_widget.inputs_tree
         def inputs_context_verify():
             self.tabs.setCurrentIndex(1)
-            item = inputs.model.itemFromIndex(inputs.view.selectedIndexes()[0])
-            row = item.row()
+            row = inputs.view.selectedIndexes()[0].row()
             self.do_verify_input(self.tx, row)
 
         menu = QMenu()

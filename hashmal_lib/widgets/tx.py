@@ -51,7 +51,7 @@ class InputsModel(QAbstractTableModel):
         col = index.column()
         data = None
         if col == 0:
-            data = b2x(tx_input.prevout.hash)
+            data = b2lx(tx_input.prevout.hash)
         elif col == 1:
             data = tx_input.prevout.n
         elif col == 2:
@@ -69,7 +69,7 @@ class InputsModel(QAbstractTableModel):
         tx_input = self.tx.vin[index.row()]
         col = index.column()
         if col == 0:
-            tx_input.prevout.hash = x(str(value.toString()))
+            tx_input.prevout.hash = lx(str(value.toString()))
         elif col == 1:
             tx_input.prevout.n, _ = value.toUInt()
         elif col == 2:

@@ -272,3 +272,7 @@ class TxAnalyzer(BaseDock):
         if self.tx:
             self.deserialize()
 
+    def on_option_changed(self, key):
+        if key == 'chainparams':
+            self.raw_tx_edit.textChanged.emit()
+

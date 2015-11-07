@@ -1,6 +1,7 @@
 import datetime
 import decimal
 from decimal import Decimal
+from collections import OrderedDict
 
 import bitcoin
 from bitcoin.core import COutPoint, CTxIn, CTxOut, lx, x, b2x, b2lx, CMutableOutPoint, CMutableTxIn, CMutableTxOut
@@ -450,7 +451,7 @@ class TxWidget(QWidget):
         self.config = config.get_config()
         self.config.optionChanged.connect(self.on_option_changed)
         # Widgets for tx fields
-        self.field_widgets = []
+        self.field_widgets = OrderedDict()
 
         form = QFormLayout()
 
@@ -463,10 +464,10 @@ class TxWidget(QWidget):
         self.outputs_tree = outputs = OutputsTree()
         self.locktime_edit = LockTimeWidget()
 
-        self.field_widgets.append(('nVersion', self.version_edit))
-        self.field_widgets.append(('vin', self.inputs_tree))
-        self.field_widgets.append(('vout', self.outputs_tree))
-        self.field_widgets.append(('nLockTime', self.locktime_edit))
+        self.field_widgets.update({'nVersion': self.version_edit})
+        self.field_widgets.update({'vin': self.inputs_tree})
+        self.field_widgets.update({'vout': self.outputs_tree})
+        self.field_widgets.update({'nLockTime': self.locktime_edit})
 
         self.tx_properties = TxProperties()
 
@@ -493,7 +494,7 @@ class TxWidget(QWidget):
 
         self.locktime_edit.set_locktime(tx.nLockTime)
 
-        for name, w in self.field_widgets:
+        for name, w in self.field_widgets.items():
             # We already handle these four.
             if name in ['nVersion', 'vin', 'vout', 'nLockTime']:
                 continue
@@ -509,7 +510,7 @@ class TxWidget(QWidget):
     def clear(self):
         self.tx_id.clear()
         self.tx_properties.clear()
-        for name, w in self.field_widgets:
+        for w in self.field_widgets.values():
             w.clear()
 
     def add_input(self, i):
@@ -529,26 +530,26 @@ class TxWidget(QWidget):
         for i, field in enumerate(tx_fields):
             name = field[0]
             # Create a new widget for the tx field.
-            if name not in [j[0] for j in self.field_widgets]:
+            if name not in self.field_widgets.keys():
                 widget = QLineEdit()
                 widget.setReadOnly(True)
                 if name == 'Timestamp':
                     widget = TimestampWidget()
                 label = QLabel(''.join([name, ':']))
-                # Add the widget to our list and to the layout.
-                self.field_widgets.insert(i, (name, widget))
+                # Add the widget to our dict and to the layout.
+                self.field_widgets[name] = widget
                 self.tx_fields_layout.insertRow(i, label, widget)
 
             # Make sure the existing widget for the tx field is visible.
             else:
-                w = self.field_widgets[i][1]
+                w = self.field_widgets[name]
                 l = self.tx_fields_layout.labelForField(w)
                 w.show()
                 l.show()
 
         # Hide unnecessary widgets
         tx_field_names = [i[0] for i in tx_fields]
-        for i, (name, w) in enumerate(self.field_widgets):
+        for name, w in self.field_widgets.items():
             if name not in tx_field_names:
                 l = self.tx_fields_layout.labelForField(w)
                 w.hide()

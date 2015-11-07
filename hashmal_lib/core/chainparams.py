@@ -41,6 +41,15 @@ ClamsPreset = ParamsPreset(
             ('ClamSpeech', 'bytes', None, b'')]
 )
 
+FreicoinPreset = ParamsPreset(
+        name='Freicoin',
+        tx_fields=[('nVersion', b'<i', 4, 1),
+            ('vin', 'inputs', None, None),
+            ('vout', 'outputs', None, None),
+            ('nLockTime', b'<I', 4, 0),
+            ('RefHeight', b'<i', 4, 0)]
+)
+
 PeercoinPreset = ParamsPreset(
         name='Peercoin',
         tx_fields=[('nVersion', b'<i', 4, 1),
@@ -53,6 +62,7 @@ PeercoinPreset = ParamsPreset(
 presets_list = [
         BitcoinPreset,
         ClamsPreset,
+        FreicoinPreset,
         PeercoinPreset
 ]
 

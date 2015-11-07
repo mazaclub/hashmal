@@ -11,6 +11,16 @@ from hashmal_lib.gui_utils import floated_buttons, HBox
 def make_plugin():
     return Plugin(Variables)
 
+_var_types = [
+    ('None', None),
+    ('Hex', None),
+    ('Raw Transaction', 'raw_transaction'),
+    ('Text', None)
+]
+variable_types = OrderedDict()
+for human_text, var_type in _var_types:
+    variable_types.update({human_text: var_type})
+
 class VarsModel(QtCore.QAbstractTableModel):
     """Model for stored variables."""
     def __init__(self, data, parent=None):
@@ -50,7 +60,7 @@ class VarsModel(QtCore.QAbstractTableModel):
         return self.data(index, role)
 
     def data(self, index, role = QtCore.Qt.DisplayRole):
-        if role != QtCore.Qt.DisplayRole and role != QtCore.Qt.UserRole:
+        if role not in [QtCore.Qt.DisplayRole, QtCore.Qt.UserRole]:
             return QtCore.QVariant(None)
         data = None
         r = index.row()
@@ -68,7 +78,9 @@ class VarsModel(QtCore.QAbstractTableModel):
         return QtCore.QVariant(data)
 
     def classify_data(self, value):
-        """Determine what to categorize a value as."""
+        """Determine what to categorize a value as.
+
+        Returns a key of the variable_types dict."""
         # If the value is not hex, assume text
         try:
             i = int(value, 16)
@@ -112,7 +124,7 @@ class Variables(BaseDock):
     def init_data(self):
         self.data = OrderedDict(self.option('data', {}))
         self.auto_save = self.option('auto_save', False)
-        self.filters = ['None', 'Hex', 'Raw Transaction', 'Text']
+        self.filters = variable_types.keys()
 
     def init_actions(self):
         store_as = ('Store raw tx as...', self.store_as_variable)
@@ -240,6 +252,13 @@ class Variables(BaseDock):
             name = self.model.dataAt(row, 0).toString()
             self.remove_key(str(name))
         menu.addAction('Delete', delete)
+
+        idx = self.view.currentIndex()
+        row = idx.row()
+        idx = self.model.createIndex(row, 1)
+        data_value = str(self.model.data(idx).toString())
+        data_category = variable_types[str(self.model.data(idx, role=QtCore.Qt.UserRole).toString())]
+        self.handler.add_plugin_actions(self, menu, data_category, data_value)
 
         menu.exec_(self.view.viewport().mapToGlobal(position))
 

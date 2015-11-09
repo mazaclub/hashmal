@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 
 from PyQt4.QtGui import *
@@ -11,15 +11,39 @@ from hashmal_lib.gui_utils import floated_buttons, HBox
 def make_plugin():
     return Plugin(Variables)
 
+VariableType = namedtuple('VariableType', ('name', 'category', 'classify'))
+"""Variable type.
+
+Attributes:
+    name (str): Human-readable name.
+    category (str): Category; for plugin context menus. (e.g. raw_transaction)
+    classify (function): Function returning whether a value has this variable type.
+"""
+
+def is_hex(x):
+    try:
+        i = int(x, 16)
+        return True
+    except Exception:
+        return False
+
+def is_raw_tx(x):
+    try:
+        t = Transaction.deserialize(x.decode('hex'))
+        return True
+    except Exception:
+        return False
+
 _var_types = [
-    ('None', None),
-    ('Hex', None),
-    ('Raw Transaction', 'raw_transaction'),
-    ('Text', None)
+    VariableType('None', None, lambda x: False),
+    VariableType('Raw Transaction', 'raw_transaction', is_raw_tx),
+    VariableType('Hex', None, is_hex),
+    VariableType('Text', None, lambda x: x.startswith('"') and x.endswith('"'))
 ]
+
 variable_types = OrderedDict()
-for human_text, var_type in _var_types:
-    variable_types.update({human_text: var_type})
+for var_type in _var_types:
+    variable_types.update({var_type.name: var_type})
 
 class VarsModel(QtCore.QAbstractTableModel):
     """Model for stored variables."""
@@ -59,6 +83,12 @@ class VarsModel(QtCore.QAbstractTableModel):
         index = self.createIndex(row, column)
         return self.data(index, role)
 
+    def keyForIndex(self, index, role=QtCore.Qt.DisplayRole):
+        return self.dataAt(index.row(), 0, role)
+
+    def valueForIndex(self, index, role=QtCore.Qt.DisplayRole):
+        return self.dataAt(index.row(), 1, role)
+
     def data(self, index, role = QtCore.Qt.DisplayRole):
         if role not in [QtCore.Qt.DisplayRole, QtCore.Qt.UserRole]:
             return QtCore.QVariant(None)
@@ -80,22 +110,13 @@ class VarsModel(QtCore.QAbstractTableModel):
     def classify_data(self, value):
         """Determine what to categorize a value as.
 
-        Returns a key of the variable_types dict."""
-        # If the value is not hex, assume text
-        try:
-            i = int(value, 16)
-        except ValueError:
-            return 'Text'
+        Returns a list of keys of the variable_types dict."""
+        var_types = []
+        for k, v in variable_types.items():
+            if v.classify(value):
+                var_types.append(k)
 
-        # See if it's a raw transaction.
-        try:
-            t = Transaction.deserialize(value.decode('hex'))
-            return 'Raw Transaction'
-        except Exception:
-            pass
-
-        # Use the generic 'Hex' category if nothing else matches.
-        return 'Hex'
+        return var_types
 
     def set_key(self, key, value):
         self.beginInsertRows( QtCore.QModelIndex(), self.rowCount(), self.rowCount() )
@@ -120,6 +141,7 @@ class Variables(BaseDock):
             if self.auto_save:
                 self.save_variables()
         self.dataChanged.connect(maybe_save)
+        self.augment('variable_types', variable_types, callback=self.on_var_types_augmented)
 
     def init_data(self):
         self.data = OrderedDict(self.option('data', {}))
@@ -145,6 +167,7 @@ class Variables(BaseDock):
         self.view.customContextMenuRequested.connect(self.context_menu)
         self.view.setSizePolicy(QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding))
         self.view.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.view.setAlternatingRowColors(True)
 
         self.filter_combo = QComboBox()
@@ -194,7 +217,7 @@ class Variables(BaseDock):
                 self.view.showRow(i)
                 continue
 
-            if filter_str == str(self.model.dataAt(i, 1, QtCore.Qt.UserRole).toString()):
+            if filter_str in self.model.dataAt(i, 1, QtCore.Qt.UserRole).toList():
                 self.view.showRow(i)
             else:
                 self.view.hideRow(i)
@@ -240,25 +263,30 @@ class Variables(BaseDock):
     def context_menu(self, position):
         menu = QMenu()
 
-        def copy():
-            index = self.view.currentIndex()
-            text = self.model.data(index).toString()
+        def copy_key(index):
+            text = self.model.keyForIndex(index).toString()
             QApplication.clipboard().setText(str(text))
-        menu.addAction('Copy', copy)
 
-        def delete():
-            index = self.view.currentIndex()
-            row = index.row()
-            name = self.model.dataAt(row, 0).toString()
+        def copy_value(index):
+            text = self.model.valueForIndex(index).toString()
+            QApplication.clipboard().setText(str(text))
+
+        def delete_key(index):
+            name = self.model.keyForIndex(index).toString()
             self.remove_key(str(name))
-        menu.addAction('Delete', delete)
+
+        menu.addAction('Copy Key', lambda: copy_key(self.view.currentIndex()))
+        menu.addAction('Copy Value', lambda: copy_value(self.view.currentIndex()))
+        menu.addAction('Delete', lambda: delete_key(self.view.currentIndex()))
 
         idx = self.view.currentIndex()
         row = idx.row()
         idx = self.model.createIndex(row, 1)
         data_value = str(self.model.data(idx).toString())
-        data_category = variable_types[str(self.model.data(idx, role=QtCore.Qt.UserRole).toString())]
-        self.handler.add_plugin_actions(self, menu, data_category, data_value)
+        # Add context menu actions for all applicable variable types.
+        data_categories = map(lambda x: variable_types[str(x.toString())], self.model.data(idx, role=QtCore.Qt.UserRole).toList())
+        for i in data_categories:
+            self.handler.add_plugin_actions(self, menu, i.category, data_value)
 
         menu.exec_(self.view.viewport().mapToGlobal(position))
 
@@ -283,3 +311,6 @@ class Variables(BaseDock):
         k = str(self.del_var_key.text())
         self.remove_key(k)
         self.del_var_key.clear()
+
+    def on_var_types_augmented(self, arg):
+        self.filters = variable_types.keys()

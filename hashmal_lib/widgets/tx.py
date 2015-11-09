@@ -139,6 +139,12 @@ class InputsTree(QWidget):
     def clear(self):
         self.model.clear()
 
+    def copy_prev_tx(self):
+        """Copy the previous transaction ID to clipboard."""
+        idx = self.view.selectedIndexes()[0]
+        data = self.model.data(idx)
+        QApplication.clipboard().setText(data.toString())
+
     def copy_script(self):
         """Copy the scriptSig to clipboard."""
         idx = self.view.selectedIndexes()[2]
@@ -155,6 +161,7 @@ class InputsTree(QWidget):
         menu = QMenu()
         menu.addAction('Copy Input Script', self.copy_script)
         menu.addAction('Copy Input Script Hex', self.copy_script_hex)
+        menu.addAction('Copy Previous Transaction ID', self.copy_prev_tx)
         return menu
 
     def customContextMenu(self, pos):

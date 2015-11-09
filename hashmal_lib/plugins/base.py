@@ -150,9 +150,10 @@ class BaseDock(QDockWidget):
     def get_actions(self, category):
         """Get the advertised actions for category.
 
-        category can be one of:
+        category is not limited to but can be one of the following:
             - raw_transaction
             - raw_block
+            - hash160
 
         """
         if self.advertised_actions.get(category):

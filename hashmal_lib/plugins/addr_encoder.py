@@ -4,11 +4,19 @@ from bitcoin.base58 import CBase58Data
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from base import BaseDock, Plugin, Category
+from base import BaseDock, Plugin, Category, augmenter
 from hashmal_lib.gui_utils import monospace_font, Separator
+from variables import is_hex, VariableType
 
 def make_plugin():
     return Plugin(AddrEncoder)
+
+def is_address(x):
+    try:
+        data = CBase58Data(x)
+    except Exception:
+        return False
+    return len(x) >= 26 and len(x) <= 35
 
 class AddrEncoder(BaseDock):
 
@@ -23,8 +31,21 @@ class AddrEncoder(BaseDock):
         super(AddrEncoder, self).__init__(handler)
         self.widget().setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 
+    def init_actions(self):
+        encode_hash160 = ('Encode Address', self.encode_hash160)
+        self.advertised_actions['hash160'] = [encode_hash160]
+
     def init_data(self):
         pass
+
+    @augmenter
+    def variable_types(self, data):
+        if not data.get('Address'):
+            address = VariableType('Address', 'address', is_address)
+            data[address.name] = address
+        if not data.get('Hash160'):
+            hash160 = VariableType('Hash160', 'hash160', lambda x: is_hex(x) and (len(x) == 42 if x.startswith('0x') else len(x) == 40))
+            data[hash160.name] = hash160
 
     def create_layout(self):
         form = QFormLayout()
@@ -90,3 +111,8 @@ class AddrEncoder(BaseDock):
         addr = CBase58Data.from_bytes(hash160.decode('hex'), version)
         self.address_line.setText(str(addr))
         self.status_message('Encoded address "%s".' % str(addr))
+
+    def encode_hash160(self, hash160):
+        self.needsFocus.emit()
+        self.hash_line.setText(hash160)
+        self.encode_address()

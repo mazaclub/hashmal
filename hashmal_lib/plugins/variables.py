@@ -36,14 +36,27 @@ def is_raw_tx(x):
 
 _var_types = [
     VariableType('None', None, lambda x: False),
-    VariableType('Raw Transaction', 'raw_transaction', is_raw_tx),
     VariableType('Hex', None, is_hex),
-    VariableType('Text', None, lambda x: x.startswith('"') and x.endswith('"'))
+    VariableType('Text', None, lambda x: x.startswith('"') and x.endswith('"')),
+    VariableType('64 Hex Digits', None, lambda x: is_hex(x) and (len(x) == 66 if x.startswith('0x') else len(x) == 64)),
+    VariableType('Raw Transaction', 'raw_transaction', is_raw_tx),
 ]
 
 variable_types = OrderedDict()
 for var_type in _var_types:
     variable_types.update({var_type.name: var_type})
+
+def classify_data(value):
+    """Determine what to categorize a value as.
+
+    Returns a list of variable_types keys.
+    """
+    var_types = []
+    for var_type in variable_types.values():
+        if var_type.classify(value):
+            var_types.append(var_type.name)
+
+    return var_types
 
 class VarsModel(QtCore.QAbstractTableModel):
     """Model for stored variables."""
@@ -103,20 +116,9 @@ class VarsModel(QtCore.QAbstractTableModel):
             if role == QtCore.Qt.DisplayRole:
                 data = self.vars_data[key]
             elif role == QtCore.Qt.UserRole:
-                data = self.classify_data(self.vars_data[key])
+                data = classify_data(self.vars_data[key])
 
         return QtCore.QVariant(data)
-
-    def classify_data(self, value):
-        """Determine what to categorize a value as.
-
-        Returns a list of keys of the variable_types dict."""
-        var_types = []
-        for k, v in variable_types.items():
-            if v.classify(value):
-                var_types.append(k)
-
-        return var_types
 
     def set_key(self, key, value):
         self.beginInsertRows( QtCore.QModelIndex(), self.rowCount(), self.rowCount() )
@@ -314,3 +316,5 @@ class Variables(BaseDock):
 
     def on_var_types_augmented(self, arg):
         self.filters = variable_types.keys()
+        self.filter_combo.clear()
+        self.filter_combo.addItems(self.filters)

@@ -1,5 +1,7 @@
 from collections import OrderedDict, namedtuple
 
+from bitcoin.core import x, lx, b2x, b2lx
+from bitcoin.base58 import CBase58Data
 
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
@@ -153,6 +155,18 @@ class Variables(BaseDock):
     def init_actions(self):
         store_as = ('Store raw tx as...', self.store_as_variable)
         self.advertised_actions['raw_transaction'] = [store_as]
+
+        def copy_h160(x):
+            h160 = CBase58Data(x).encode('hex')
+            QApplication.clipboard().setText(h160)
+        copy_hash160 = ('Copy RIPEMD-160 Hash', copy_h160)
+        self.local_actions['address'] = [copy_hash160]
+
+        def copy_txid(rawtx):
+            txid = b2lx(Transaction.deserialize(x(rawtx)).GetHash())
+            QApplication.clipboard().setText(txid)
+        copy_tx_id = ('Copy Transaction ID', copy_txid)
+        self.local_actions['raw_transaction'] = [copy_tx_id]
 
     def create_layout(self):
         form = QFormLayout()

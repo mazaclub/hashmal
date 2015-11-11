@@ -65,6 +65,7 @@ class VarsModel(QtCore.QAbstractTableModel):
     def __init__(self, data, parent=None):
         super(VarsModel, self).__init__(parent)
         self.vars_data = data
+        self.classification_cache = {}
 
     def columnCount(self, parent = QtCore.QModelIndex()):
         return 2
@@ -118,7 +119,13 @@ class VarsModel(QtCore.QAbstractTableModel):
             if role == QtCore.Qt.DisplayRole:
                 data = self.vars_data[key]
             elif role == QtCore.Qt.UserRole:
-                data = classify_data(self.vars_data[key])
+                value = self.vars_data[key]
+                cached = self.classification_cache.get(value, None)
+                if cached is None:
+                    data = classify_data(value)
+                    self.classification_cache[value] = data
+                else:
+                    data = cached
 
         return QtCore.QVariant(data)
 
@@ -132,6 +139,9 @@ class VarsModel(QtCore.QAbstractTableModel):
         self.beginRemoveRows( QtCore.QModelIndex(), row, row )
         del self.vars_data[key]
         self.endRemoveRows()
+
+    def invalidate_cache(self):
+        self.classification_cache.clear()
 
 class Variables(BaseDock):
 
@@ -332,3 +342,4 @@ class Variables(BaseDock):
         self.filters = variable_types.keys()
         self.filter_combo.clear()
         self.filter_combo.addItems(self.filters)
+        self.model.invalidate_cache()

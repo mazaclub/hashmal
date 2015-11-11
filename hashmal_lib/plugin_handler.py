@@ -197,6 +197,12 @@ class PluginHandler(QWidget):
 
         """
         separator_added = False
+        # Add the caller's actions first.
+        dock_actions = instance.get_actions(category, local=True)
+        if dock_actions:
+            for action_name, action_receiver in dock_actions:
+                menu.addAction(action_name, partial(action_receiver, data))
+        # Then add other plugins' actions.
         for plugin in self.loaded_plugins:
             dock = plugin.dock
             if not dock.is_enabled:

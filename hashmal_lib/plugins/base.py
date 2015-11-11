@@ -87,6 +87,7 @@ class BaseDock(QDockWidget):
         self.handler = handler
         self.config = config.get_config()
         self.advertised_actions = {}
+        self.local_actions = {}
         self.is_enabled = True
 
         self.init_data()
@@ -121,6 +122,9 @@ class BaseDock(QDockWidget):
         Subclasses with actions to advertise should create a list of tuples for
         each category they advertise in their 'advertised_actions' attribute.
 
+        Subclasses can also use the 'local_actions' attribute to specify actions that
+        should be shown only when using the subclass.
+
         Tuples are in the form (action_name, action)
 
         Example:
@@ -147,8 +151,11 @@ class BaseDock(QDockWidget):
         """Called when a config option changes."""
         pass
 
-    def get_actions(self, category):
+    def get_actions(self, category, local=False):
         """Get the advertised actions for category.
+
+        If local is True, only actions that are relevant when using the
+        subclass are returned.
 
         category is not limited to but can be one of the following:
             - raw_transaction
@@ -156,8 +163,9 @@ class BaseDock(QDockWidget):
             - hash160
 
         """
-        if self.advertised_actions.get(category):
-            return self.advertised_actions.get(category)
+        if local:
+            return self.local_actions.get(category)
+        return self.advertised_actions.get(category)
 
     def status_message(self, msg, error=False):
         """Show a message on the status bar.

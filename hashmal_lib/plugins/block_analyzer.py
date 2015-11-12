@@ -5,6 +5,7 @@ from bitcoin.core import CBlockHeader, CBlock, x, b2x, lx, b2lx
 from base import BaseDock, Plugin, Category
 from hashmal_lib.gui_utils import Separator
 from hashmal_lib.widgets.block import BlockWidget
+from hashmal_lib.items import *
 
 def make_plugin():
     return Plugin(BlockAnalyzer)
@@ -82,7 +83,7 @@ class BlockAnalyzer(BaseDock):
             r = selected.row()
             tx = self.block.vtx[r]
             raw_tx = b2x(tx.serialize())
-            self.handler.add_plugin_actions(self, menu, 'raw_transaction', raw_tx)
+            self.handler.add_plugin_actions(self, menu, RAW_TX, raw_tx)
 
         menu.exec_(self.block_widget.txs_widget.view.viewport().mapToGlobal(position))
 

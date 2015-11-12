@@ -9,6 +9,7 @@ from hashmal_lib.core import Transaction, chainparams
 from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.widgets.script import ScriptEditor
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font, OutputAmountEdit
+from hashmal_lib.items import *
 from base import BaseDock, Plugin, Category
 
 def make_plugin():
@@ -30,7 +31,7 @@ class TxBuilder(BaseDock):
         self.tx = None
 
     def init_actions(self):
-        self.advertised_actions['raw_transaction'] = [('Edit', self.deserialize_raw)]
+        self.advertised_actions[RAW_TX] = [('Edit', self.deserialize_raw)]
 
     def create_layout(self):
         vbox = QVBoxLayout()
@@ -60,7 +61,7 @@ class TxBuilder(BaseDock):
 
         txt = str(self.raw_tx.toPlainText())
         if txt:
-            self.handler.add_plugin_actions(self, menu, 'raw_transaction', txt)
+            self.handler.add_plugin_actions(self, menu, RAW_TX, txt)
 
         menu.exec_(self.raw_tx.viewport().mapToGlobal(position))
 

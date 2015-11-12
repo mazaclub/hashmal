@@ -9,6 +9,7 @@ from hashmal_lib.gui_utils import monospace_font, floated_buttons, Separator
 from hashmal_lib.widgets.tx import TxWidget
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction
+from hashmal_lib.items import *
 
 def make_plugin():
     return Plugin(TxAnalyzer)
@@ -68,7 +69,7 @@ class TxAnalyzer(BaseDock):
     def init_actions(self):
         deserialize = ('Deserialize', self.deserialize_raw)
         verify = ('Verify inputs', self.do_verify_inputs)
-        self.advertised_actions['raw_transaction'] = [deserialize, verify]
+        self.advertised_actions[RAW_TX] = [deserialize, verify]
 
     def create_layout(self):
         form = QFormLayout()
@@ -143,7 +144,7 @@ class TxAnalyzer(BaseDock):
         menu = QMenu()
         if self.tx:
             txt = str(self.raw_tx_edit.toPlainText())
-            self.handler.add_plugin_actions(self, menu, 'raw_transaction', txt)
+            self.handler.add_plugin_actions(self, menu, RAW_TX, txt)
 
         menu.exec_(self.mapToGlobal(position))
 

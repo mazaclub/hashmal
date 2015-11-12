@@ -192,7 +192,7 @@ class PluginHandler(QWidget):
         Args:
             instance: Instance of class that is requesting actions.
             menu (QMenu): Context menu to add actions to.
-            category (str): Category of actions (e.g. raw_transaction).
+            category (str): Category of actions (e.g. RAW_TX, defined in hashmal_lib.items).
             data: Data to call the action(s) with.
 
         """
@@ -281,7 +281,7 @@ class PluginHandler(QWidget):
         """Download blockchain data with the pre-chosen plugin.
 
         Args:
-            data_type (str): Type of data (e.g. 'raw_transaction').
+            data_type (str): Type of data (e.g. RAW_TX, defined in hashmal_lib.items).
             identifier (str): Data identifier (e.g. transaction ID).
         """
         plugin_name = self.config.get_option('data_retriever', 'Blockchain')

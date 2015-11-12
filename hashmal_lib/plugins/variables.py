@@ -9,6 +9,7 @@ from PyQt4 import QtCore
 from base import BaseDock, Plugin
 from hashmal_lib.core import Transaction
 from hashmal_lib.gui_utils import floated_buttons, HBox
+from hashmal_lib.items import *
 
 def make_plugin():
     return Plugin(Variables)
@@ -18,7 +19,7 @@ VariableType = namedtuple('VariableType', ('name', 'category', 'classify'))
 
 Attributes:
     name (str): Human-readable name.
-    category (str): Category; for plugin context menus. (e.g. raw_transaction)
+    category (str): Category; for plugin context menus. (e.g. hashmal_lib.items.RAW_TX)
     classify (function): Function returning whether a value has this variable type.
 """
 
@@ -41,7 +42,7 @@ _var_types = [
     VariableType('Hex', None, is_hex),
     VariableType('Text', None, lambda x: x.startswith('"') and x.endswith('"')),
     VariableType('64 Hex Digits', None, lambda x: is_hex(x) and (len(x) == 66 if x.startswith('0x') else len(x) == 64)),
-    VariableType('Raw Transaction', 'raw_transaction', is_raw_tx),
+    VariableType('Raw Transaction', RAW_TX, is_raw_tx),
 ]
 
 variable_types = OrderedDict()
@@ -164,7 +165,7 @@ class Variables(BaseDock):
 
     def init_actions(self):
         store_as = ('Store raw tx as...', self.store_as_variable)
-        self.advertised_actions['raw_transaction'] = [store_as]
+        self.advertised_actions[RAW_TX] = [store_as]
 
         def copy_h160(x):
             h160 = CBase58Data(x).encode('hex')
@@ -176,7 +177,7 @@ class Variables(BaseDock):
             txid = b2lx(Transaction.deserialize(x(rawtx)).GetHash())
             QApplication.clipboard().setText(txid)
         copy_tx_id = ('Copy Transaction ID', copy_txid)
-        self.local_actions['raw_transaction'] = [copy_tx_id]
+        self.local_actions[RAW_TX] = [copy_tx_id]
 
     def create_layout(self):
         form = QFormLayout()

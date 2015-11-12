@@ -9,6 +9,7 @@ from PyQt4.QtCore import *
 import hashmal_lib
 from hashmal_lib.plugins import BaseDock, Plugin, Category
 from hashmal_lib.gui_utils import floated_buttons
+from hashmal_lib.items import *
 
 RPCMethod = namedtuple('RPCMethod', ('method', 'get_result_type'))
 """RPC method.
@@ -22,7 +23,7 @@ the kind of data the result is. This way, context menus can have relevant action
 
 known_methods = [
             RPCMethod('getblock', lambda params: 'raw_block' if len(params) > 1 and params[1] == False else None), # non-verbose
-            RPCMethod('getrawtransaction', lambda params: 'raw_transaction' if len(params) == 1 or (len(params) > 1 and params[1] == 0) else None) # non-verbose
+            RPCMethod('getrawtransaction', lambda params: RAW_TX if len(params) == 1 or (len(params) > 1 and params[1] == 0) else None) # non-verbose
 ]
 
 known_methods_dict = dict((i.method, i) for i in known_methods)

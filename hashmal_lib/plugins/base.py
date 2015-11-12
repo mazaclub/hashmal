@@ -132,7 +132,7 @@ class BaseDock(QDockWidget):
             it would do the following:
 
             deserialize_raw_tx = ('Deserialize', self.deserialize_tx)
-            self.advertised_actions['raw_transaction'] = [deserialize_raw_tx]
+            self.advertised_actions[hashmal_lib.items.RAW_TX] = [deserialize_raw_tx]
         """
         pass
 
@@ -158,9 +158,9 @@ class BaseDock(QDockWidget):
         subclass are returned.
 
         category is not limited to but can be one of the following:
-            - raw_transaction
             - raw_block
             - hash160
+        In addition, it can be a constant defined in hashmal_lib.items.
 
         """
         if local:

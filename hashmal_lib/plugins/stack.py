@@ -8,6 +8,7 @@ from PyQt4.QtCore import *
 from hashmal_lib.core import Transaction
 from hashmal_lib.core.stack import Stack
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
+from hashmal_lib.items import *
 from base import BaseDock, Plugin, Category
 
 def make_plugin():
@@ -36,7 +37,7 @@ class StackEval(BaseDock):
 
     def init_actions(self):
         set_as_spending = ('Set as spending transaction', self.set_spending_tx)
-        self.advertised_actions['raw_transaction'] = [set_as_spending]
+        self.advertised_actions[RAW_TX] = [set_as_spending]
 
     def reset_step_counter(self):
         self.step_counter = -1

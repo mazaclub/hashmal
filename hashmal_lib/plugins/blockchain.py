@@ -6,6 +6,7 @@ from PyQt4.QtCore import *
 from bitcoin.core import x, lx, b2x, CBlockHeader
 
 from hashmal_lib.gui_utils import floated_buttons
+from hashmal_lib.items import *
 from base import BaseDock, Plugin, Category
 
 def make_plugin():
@@ -232,7 +233,7 @@ class Blockchain(BaseDock):
 
         txt = str(self.raw_edit.toPlainText())
         data_type = known_data_types[str(self.data_group.checkedButton().text())]
-        categories = {'raw_tx': 'raw_transaction', 'raw_header': 'raw_block'}
+        categories = {'raw_tx': RAW_TX, 'raw_header': 'raw_block'}
         category = categories.get(data_type, '')
         if txt and category:
             self.handler.add_plugin_actions(self, menu, category, txt)

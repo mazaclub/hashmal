@@ -28,8 +28,11 @@ class Transaction(CMutableTransaction):
     For the most common purposes, chainparams.set_to_preset()
     can be used instead.
     """
-    def __init__(self, vin=None, vout=None, locktime=0, version=1, fields=None):
+    def __init__(self, vin=None, vout=None, locktime=0, version=1, fields=None, kwfields=None):
         super(Transaction, self).__init__(vin, vout, locktime, version)
+        if kwfields is None: kwfields = {}
+        for k, v in kwfields.items():
+            setattr(self, k, v)
         self.set_serialization(fields)
 
     def set_serialization(self, fields=None):
@@ -71,6 +74,20 @@ class Transaction(CMutableTransaction):
                 VectorSerializer.stream_serialize(CTxOut, self.vout, f)
             elif fmt == 'bytes':
                 BytesSerializer.stream_serialize(getattr(self, attr), f)
+
+    @classmethod
+    def from_tx(cls, tx):
+        if not issubclass(tx.__class__, Transaction):
+            return super(Transaction, cls).from_tx(tx)
+        else:
+            # In case from_tx() is called after chainparams changes,
+            # ensure the other tx gets the new fields.
+            for attr, _, _, default in transaction_fields:
+                try:
+                    getattr(tx, attr)
+                except AttributeError:
+                    setattr(tx, attr, default)
+            return tx
 
     def as_hex(self):
         return b2x(self.serialize())

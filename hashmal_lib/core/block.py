@@ -33,14 +33,33 @@ class BlockHeader(CBlockHeader):
     For the most common purposes, chainparams.set_to_preset()
     can be used instead.
     """
-    def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0, fields=None):
+    def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0, fields=None, kwfields=None):
         super(BlockHeader, self).__init__(nVersion, hashPrevBlock, hashMerkleRoot, nTime, nBits, nNonce)
+        if kwfields is None: kwfields = {}
+        for k, v in kwfields:
+            setattr(self, k, v)
         self.set_serialization(fields)
 
     @classmethod
     def header_length(cls):
         """Returns the expected length of block headers."""
         return sum([i[2] for i in block_header_fields])
+
+    @classmethod
+    def from_header(cls, header):
+        """Instantiate from a BlockHeader or CBlockHeader instance."""
+        if header.__class__ is BlockHeader:
+            # In case from_header() is called after chainparams changes,
+            # ensure the other header gets the new fields.
+            for attr, _, _, default in block_header_fields:
+                try:
+                    getattr(header, attr)
+                except AttributeError:
+                    setattr(header, attr, default)
+            return header
+        elif header.__class__ is CBlockHeader:
+            kwargs = dict((i, getattr(header, i)) for i in ['nVersion','hashPrevBlock','hashMerkleRoot','nTime','nBits','nNonce'])
+            return cls(**kwargs)
 
     def set_serialization(self, fields=None):
         """Set the serialization format.
@@ -144,13 +163,10 @@ class Block(BlockHeader):
 
         Returned header is a new object.
         """
-        return BlockHeader(nVersion=self.nVersion,
-                            hashPrevBlock=self.hashPrevBlock,
-                            hashMerkleRoot=self.hashMerkleRoot,
-                            nTime=self.nTime,
-                            nBits=self.nBits,
-                            nNonce=self.nNonce,
-                            fields=self.fields)
+        d = {}
+        for attr, _, _, _ in self.fields:
+            d[attr] = getattr(self, attr)
+        return BlockHeader(**d)
 
     @classmethod
     def stream_deserialize(cls, f):

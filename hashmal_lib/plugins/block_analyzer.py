@@ -22,7 +22,7 @@ class BlockAnalyzer(BaseDock):
 
     def init_actions(self):
         deserialize = ('Deserialize', self.deserialize_raw)
-        self.advertised_actions['raw_block'] = [deserialize]
+        self.advertised_actions[RAW_BLOCK] = self.advertised_actions[RAW_BLOCK_HEADER] = [deserialize]
 
     def create_layout(self):
         self.block_widget = BlockWidget()

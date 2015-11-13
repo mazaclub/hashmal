@@ -22,7 +22,7 @@ the kind of data the result is. This way, context menus can have relevant action
 """
 
 known_methods = [
-            RPCMethod('getblock', lambda params: 'raw_block' if len(params) > 1 and params[1] == False else None), # non-verbose
+            RPCMethod('getblock', lambda params: RAW_BLOCK if len(params) > 1 and params[1] == False else None), # non-verbose
             RPCMethod('getrawtransaction', lambda params: RAW_TX if len(params) == 1 or (len(params) > 1 and params[1] == 0) else None) # non-verbose
 ]
 

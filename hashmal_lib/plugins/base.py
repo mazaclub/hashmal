@@ -158,7 +158,6 @@ class BaseDock(QDockWidget):
         subclass are returned.
 
         category is not limited to but can be one of the following:
-            - raw_block
             - hash160
         In addition, it can be a constant defined in hashmal_lib.items.
 

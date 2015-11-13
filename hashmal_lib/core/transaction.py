@@ -1,7 +1,7 @@
 import struct
 
 import bitcoin
-from bitcoin.core import CMutableTransaction, CTxIn, CTxOut
+from bitcoin.core import CMutableTransaction, CTxIn, CTxOut, b2x, b2lx
 from bitcoin.core.serialize import ser_read, BytesSerializer, VectorSerializer
 
 transaction_fields = [
@@ -71,4 +71,7 @@ class Transaction(CMutableTransaction):
                 VectorSerializer.stream_serialize(CTxOut, self.vout, f)
             elif fmt == 'bytes':
                 BytesSerializer.stream_serialize(getattr(self, attr), f)
+
+    def as_hex(self):
+        return b2x(self.serialize())
 

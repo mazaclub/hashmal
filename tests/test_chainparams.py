@@ -1,6 +1,6 @@
 import unittest
 
-from hashmal_lib.core import chainparams, Transaction
+from hashmal_lib.core import chainparams, Transaction, BlockHeader, Block
 
 maza_raw_tx = '010000000279fd18c19fad871077a757804561e11d722296b68e6afd4d2a16c06d9c9a30b8000000006a4730440220380bf06cf81a43a9d425b6d34be7315e9ebb396081ecb94e291a906e6b9e36a6022060458349b8592a1d7133e77756a011e2d8e5749b67a2a94f3a5488e81458c00c0121024370144b106ab92b9bdf2cf2de6eb173f4656e581d27ed2c0f77479db338fc21ffffffff551d183e1f98a5a5e7f5b296ba6d77729babb7f90aaabe6b8eb128c624e10fce000000006b483045022100e1d89636d53334e29703dff014323cb8c9836e2b77f666477f185a1882cc2c7a02201d3af8352b2bf338b79a709a30fdf4e9c5166487b7af15fb48a85eac2e43c722012103c4e79c99c1cfcce534b4715ec9a8f6ccf735f050a58caf7b6126ebe4691aa480ffffffff025a232d00000000001976a9144fd5ae7260db3ddc49d058e6f200a486058c666288ac00127a00000000001976a9149d0d296ad8e00e57f90670215d9276765ba1c81788ac00000000'.decode('hex')
 
@@ -22,10 +22,11 @@ clams_fields.append( ('ClamSpeech', 'bytes', None, b'') )
 peercoin_fields = list(bitcoin_fields)
 peercoin_fields.insert(1, ('Timestamp', b'<i', 4, 0))
 
-class ChainparamsTest(unittest.TestCase):
+
+class TransactionTest(unittest.TestCase):
     def setUp(self):
-        super(ChainparamsTest, self).setUp()
-        chainparams.set_tx_fields(bitcoin_fields)
+        super(TransactionTest, self).setUp()
+        chainparams.set_to_preset('Bitcoin')
 
     def test_bitcoin_fields(self):
         tx = Transaction.deserialize(maza_raw_tx)
@@ -69,3 +70,49 @@ class ChainparamsTest(unittest.TestCase):
         tx = Transaction.deserialize(ppc_raw_tx)
         self.assertRaises(Exception, Transaction.deserialize, clams_raw_tx)
         self.assertRaises(Exception, Transaction.deserialize, maza_raw_tx)
+
+    def test_serialize_as_hex(self):
+        tx = Transaction.deserialize(maza_raw_tx)
+        self.assertEqual(maza_raw_tx.encode('hex'), tx.as_hex())
+
+
+bitcoin_raw_header = '0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a29ab5f49ffff001d1dac2b7c'.decode('hex')
+
+bitcoin_header_fields = [
+    ('nVersion', b'<i', 4, 1),
+    ('hashPrevBlock', 'bytes', 32, b'\x00'*32),
+    ('hashMerkleRoot', 'bytes', 32, b'\x00'*32),
+    ('nTime', b'<I', 4, 0),
+    ('nBits', b'<I', 4, 0),
+    ('nNonce', b'<I', 4, 0)
+]
+
+class BlockHeaderTest(unittest.TestCase):
+    def setUp(self):
+        super(BlockHeaderTest, self).setUp()
+        chainparams.set_to_preset('Bitcoin')
+
+    def test_bitcoin_fields(self):
+        self.assertEqual(BlockHeader.header_length(), 80)
+        header = BlockHeader.deserialize(bitcoin_raw_header)
+        self.assertEqual(bitcoin_header_fields, header.fields)
+
+    def test_serialize_as_hex(self):
+        header = BlockHeader.deserialize(bitcoin_raw_header)
+        self.assertEqual(bitcoin_raw_header.encode('hex'), header.as_hex())
+
+bitcoin_raw_block = '0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a29ab5f49ffff001d1dac2b7c0101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff4d04ffff001d0104455468652054696d65732030332f4a616e2f32303039204368616e63656c6c6f72206f6e206272696e6b206f66207365636f6e64206261696c6f757420666f722062616e6b73ffffffff0100f2052a01000000434104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000'.decode('hex')
+
+class BlockTest(unittest.TestCase):
+    def setUp(self):
+        super(BlockTest, self).setUp()
+        chainparams.set_to_preset('Bitcoin')
+
+    def test_get_header(self):
+        blk = Block.deserialize(bitcoin_raw_block)
+        header = blk.get_header()
+        self.assertEqual(bitcoin_raw_header, header.serialize())
+
+    def test_serialize_as_hex(self):
+        blk = Block.deserialize(bitcoin_raw_block)
+        self.assertEqual(bitcoin_raw_block.encode('hex'), blk.as_hex())

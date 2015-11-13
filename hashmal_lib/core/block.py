@@ -1,0 +1,166 @@
+import struct
+
+import bitcoin
+from bitcoin.core import __make_mutable, b2x, b2lx, CBlockHeader
+from bitcoin.core.serialize import ser_read, Hash, VectorSerializer
+
+from transaction import Transaction
+
+block_header_fields = [
+    ('nVersion', b'<i', 4, 1),
+    ('hashPrevBlock', 'bytes', 32, b'\x00'*32),
+    ('hashMerkleRoot', 'bytes', 32, b'\x00'*32),
+    ('nTime', b'<I', 4, 0),
+    ('nBits', b'<I', 4, 0),
+    ('nNonce', b'<I', 4, 0)
+]
+"""Fields of block header.
+
+Do not modify this list! Use chainparams.set_block_header_fields()
+or a preset via chainparams.set_to_preset().
+"""
+
+@__make_mutable
+class BlockHeader(CBlockHeader):
+    """Cryptocurrency block header.
+
+    Subclassed from CBlockHeader so that its fields
+    (e.g. nVersion, nTime) can be altered.
+
+    Use chainparams.set_tx_fields() to modify the global
+    block_header_fields list.
+
+    For the most common purposes, chainparams.set_to_preset()
+    can be used instead.
+    """
+    def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0, fields=None):
+        super(BlockHeader, self).__init__(nVersion, hashPrevBlock, hashMerkleRoot, nTime, nBits, nNonce)
+        self.set_serialization(fields)
+
+    @classmethod
+    def header_length(cls):
+        """Returns the expected length of block headers."""
+        return sum([i[2] for i in block_header_fields])
+
+    def set_serialization(self, fields=None):
+        """Set the serialization format.
+
+        This allows block headers to exist that do not comply with the
+        global block_header_fields list.
+        """
+        if fields is None:
+            fields = list(block_header_fields)
+        self.fields = fields
+        for name, _, _, default in self.fields:
+            try:
+                getattr(self, name)
+            except AttributeError:
+                setattr(self, name, default)
+
+    @classmethod
+    def stream_deserialize(cls, f):
+        self = cls()
+        for attr, fmt, num_bytes, _ in self.fields:
+            if fmt not in ['bytes']:
+                setattr(self, attr, struct.unpack(fmt, ser_read(f, num_bytes))[0])
+            elif fmt == 'bytes':
+                setattr(self, attr, ser_read(f, num_bytes))
+        return self
+
+    def stream_serialize(self, f):
+        for attr, fmt, num_bytes, _ in self.fields:
+            if fmt not in ['bytes']:
+                f.write(struct.pack(fmt, getattr(self, attr)))
+            elif fmt == 'bytes':
+                f.write(getattr(self, attr))
+
+    def as_hex(self):
+        return b2x(self.serialize())
+
+
+class Block(BlockHeader):
+    """A block including all transactions in it.
+
+    Most of this code is copied directly from the CBlock class in python-bitcoinlib.
+    https://github.com/petertodd/python-bitcoinlib/blob/master/bitcoin/core/__init__.py
+    """
+    @staticmethod
+    def build_merkle_tree_from_txids(txids):
+        """Build a full Block merkle tree from txids
+
+        txids - iterable of txids
+
+        Returns a new merkle tree in deepest first order. The last element is
+        the merkle root.
+
+        WARNING! If you're reading this because you're learning about crypto
+        and/or designing a new system that will use merkle trees, keep in mind
+        that the following merkle tree algorithm has a serious flaw related to
+        duplicate txids, resulting in a vulnerability. (CVE-2012-2459) Bitcoin
+        has since worked around the flaw, but for new applications you should
+        use something different; don't just copy-and-paste this code without
+        understanding the problem first.
+        """
+        merkle_tree = list(txids)
+
+        size = len(txids)
+        j = 0
+        while size > 1:
+            for i in range(0, size, 2):
+                i2 = min(i+1, size-1)
+                merkle_tree.append(Hash(merkle_tree[j+i] + merkle_tree[j+i2]))
+
+            j += size
+            size = (size + 1) // 2
+
+        return merkle_tree
+
+    @staticmethod
+    def build_merkle_tree_from_txs(txs):
+        """Build a full merkle tree from transactions"""
+        txids = [tx.GetHash() for tx in txs]
+        return Block.build_merkle_tree_from_txids(txids)
+
+    def calc_merkle_root(self):
+        """Calculate the merkle root
+
+        The calculated merkle root is not cached; every invocation
+        re-calculates it from scratch.
+        """
+        if not len(self.vtx):
+            raise ValueError('Block contains no transactions')
+        return self.build_merkle_tree_from_txs(self.vtx)[-1]
+
+    def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0, vtx=(), header_fields=None):
+        """Create a new block"""
+        super(Block, self).__init__(nVersion, hashPrevBlock, hashMerkleRoot, nTime, nBits, nNonce, header_fields)
+
+        vMerkleTree = tuple(Block.build_merkle_tree_from_txs(vtx))
+        object.__setattr__(self, 'vMerkleTree', vMerkleTree)
+        object.__setattr__(self, 'vtx', tuple(Transaction.from_tx(tx) for tx in vtx))
+
+    def get_header(self):
+        """Return the block header
+
+        Returned header is a new object.
+        """
+        return BlockHeader(nVersion=self.nVersion,
+                            hashPrevBlock=self.hashPrevBlock,
+                            hashMerkleRoot=self.hashMerkleRoot,
+                            nTime=self.nTime,
+                            nBits=self.nBits,
+                            nNonce=self.nNonce,
+                            fields=self.fields)
+
+    @classmethod
+    def stream_deserialize(cls, f):
+        self = super(Block, cls).stream_deserialize(f)
+        vtx = VectorSerializer.stream_deserialize(Transaction, f)
+        vMerkleTree = tuple(Block.build_merkle_tree_from_txs(vtx))
+        setattr(self, 'vMerkleTree', vMerkleTree)
+        setattr(self, 'vtx', tuple(vtx))
+        return self
+
+    def stream_serialize(self, f):
+        super(Block, self).stream_serialize(f)
+        VectorSerializer.stream_serialize(Transaction, self.vtx, f)

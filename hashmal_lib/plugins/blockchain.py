@@ -3,9 +3,10 @@ import requests
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-from bitcoin.core import x, lx, b2x, CBlockHeader
+from bitcoin.core import x, lx, b2x
 
 from hashmal_lib.gui_utils import floated_buttons
+from hashmal_lib.core import BlockHeader
 from hashmal_lib.items import *
 from base import BaseDock, Plugin, Category
 
@@ -61,7 +62,7 @@ def header_from_insight_block(d):
     time = int(d['time'])
     bits = int(d['bits'], 16)
     nonce = int(d['nonce'])
-    return b2x(CBlockHeader(version, prev_block, merkle_root, time, bits, nonce).serialize())
+    return BlockHeader(version, prev_block, merkle_root, time, bits, nonce).as_hex()
 
 insight_explorer = type('insight_explorer', (BlockExplorer,), dict(name='insight',domain='https://insight.bitpay.com',
                 routes = {'raw_tx':'/api/rawtx/', 'raw_header':'/api/block/'},

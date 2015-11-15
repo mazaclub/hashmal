@@ -36,7 +36,7 @@ class BlockHeader(CBlockHeader):
     def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0, fields=None, kwfields=None):
         super(BlockHeader, self).__init__(nVersion, hashPrevBlock, hashMerkleRoot, nTime, nBits, nNonce)
         if kwfields is None: kwfields = {}
-        for k, v in kwfields:
+        for k, v in kwfields.items():
             setattr(self, k, v)
         self.set_serialization(fields)
 
@@ -140,6 +140,22 @@ class Block(BlockHeader):
         txids = [tx.GetHash() for tx in txs]
         return Block.build_merkle_tree_from_txids(txids)
 
+    @classmethod
+    def from_block(cls, blk):
+        if blk.__class__ is Block:
+            # In case from_block() is called after chainparams changes,
+            # ensure the other block gets the new fields.
+            for attr, _, _, default in block_header_fields:
+                try:
+                    getattr(blk, attr)
+                except AttributeError:
+                    setattr(blk, attr, default)
+            return blk
+        elif blk.__class__ is CBlock:
+            kwargs = dict((i, getattr(blk, i)) for i in ['nVersion','hashPrevBlock','hashMerkleRoot','nTime','nBits','nNonce'])
+            return cls(**kwargs)
+
+
     def calc_merkle_root(self):
         """Calculate the merkle root
 
@@ -150,9 +166,12 @@ class Block(BlockHeader):
             raise ValueError('Block contains no transactions')
         return self.build_merkle_tree_from_txs(self.vtx)[-1]
 
-    def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0, vtx=(), header_fields=None):
+    def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0, vtx=(), header_fields=None, kwfields=None):
         """Create a new block"""
         super(Block, self).__init__(nVersion, hashPrevBlock, hashMerkleRoot, nTime, nBits, nNonce, header_fields)
+        if kwfields is None: kwfields = {}
+        for k, v in kwfields.items():
+            setattr(self, k, v)
 
         vMerkleTree = tuple(Block.build_merkle_tree_from_txs(vtx))
         object.__setattr__(self, 'vMerkleTree', vMerkleTree)

@@ -6,6 +6,7 @@ from base import BaseDock, Plugin, Category
 from hashmal_lib.gui_utils import Separator
 from hashmal_lib.widgets.block import BlockWidget
 from hashmal_lib.items import *
+from hashmal_lib.core import BlockHeader, Block
 
 def make_plugin():
     return Plugin(BlockAnalyzer)
@@ -18,6 +19,7 @@ class BlockAnalyzer(BaseDock):
     is_large = True
 
     def init_data(self):
+        self.header = None
         self.block = None
 
     def init_actions(self):
@@ -25,6 +27,9 @@ class BlockAnalyzer(BaseDock):
         self.advertised_actions[RAW_BLOCK] = self.advertised_actions[RAW_BLOCK_HEADER] = [deserialize]
 
     def create_layout(self):
+        self.raw_block_invalid = QLabel('Cannot parse block or block header.')
+        self.raw_block_invalid.setProperty('hasError', True)
+        self.raw_block_invalid.hide()
         self.block_widget = BlockWidget()
         self.block_widget.header_widget.view.selectionModel().selectionChanged.connect(self.select_block_field)
         self.raw_block_edit = QPlainTextEdit()
@@ -37,16 +42,18 @@ class BlockAnalyzer(BaseDock):
         form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.WrapAllRows)
         form.addRow('Raw Block (Or Block Header):', self.raw_block_edit)
+        form.addRow(self.raw_block_invalid)
         form.addRow(Separator())
         form.addRow(self.block_widget)
         return form
 
     def check_raw_block(self):
         txt = str(self.raw_block_edit.toPlainText())
-        self.block, block_header = self.deserialize(txt)
+        self.block, self.header = self.deserialize(txt)
+        self.raw_block_invalid.setVisible(self.header is None)
 
         # Clears the widget if block_header is None.
-        self.block_widget.set_block(block_header, self.block)
+        self.block_widget.set_block(self.header, self.block)
 
     def deserialize_raw(self, txt):
         """This is for context menus."""
@@ -55,26 +62,24 @@ class BlockAnalyzer(BaseDock):
         self.check_raw_block()
 
     def deserialize(self, raw):
-        """Deserialize hex-encoded block/block header."""
-        only_header = False
-        if len(raw) == 160:
-            only_header = True
+        """Deserialize hex-encoded block/block header.
 
-        block = None
-        block_header = None
-
+        Returns:
+            Two-tuple of (block, block_header)
+        """
+        raw = x(raw)
         try:
-            if only_header:
-                block_header = CBlockHeader.deserialize(x(raw))
+            if len(raw) == BlockHeader.header_length():
+                block_header = BlockHeader.deserialize(raw)
+                return (None, block_header)
             else:
                 # We don't use block.get_header() in case the header is
                 # correct but the rest of the block isn't.
-                block_header = CBlockHeader.deserialize(x(raw[0:160]))
-                block = CBlock.deserialize(x(raw))
-        except Exception:
-            pass
-
-        return (block, block_header)
+                block_header = BlockHeader.deserialize(raw[0:BlockHeader.header_length()])
+                block = Block.deserialize(raw)
+                return (block, block_header)
+        except Exception as e:
+            return (None, None)
 
     def txs_context_menu(self, position):
         menu = QMenu()
@@ -88,11 +93,13 @@ class BlockAnalyzer(BaseDock):
         menu.exec_(self.block_widget.txs_widget.view.viewport().mapToGlobal(position))
 
     def select_block_field(self, selected, deselected):
-        if len(self.raw_block_edit.toPlainText()) < 160:
+        if len(self.raw_block_edit.toPlainText()) < BlockHeader.header_length() * 2:
+            return
+        if not len(selected.indexes()):
             return
         index = selected.indexes()[0]
         row = index.row()
-        header = [8, 64, 64, 8, 8, 8]
+        header = [i[2] * 2 for i in self.header.fields]
 
         start = sum(header[0:row])
         length = header[row]
@@ -101,4 +108,8 @@ class BlockAnalyzer(BaseDock):
         cursor.setPosition(start)
         cursor.setPosition(start + length, QTextCursor.KeepAnchor)
         self.raw_block_edit.setTextCursor(cursor)
+
+    def on_option_changed(self, key):
+        if key == 'chainparams':
+            self.raw_block_edit.textChanged.emit()
 

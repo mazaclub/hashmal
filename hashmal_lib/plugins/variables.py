@@ -7,7 +7,7 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
 from base import BaseDock, Plugin
-from hashmal_lib.core import Transaction
+from hashmal_lib.core import Transaction, Block
 from hashmal_lib.gui_utils import floated_buttons, HBox
 from hashmal_lib.items import *
 
@@ -37,12 +37,20 @@ def is_raw_tx(x):
     except Exception:
         return False
 
+def is_raw_block(x):
+    try:
+        b = Block.deserialize(x.decode('hex'))
+        return True
+    except Exception:
+        return False
+
 _var_types = [
     VariableType('None', None, lambda x: False),
     VariableType('Hex', None, is_hex),
     VariableType('Text', None, lambda x: x.startswith('"') and x.endswith('"')),
     VariableType('64 Hex Digits', None, lambda x: is_hex(x) and (len(x) == 66 if x.startswith('0x') else len(x) == 64)),
     VariableType('Raw Transaction', RAW_TX, is_raw_tx),
+    VariableType('Raw Block', RAW_BLOCK, is_raw_block),
 ]
 
 variable_types = OrderedDict()
@@ -178,6 +186,12 @@ class Variables(BaseDock):
             QApplication.clipboard().setText(txid)
         copy_tx_id = ('Copy Transaction ID', copy_txid)
         self.local_actions[RAW_TX] = [copy_tx_id]
+
+        def copy_blockhash(rawblock):
+            blockhash = b2lx(Block.deserialize(x(rawblock)).GetHash())
+            QApplication.clipboard().setText(blockhash)
+        copy_block_hash = ('Copy Block Hash', copy_blockhash)
+        self.local_actions[RAW_BLOCK] = [copy_block_hash]
 
     def create_layout(self):
         form = QFormLayout()

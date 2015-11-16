@@ -199,3 +199,7 @@ class Block(BlockHeader):
     def stream_serialize(self, f):
         super(Block, self).stream_serialize(f)
         VectorSerializer.stream_serialize(Transaction, self.vtx, f)
+
+    def GetHash(self):
+        return self.get_header().GetHash()
+

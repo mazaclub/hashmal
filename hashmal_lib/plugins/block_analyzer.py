@@ -49,6 +49,12 @@ class BlockAnalyzer(BaseDock):
 
     def check_raw_block(self):
         txt = str(self.raw_block_edit.toPlainText())
+        # Variable substitution
+        if txt.startswith('$'):
+            var_value = self.handler.get_plugin('Variables').dock.get_key(txt[1:])
+            if var_value:
+                self.raw_block_edit.setPlainText(var_value)
+            return
         self.block, self.header = self.deserialize(txt)
         self.raw_block_invalid.setVisible(self.header is None)
 

@@ -79,11 +79,26 @@ class BlockHeaderWidget(QWidget):
         self.view.horizontalHeader().setVisible(False)
 
         self.model.modelReset.connect(lambda: self.view.verticalHeader().resizeSections(QHeaderView.ResizeToContents))
+        self.view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.view.customContextMenuRequested.connect(self.context_menu)
 
         vbox = QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(self.view)
         self.setLayout(vbox)
+
+    def context_menu(self, pos):
+        if len(self.view.selectedIndexes()) == 0:
+            return
+        menu = QMenu()
+        copy = menu.addMenu('Copy')
+        copy.addAction('Serialized header', self.copy_serialized)
+
+        menu.exec_(self.view.viewport().mapToGlobal(pos))
+
+    def copy_serialized(self):
+        data = b2x(self.model.header.serialize())
+        QApplication.clipboard().setText(data)
 
     def clear(self):
         self.model.clear()

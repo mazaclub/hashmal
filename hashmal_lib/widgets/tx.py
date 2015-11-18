@@ -159,9 +159,17 @@ class InputsTree(QWidget):
 
     def context_menu(self):
         menu = QMenu()
-        menu.addAction('Copy Input Script', self.copy_script)
-        menu.addAction('Copy Input Script Hex', self.copy_script_hex)
-        menu.addAction('Copy Previous Transaction ID', self.copy_prev_tx)
+        copy = menu.addMenu('Copy')
+        copy.addAction('Previous Transaction ID', self.copy_prev_tx)
+        copy.addAction('Input Script', self.copy_script)
+        copy.addAction('Input Script (Hex)', self.copy_script_hex)
+
+        def copy_serialized():
+            row = self.view.selectedIndexes()[0].row()
+            inp = self.model.tx.vin[row]
+            data = b2x(inp.serialize())
+            QApplication.clipboard().setText(data)
+        copy.addAction('Serialized Input', copy_serialized)
         return menu
 
     def customContextMenu(self, pos):
@@ -323,8 +331,16 @@ class OutputsTree(QWidget):
         if len(self.view.selectedIndexes()) == 0:
             return
         menu = QMenu()
-        menu.addAction('Copy Output Script', self.copy_script)
-        menu.addAction('Copy Output Script Hex', self.copy_script_hex)
+        copy = menu.addMenu('Copy')
+        copy.addAction('Output Script', self.copy_script)
+        copy.addAction('Output Script (Hex)', self.copy_script_hex)
+
+        def copy_serialized():
+            row = self.view.selectedIndexes()[0].row()
+            out = self.model.tx.vout[row]
+            data = b2x(out.serialize())
+            QApplication.clipboard().setText(data)
+        copy.addAction('Serialized Output', copy_serialized)
 
         menu.exec_(self.view.viewport().mapToGlobal(pos))
 

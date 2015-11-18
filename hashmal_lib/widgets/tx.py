@@ -1,4 +1,5 @@
 import datetime
+import time
 import decimal
 from decimal import Decimal
 from collections import OrderedDict
@@ -412,9 +413,12 @@ class TimestampWidget(QWidget):
         if not timestamp_str:
             self.timestamp_human.clear()
             return
+        if not str(timestamp_str).isdigit():
+            self.timestamp_raw.setText(str(int(time.time())))
+            return
         timestamp = int(timestamp_str)
-        time = datetime.datetime.utcfromtimestamp(timestamp)
-        self.timestamp_human.setText(' '.join([time.strftime('%Y-%m-%d %H:%M:%S'), 'UTC']))
+        date_time = datetime.datetime.utcfromtimestamp(timestamp)
+        self.timestamp_human.setText(' '.join([date_time.strftime('%Y-%m-%d %H:%M:%S'), 'UTC']))
         self.setToolTip('{} ({})'.format(str(timestamp), str(self.timestamp_human.text())))
 
     def set_time(self, timestamp):

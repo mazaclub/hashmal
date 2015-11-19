@@ -112,6 +112,7 @@ class WalletRPC(BaseDock):
         form = QFormLayout()
 
         self.method_edit = QLineEdit()
+        self.method_edit.setWhatsThis('Enter the RPC method you want to use here. Some methods have auto-completion support, but any method that a node accepts can be entered here.')
         method_completer = QCompleter([i.method for i in known_methods])
         method_completer.setCompletionMode(QCompleter.InlineCompletion)
         self.method_edit.setCompleter(method_completer)
@@ -120,6 +121,7 @@ class WalletRPC(BaseDock):
         param_desc = QLabel('Params syntax is the same as when using a wallet\'s command-line tool (e.g. bitcoin-cli) from a shell.')
 
         self.result_edit = QPlainTextEdit()
+        self.result_edit.setWhatsThis('The response from a node is displayed here.')
         self.result_edit.setReadOnly(True)
         self.result_edit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         self.result_edit.setContextMenuPolicy(Qt.CustomContextMenu)

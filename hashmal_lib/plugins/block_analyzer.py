@@ -33,6 +33,7 @@ class BlockAnalyzer(BaseDock):
         self.block_widget = BlockWidget()
         self.block_widget.header_widget.view.selectionModel().selectionChanged.connect(self.select_block_field)
         self.raw_block_edit = QPlainTextEdit()
+        self.raw_block_edit.setWhatsThis('Enter a serialized raw block or block header here. If you have a raw block or header stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically.')
         self.raw_block_edit.textChanged.connect(self.check_raw_block)
         self.setFocusProxy(self.raw_block_edit)
 

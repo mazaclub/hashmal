@@ -147,12 +147,14 @@ class Blockchain(BaseDock):
 
 
         self.chain_combo = chain_combo = QComboBox()
+        chain_combo.setWhatsThis('Use this to select which cryptocurrency\'s block explorers you want to use.')
         chain_combo.addItems(self.known_explorers.keys())
         chain_combo.setCurrentIndex(self.known_explorers.keys().index(self.chain))
 
         chain_combo.currentIndexChanged.connect(self.on_chain_combo_changed)
 
         self.explorer_combo = explorer_combo = QComboBox()
+        explorer_combo.setWhatsThis('Use this to select which block explorer you want to use.')
         explorer_names_list = [i.name for i in self.known_explorers[self.chain]]
         explorer_combo.addItems(explorer_names_list)
         explorer_combo.setCurrentIndex(explorer_names_list.index(self.explorer.name))
@@ -173,6 +175,7 @@ class Blockchain(BaseDock):
         cache_size = int(self.option('cache_size', 25))
 
         cache_size_box = QSpinBox()
+        cache_size_box.setWhatsThis('Use this to change the number of recent downloaded data items that are kept in memory for quicker access to them.')
         cache_size_box.setRange(0, 100)
         cache_size_box.setValue(cache_size)
         cache_size_box.setToolTip('Number of recent raw transactions/blocks to keep in memory')
@@ -205,8 +208,10 @@ class Blockchain(BaseDock):
         self.data_box.setLayout(hbox)
 
         self.id_edit = QLineEdit()
+        self.id_edit.setWhatsThis('Enter an identifier here, such as a transaction ID or block hash.')
         self.raw_edit = QTextEdit()
         self.raw_edit.setReadOnly(True)
+        self.raw_edit.setWhatsThis('The result of a download is displayed here.')
         self.raw_edit.setContextMenuPolicy(Qt.CustomContextMenu)
         self.raw_edit.customContextMenuRequested.connect(self.context_menu)
         self.download_button = QPushButton('&Download')

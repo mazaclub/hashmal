@@ -52,14 +52,17 @@ class AddrEncoder(BaseDock):
         form.setRowWrapPolicy(QFormLayout.WrapAllRows)
 
         self.address_line = QLineEdit()
+        self.address_line.setWhatsThis('Enter a cryptocurrency address in this field to decode it into its raw format.')
         self.address_line.setFont(monospace_font)
         self.setFocusProxy(self.address_line)
         self.decode_button = QPushButton('Decode')
         self.decode_button.clicked.connect(self.decode_address)
 
         self.hash_line = QLineEdit()
+        self.hash_line.setWhatsThis('Enter a raw RIPEMD-160 hash in this field to encode it into an address.')
         self.hash_line.setFont(monospace_font)
         self.addr_version = QSpinBox()
+        self.addr_version.setWhatsThis('The address version determines what character an address will start with, and is used to distinguish addresses for different cryptocurrencies.')
         self.addr_version.setRange(0, 255)
         self.encode_button = QPushButton('Encode')
         self.encode_button.clicked.connect(self.encode_address)

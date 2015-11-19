@@ -113,6 +113,7 @@ class ScriptGenerator(BaseDock):
     def create_layout(self):
         # ComboBox for selecting which template to use.
         self.template_combo = QComboBox()
+        self.template_combo.setWhatsThis('Use this to select a template for script generation.')
         self.template_combo.addItems([i.name for i in known_templates])
         self.setFocusProxy(self.template_combo)
 
@@ -123,6 +124,7 @@ class ScriptGenerator(BaseDock):
 
         # Generated script
         self.script_output = QPlainTextEdit()
+        self.script_output.setWhatsThis('The generated script is displayed here in human-readable format.')
         self.script_output.setReadOnly(True)
         self.script_output.setFont(monospace_font)
 

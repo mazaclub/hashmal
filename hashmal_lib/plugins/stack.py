@@ -71,6 +71,7 @@ class StackEval(BaseDock):
 
         # Raw script input.
         self.tx_script = QPlainTextEdit()
+        self.tx_script.setWhatsThis('Enter a raw script here to evaluate it.')
         self.tx_script.textChanged.connect(self.reset_step_counter)
         self.tx_script.setFont(monospace_font)
         # Result of the latest script op.
@@ -79,8 +80,10 @@ class StackEval(BaseDock):
 
         # Visualization of stack.
         self.stack_view = QListWidget()
+        self.stack_view.setWhatsThis('The stack is displayed here as a list.')
         # Log of script ops.
         self.stack_log = QTreeWidget()
+        self.stack_log.setWhatsThis('Detailed descriptions of each script evaluation step are displayed here.')
         self.stack_log.setColumnCount(3)
         self.stack_log.setHeaderLabels(['Step', 'Op', 'Result'])
         self.stack_log.header().setDefaultSectionSize(50)

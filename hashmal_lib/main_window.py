@@ -203,9 +203,11 @@ class HashmalMain(QMainWindow):
     def create_script_editor(self):
         vbox = QVBoxLayout()
         self.format_combo = QComboBox()
+        self.format_combo.setWhatsThis('Use this to change the format that script editor displays and writes scripts in.')
         self.format_combo.addItems(known_script_formats)
         self.script_editor = ScriptEditor(self)
         self.script_editor.textChanged.connect(self.on_text_changed)
+        self.script_editor.setWhatsThis('The script editor lets you write transaction scripts in a human-readable format. You can also write and edit scripts in their raw, hex-encoded format if you prefer.')
 
         self.format_combo.currentIndexChanged.connect(lambda index: self.script_editor.set_format(known_script_formats[index]))
 
@@ -224,7 +226,14 @@ class HashmalMain(QMainWindow):
         toolbar = QToolBar('Toolbar')
         toolbar.setObjectName('Toolbar')
 
+        whats_this_button = QPushButton('?')
+        whats_this_button.setMaximumWidth(20)
+        whats_this_button.clicked.connect(lambda: QWhatsThis.enterWhatsThisMode())
+        toolbar.addWidget(whats_this_button)
+        toolbar.addSeparator()
+
         params_combo = ChainparamsComboBox(self.config)
+        params_combo.setWhatsThis('Use this to change the chainparams preset. Chainparams presets are described in the settings dialog.')
         params_combo.setMinimumWidth(120)
         params_form = QFormLayout()
         params_form.setContentsMargins(0, 0, 0, 0)
@@ -237,6 +246,7 @@ class HashmalMain(QMainWindow):
         toolbar.addSeparator()
 
         layout_changer = LayoutChanger(self)
+        layout_changer.setWhatsThis('Use this to load or save layouts. Layouts allow you to quickly access the tools you need for a given purpose.')
         layout_changer.layout_combo.setMinimumWidth(120)
         layout_changer.delete_button.setVisible(False)
         for i in [layout_changer.load_button, layout_changer.save_button]:

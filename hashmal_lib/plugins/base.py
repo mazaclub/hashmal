@@ -105,7 +105,6 @@ class BaseDock(QDockWidget):
         self.setFeatures(QDockWidget.DockWidgetClosable | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
         self.setObjectName(self.tool_name)
         self.setWindowTitle(self.tool_name)
-        self.setWhatsThis(self.description)
 
         self.augmenters = []
         for name in dir(self):

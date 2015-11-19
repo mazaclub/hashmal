@@ -167,6 +167,7 @@ class TxBuilder(BaseDock):
         form = QFormLayout()
 
         self.raw_tx = QTextEdit()
+        self.raw_tx.setWhatsThis('The transaction you build is displayed here.')
         self.raw_tx.setReadOnly(True)
 
         self.tx_widget = TxWidget()

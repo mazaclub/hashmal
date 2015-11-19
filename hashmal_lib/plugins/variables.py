@@ -199,6 +199,7 @@ class Variables(BaseDock):
         self.model = VarsModel(self.data)
 
         self.view = QTableView()
+        self.view.setWhatsThis('This table displays the variables you have defined.')
         self.view.setModel(self.model)
         self.view.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
         self.view.horizontalHeader().setHighlightSections(False)
@@ -212,6 +213,7 @@ class Variables(BaseDock):
         self.view.setAlternatingRowColors(True)
 
         self.filter_combo = QComboBox()
+        self.filter_combo.setWhatsThis('Use this to filter the displayed variables by their values.')
         self.filter_combo.addItems(self.filters)
         self.filter_combo.currentIndexChanged.connect(self.filter_table)
 
@@ -221,13 +223,16 @@ class Variables(BaseDock):
         # Controls for adding/removing variables
 
         self.new_var_key = QLineEdit()
+        self.new_var_key.setWhatsThis('Enter the name to give the new variable here.')
         self.setFocusProxy(self.new_var_key)
         self.new_var_value = QLineEdit()
+        self.new_var_value.setWhatsThis('Enter the value to give the new variable here.')
         add_var_btn = QPushButton('Set')
         add_var_btn.clicked.connect(self.add_new_var)
         add_var_hbox = HBox(self.new_var_key, QLabel(':'), self.new_var_value, add_var_btn)
 
         self.del_var_key = QLineEdit()
+        self.del_var_key.setWhatsThis('Enter the name of the variable you want to delete here.')
         del_var_button = QPushButton('Delete')
         del_var_button.clicked.connect(self.remove_var)
         del_var_hbox = HBox(self.del_var_key, del_var_button)

@@ -66,7 +66,8 @@ class HashmalMain(QMainWindow):
         self.statusBar().setVisible(True)
         self.statusBar().messageChanged.connect(self.change_status_bar)
 
-        self.restoreState(self.qt_settings.value('toolLayout/default').toByteArray())
+        self.restoreState(self.qt_settings.value('toolLayout/default/state').toByteArray())
+        self.restoreGeometry(self.qt_settings.value('toolLayout/default/geometry').toByteArray())
         self.script_editor.setFocus()
 
         if self.qt_settings.value('quickTipsOnStart', defaultValue=QtCore.QVariant(True)).toBool():

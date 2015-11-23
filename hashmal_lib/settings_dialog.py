@@ -42,6 +42,7 @@ class ChainparamsComboBox(QComboBox):
         self.paramsChanged.emit()
 
 class LayoutChanger(QWidget):
+    current_layout = 'default'
     def __init__(self, main_window, parent=None):
         super(LayoutChanger, self).__init__(parent)
         self.gui = main_window
@@ -49,10 +50,11 @@ class LayoutChanger(QWidget):
         self.load_layout_names()
         self.create_layout()
         self.gui.layoutsChanged.connect(self.refresh_layout_combobox)
+        self.layout_combo.setCurrentIndex(self.layout_names.indexOf('default'))
 
     def load_layout_names(self):
         self.qt_settings.beginGroup('toolLayout')
-        self.layout_names = self.qt_settings.childKeys()
+        self.layout_names = self.qt_settings.childGroups()
         self.qt_settings.endGroup()
 
     def create_layout(self):
@@ -83,17 +85,26 @@ class LayoutChanger(QWidget):
 
     def save_layout(self, name='default'):
         key = '/'.join(['toolLayout', name])
-        self.qt_settings.setValue(key, self.gui.saveState())
+        LayoutChanger.current_layout = name
+        self.qt_settings.setValue(key + '/state', self.gui.saveState())
+        self.qt_settings.setValue(key + '/geometry', self.gui.saveGeometry())
         self.gui.show_status_message('Saved layout "{}".'.format(name))
         self.gui.layoutsChanged.emit()
 
     def load_layout(self, name='default'):
         key = '/'.join(['toolLayout', name])
-        self.gui.restoreState(self.qt_settings.value(key).toByteArray())
+        LayoutChanger.current_layout = name
+        pos = self.gui.pos()
+        self.gui.restoreState(self.qt_settings.value(key + '/state').toByteArray())
+        self.gui.restoreGeometry(self.qt_settings.value(key + '/geometry').toByteArray())
+        self.gui.move(pos)
         self.gui.show_status_message('Loaded layout "{}".'.format(name))
+        self.gui.layoutsChanged.emit()
 
     def delete_layout(self, name):
         key = '/'.join(['toolLayout', name])
+        if LayoutChanger.current_layout == name:
+            LayoutChanger.current_layout = 'default'
         self.qt_settings.remove(key)
         self.gui.show_status_message('Deleted layout "{}".'.format(name))
         self.gui.layoutsChanged.emit()
@@ -105,6 +116,7 @@ class LayoutChanger(QWidget):
         self.load_layout_names()
         self.layout_combo.clear()
         self.layout_combo.addItems(self.layout_names)
+        self.layout_combo.setCurrentIndex(self.layout_names.indexOf(LayoutChanger.current_layout))
 
 
 class SettingsDialog(QDialog):

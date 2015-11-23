@@ -11,6 +11,26 @@ from hashmal_lib.core import BlockHeader, Block
 def make_plugin():
     return Plugin(BlockAnalyzer)
 
+def deserialize_block_or_header(raw):
+    """Deserialize hex-encoded block/block header.
+
+    Returns:
+        Two-tuple of (block, block_header)
+    """
+    raw = x(raw)
+    try:
+        if len(raw) == BlockHeader.header_length():
+            block_header = BlockHeader.deserialize(raw)
+            return (None, block_header)
+        else:
+            # We don't use block.get_header() in case the header is
+            # correct but the rest of the block isn't.
+            block_header = BlockHeader.deserialize(raw[0:BlockHeader.header_length()])
+            block = Block.deserialize(raw)
+            return (block, block_header)
+    except Exception as e:
+        return (None, None)
+
 class BlockAnalyzer(BaseDock):
 
     tool_name = 'Block Analyzer'
@@ -56,7 +76,7 @@ class BlockAnalyzer(BaseDock):
             if var_value:
                 self.raw_block_edit.setPlainText(var_value)
             return
-        self.block, self.header = self.deserialize(txt)
+        self.block, self.header = deserialize_block_or_header(txt)
         self.raw_block_invalid.setVisible(self.header is None)
 
         # Clears the widget if block_header is None.
@@ -67,26 +87,6 @@ class BlockAnalyzer(BaseDock):
         self.needsFocus.emit()
         self.raw_block_edit.setPlainText(txt)
         self.check_raw_block()
-
-    def deserialize(self, raw):
-        """Deserialize hex-encoded block/block header.
-
-        Returns:
-            Two-tuple of (block, block_header)
-        """
-        raw = x(raw)
-        try:
-            if len(raw) == BlockHeader.header_length():
-                block_header = BlockHeader.deserialize(raw)
-                return (None, block_header)
-            else:
-                # We don't use block.get_header() in case the header is
-                # correct but the rest of the block isn't.
-                block_header = BlockHeader.deserialize(raw[0:BlockHeader.header_length()])
-                block = Block.deserialize(raw)
-                return (block, block_header)
-        except Exception as e:
-            return (None, None)
 
     def txs_context_menu(self, position):
         menu = QMenu()

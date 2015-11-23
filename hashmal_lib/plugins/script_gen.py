@@ -25,6 +25,28 @@ Attributes:
 
 """
 
+def template_to_script(template, variables):
+    text = template.text
+    _vars = {}
+    for k, v in variables.items():
+        var_type = template.variables[k]
+        if var_type == 'address':
+            try:
+                h160 = CBase58Data(v).to_bytes()
+            except Exception:
+                return 'Error: Could not decode <{}> address.'.format(k)
+            _vars[k] = ''.join(['0x', h160.encode('hex')])
+        elif var_type == 'text':
+            _vars[k] = ''.join(['0x', v.encode('hex')])
+        else:
+            _vars[k] = v
+
+    # Replace the <variable> occurrences with their values.
+    for k, v in _vars.items():
+        old = ''.join(['<', k, '>'])
+        text = text.replace(old, v)
+    return text
+
 class TemplateWidget(QWidget):
     def __init__(self, template):
         super(TemplateWidget, self).__init__()
@@ -52,26 +74,9 @@ class TemplateWidget(QWidget):
         text = self.template.text
         variables = {}
         for var_name, v in self.variable_widgets.items():
-            var = str(v.text())
-            var_type = self.template.variables[var_name]
-            # Convert input to appropriate format.
-            if var_type == 'address':
-                try:
-                    h160 = CBase58Data(var).to_bytes()
-                except Exception:
-                    return 'Error: Could not decode <{}> address.'.format(var_name)
-                var = ''.join(['0x', h160.encode('hex')])
-            elif var_type == 'text':
-#                var = ''.join(['"', var, '"'])
-                var = var.encode('hex')
-            variables[var_name] = var
+            variables.update({var_name: str(v.text())})
 
-        # Replace the <variable> occurrences with their values.
-        for k, v in variables.items():
-            old = ''.join(['<', k, '>'])
-            text = text.replace(old, v)
-
-        return text
+        return template_to_script(self.template, variables)
 
     def clear_fields(self):
         for _, v in self.variable_widgets.items():

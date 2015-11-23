@@ -1,4 +1,5 @@
 import bitcoin
+from bitcoin.core import x, b2x
 from bitcoin.base58 import CBase58Data
 
 from PyQt4.QtGui import *
@@ -17,6 +18,24 @@ def is_address(x):
     except Exception:
         return False
     return len(x) >= 26 and len(x) <= 35
+
+def decode_address(txt):
+    """Decode txt into a RIPEMD-160 hash.
+
+    Will raise if txt is not a valid address.
+
+    Returns:
+        Two-tuple of (raw_bytes, address_version)
+    """
+    addr = CBase58Data(txt)
+    raw = addr.to_bytes()
+    return (addr.to_bytes(), addr.nVersion)
+
+def encode_address(hash160, addr_version=0):
+    """Encode hash160 into an address."""
+    assert len(hash160) == 20, 'Invalid RIPEMD-160 hash'
+    addr = CBase58Data.from_bytes(hash160, addr_version)
+    return addr
 
 class AddrEncoder(BaseDock):
 
@@ -88,14 +107,14 @@ class AddrEncoder(BaseDock):
     def decode_address(self):
         txt = str(self.address_line.text())
         try:
-            addr = CBase58Data(txt)
+            addr_bytes, version = decode_address(txt)
         except Exception:
             self.hash_line.setText('Could not decode address.')
             self.addr_version.setValue(0)
             return
 
-        self.hash_line.setText(addr.to_bytes().encode('hex'))
-        self.addr_version.setValue(addr.nVersion)
+        self.hash_line.setText(b2x(addr_bytes))
+        self.addr_version.setValue(version)
 
     def encode_address(self):
         hash160 = str(self.hash_line.text())
@@ -111,7 +130,7 @@ class AddrEncoder(BaseDock):
             return
 
         version = self.addr_version.value()
-        addr = CBase58Data.from_bytes(hash160.decode('hex'), version)
+        addr = encode_address(hash160, version)
         self.address_line.setText(str(addr))
         self.status_message('Encoded address "%s".' % str(addr))
 

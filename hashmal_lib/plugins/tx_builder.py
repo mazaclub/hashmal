@@ -201,7 +201,10 @@ class TxBuilder(BaseDock):
             for name, w in self.tx_field_widgets:
                 if name in ['nVersion', 'vin', 'vout', 'nLockTime']:
                     continue
-                value = getattr(tx, name)
+                try:
+                    value = getattr(tx, name)
+                except AttributeError:
+                    continue
                 if isinstance(w, AmountEdit):
                     w.set_amount(value)
                 else:

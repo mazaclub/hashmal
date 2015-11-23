@@ -363,3 +363,7 @@ class Variables(BaseDock):
         self.filter_combo.clear()
         self.filter_combo.addItems(self.filters)
         self.model.invalidate_cache()
+
+    def on_option_changed(self, key):
+        if key == 'chainparams':
+            self.model.invalidate_cache()

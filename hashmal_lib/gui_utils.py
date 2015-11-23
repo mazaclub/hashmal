@@ -220,7 +220,7 @@ required_plugins = ['Stack Evaluator', 'Variables']
 """These plugins are needed and cannot be disabled."""
 
 default_plugins = ['Blockchain', 'Script Generator', 'Stack Evaluator', 'Transaction Analyzer',
-                   'Transaction Builder', 'Variables']
+                   'Transaction Builder', 'Variables', 'Wallet RPC']
 
 
 hashmal_style = '''

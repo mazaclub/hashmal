@@ -12,6 +12,7 @@ class QuickTips(QDialog):
         general_tips_text = '''
 <ul>
 <li>See <i>Tools > Plugin Manager</i> in the menubar for details on what each tool does.</li>
+<li>Not all of the available plugins for Hashmal are enabled by default. Check them out in the Plugin Manager.</li>
 <li>The Plugin Manager also allows you to set "favorite tools" - which have keyboard shortcuts.</li>
 <li>You can manage tool layouts via <i>Tools > Settings</i> in the menubar.</li>
 </ul>

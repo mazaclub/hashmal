@@ -140,6 +140,10 @@ class WalletRPC(BaseDock):
         w.setLayout(form)
         return w
 
+    def supported_blockchain_data_types(self):
+        """Get the types of data this plugin can retrieve."""
+        return ['raw_transaction', 'raw_block', 'raw_header', 'block_hash']
+
     def retrieve_blockchain_data(self, data_type, identifier):
         """Signifies that this plugin is a data retriever."""
         params = [identifier]

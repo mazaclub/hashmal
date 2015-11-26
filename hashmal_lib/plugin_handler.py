@@ -273,7 +273,7 @@ class PluginHandler(QWidget):
         for plugin in self.loaded_plugins:
             dock = plugin.dock
             if not dock.is_enabled: continue
-            if getattr(dock, 'retrieve_blockchain_data', None):
+            if hasattr(dock, 'retrieve_blockchain_data'):
                 retrievers.append(plugin)
         return retrievers
 
@@ -286,9 +286,10 @@ class PluginHandler(QWidget):
         """
         plugin_name = self.config.get_option('data_retriever', 'Blockchain')
         plugin = self.get_plugin(plugin_name)
-        dock = plugin.dock
-        if plugin is None or not getattr(plugin.dock, 'retrieve_blockchain_data', None):
+        if not plugin or not hasattr(plugin.dock, 'retrieve_blockchain_data'):
             plugin = self.get_plugin('Blockchain')
+        if not data_type in plugin.dock.supported_blockchain_data_types():
+            raise Exception('Plugin "%s" does not support downloading "%s" data.' % (plugin.name, data_type))
         return plugin.dock.retrieve_blockchain_data(data_type, identifier)
 
     def evaluate_current_script(self):

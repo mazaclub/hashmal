@@ -70,6 +70,9 @@ class BaseDock(QDockWidget):
         retrieve_blockchain_data(data_type, identifier): Signifies that
             this dock is a data retriever, and can be used when the user
             wants to download blockchain data such as transactions.
+
+        supported_blockchain_data_types(): Returns the types of blockchain
+            data this class can retrieve.
     """
     needsFocus = QtCore.pyqtSignal()
     needsUpdate = QtCore.pyqtSignal()

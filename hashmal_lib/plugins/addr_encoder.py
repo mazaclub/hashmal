@@ -130,6 +130,7 @@ class AddrEncoder(BaseDock):
             return
 
         version = self.addr_version.value()
+        hash160 = x(hash160)
         addr = encode_address(hash160, version)
         self.address_line.setText(str(addr))
         self.status_message('Encoded address "%s".' % str(addr))

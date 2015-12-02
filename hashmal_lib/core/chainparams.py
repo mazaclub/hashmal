@@ -17,12 +17,14 @@ class ParamsPreset(object):
                 - default: Default value.
         - block_header_fields (list): Block header format. Same form as tx_fields.
             If not specified, the 80-byte Bitcoin block header format is used.
+        - block_fields (list): Block (excluding header) format.
 
     """
     def __init__(self, **kwargs):
         self.name = ''
         self.tx_fields = []
         self.block_header_fields = list(_bitcoin_header_fields)
+        self.block_fields = list(_bitcoin_block_fields)
 
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -34,6 +36,10 @@ _bitcoin_header_fields = [
     ('nTime', b'<I', 4, 0),
     ('nBits', b'<I', 4, 0),
     ('nNonce', b'<I', 4, 0)
+]
+
+_bitcoin_block_fields = [
+    ('vtx', 'vectortx', None, None)
 ]
 
 BitcoinPreset = ParamsPreset(
@@ -51,7 +57,8 @@ ClamsPreset = ParamsPreset(
             ('vin', 'inputs', None, None),
             ('vout', 'outputs', None, None),
             ('nLockTime', b'<I', 4, 0),
-            ('ClamSpeech', 'bytes', None, b'')]
+            ('ClamSpeech', 'bytes', None, b'')],
+        block_fields = list(_bitcoin_block_fields) + [('blockSig', 'bytes', None, None)]
 )
 
 FreicoinPreset = ParamsPreset(
@@ -102,9 +109,20 @@ def set_block_header_fields(fields):
     """
     block.block_header_fields = list(fields)
 
+def get_block_fields():
+    return block.block_fields
+
+def set_block_fields(fields):
+    """Set the format of blocks (excluding their headers).
+
+    This affects all Block instances created afterward.
+    """
+    block.block_fields = list(fields)
+
 def set_to_preset(name):
     """Reset chainparams to the preset name."""
     # Will throw an exception if name isn't a preset.
     params = presets[name]
     set_tx_fields(params.tx_fields)
     set_block_header_fields(params.block_header_fields)
+    set_block_fields(params.block_fields)

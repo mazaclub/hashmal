@@ -2,7 +2,7 @@ import struct
 
 import bitcoin
 from bitcoin.core import __make_mutable, b2x, b2lx, CBlockHeader
-from bitcoin.core.serialize import ser_read, Hash, VectorSerializer
+from bitcoin.core.serialize import ser_read, Hash, BytesSerializer, VectorSerializer
 
 from transaction import Transaction
 
@@ -19,6 +19,10 @@ block_header_fields = [
 Do not modify this list! Use chainparams.set_block_header_fields()
 or a preset via chainparams.set_to_preset().
 """
+
+block_fields = [
+    ('vtx', 'vectortx', None, None)
+]
 
 @__make_mutable
 class BlockHeader(CBlockHeader):
@@ -79,6 +83,8 @@ class BlockHeader(CBlockHeader):
     @classmethod
     def stream_deserialize(cls, f):
         self = cls()
+        if not hasattr(self, 'fields'):
+            setattr(self, 'fields', list(block_header_fields))
         for attr, fmt, num_bytes, _ in self.fields:
             if fmt not in ['bytes']:
                 setattr(self, attr, struct.unpack(fmt, ser_read(f, num_bytes))[0])
@@ -166,13 +172,14 @@ class Block(BlockHeader):
             raise ValueError('Block contains no transactions')
         return self.build_merkle_tree_from_txs(self.vtx)[-1]
 
-    def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0, vtx=(), header_fields=None, kwfields=None):
+    def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0, vtx=(), header_fields=None, block_fields=None, kwfields=None):
         """Create a new block"""
         super(Block, self).__init__(nVersion, hashPrevBlock, hashMerkleRoot, nTime, nBits, nNonce, header_fields)
         if kwfields is None: kwfields = {}
         for k, v in kwfields.items():
             setattr(self, k, v)
 
+        self.set_serialization(block_fields)
         vMerkleTree = tuple(Block.build_merkle_tree_from_txs(vtx))
         object.__setattr__(self, 'vMerkleTree', vMerkleTree)
         object.__setattr__(self, 'vtx', tuple(Transaction.from_tx(tx) for tx in vtx))
@@ -187,19 +194,42 @@ class Block(BlockHeader):
             d[attr] = getattr(self, attr)
         return BlockHeader(**d)
 
+    def GetHash(self):
+        return self.get_header().GetHash()
+
+    def set_serialization(self, fields=None):
+        """Set the serialization format.
+
+        This allows blocks to exist that do not comply with the
+        global block_fields list.
+        """
+        if fields is None:
+            fields = list(block_fields)
+        self.block_fields = fields
+        for name, _, _, default in self.block_fields:
+            if not hasattr(self, name):
+                setattr(self, name, default)
+
     @classmethod
     def stream_deserialize(cls, f):
         self = super(Block, cls).stream_deserialize(f)
-        vtx = VectorSerializer.stream_deserialize(Transaction, f)
-        vMerkleTree = tuple(Block.build_merkle_tree_from_txs(vtx))
-        setattr(self, 'vMerkleTree', vMerkleTree)
-        setattr(self, 'vtx', tuple(vtx))
+        for attr, fmt, num_bytes, _ in self.block_fields:
+            if fmt not in ['bytes', 'vectortx']:
+                setattr(self, attr, struct.unpack(fmt, ser_read(f, num_bytes))[0])
+            elif fmt == 'bytes':
+                setattr(self, attr, BytesSerializer.stream_deserialize(f))
+            elif fmt == 'vectortx':
+                setattr(self, attr, VectorSerializer.stream_deserialize(Transaction, f))
+
+        setattr(self, 'vMerkleTree', tuple(Block.build_merkle_tree_from_txs(getattr(self, 'vtx'))))
         return self
 
     def stream_serialize(self, f):
         super(Block, self).stream_serialize(f)
-        VectorSerializer.stream_serialize(Transaction, self.vtx, f)
-
-    def GetHash(self):
-        return self.get_header().GetHash()
-
+        for attr, fmt, num_bytes, _ in self.block_fields:
+            if fmt not in ['bytes', 'vectortx']:
+                f.write(struct.pack(fmt, getattr(self, attr)))
+            elif fmt == 'bytes':
+                BytesSerializer.stream_serialize(getattr(self, attr), f)
+            elif fmt == 'vectortx':
+                VectorSerializer.stream_serialize(Transaction, getattr(self, attr), f)

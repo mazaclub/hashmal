@@ -213,7 +213,7 @@ class WalletRPC(BaseDock):
             respdata = connection.read()
             connection.close()
         except Exception as e:
-            return (None, str(e))
+            return str(e)
         else:
             r = json.loads(respdata)
             result = r.get('result', '')

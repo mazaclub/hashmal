@@ -10,6 +10,7 @@ import hashmal_lib
 from hashmal_lib.plugins import BaseDock, Plugin, Category
 from hashmal_lib.gui_utils import floated_buttons
 from hashmal_lib.items import *
+from hashmal_lib.downloader import Downloader
 
 RPCMethod = namedtuple('RPCMethod', ('method', 'get_result_type'))
 """RPC method.
@@ -54,6 +55,48 @@ class RPCProfile(object):
                     self.password,
                     self.host,
                     self.port)
+
+
+class RPCDownloader(Downloader):
+    finished = pyqtSignal(str, str, str, name='finished')
+    def __init__(self, profile, method_name, params):
+        super(RPCDownloader, self).__init__()
+        self.profile = profile
+        self.method_name = method_name
+        self.params = params
+
+    @pyqtSlot()
+    def download(self):
+        postdata = json.dumps({'method': self.method_name, 'params': self.params, 'id': 'jsonrpc'})
+        result = ''
+        error = ''
+
+        try:
+            connection = urllib.urlopen(self.profile.as_url(), postdata)
+            respdata = connection.read()
+            connection.close()
+        except Exception as e:
+            error = str(e)
+        else:
+            r = json.loads(respdata)
+            res = r.get('result', '')
+            err = r.get('error', '')
+            if res:
+                if type(res) not in (str, unicode):
+                    res = json.dumps(res, indent=2)
+                else:
+                    res = res.strip('"')
+                result = res
+            if err:
+                if type(err) not in (str, unicode):
+                    err = json.dumps(err, indent=2)
+                else:
+                    err = err.strip('"')
+                error = err
+
+        for i in [result, error]:
+            if i is None: i = ''
+        self.finished.emit(self.method_name, result, error)
 
 
 class WalletRPC(BaseDock):
@@ -162,7 +205,9 @@ class WalletRPC(BaseDock):
 
         result = None
         try:
-            result = self.do_rpc(method_name, params)
+            result, err = self.do_rpc(method_name, params, async=False)
+            if err:
+                return err
             # Truncate block to header
             if data_type == 'raw_header':
                 result = result[:160]
@@ -184,48 +229,54 @@ class WalletRPC(BaseDock):
             except Exception:
                 pass
 
-        result = None
-        error = False
-        try:
-            result = self.do_rpc(method_name, params)
-        except Exception as e:
-            result = str(e)
-            error = True
-        self.result_edit.setProperty('data_type', None)
+        self.do_rpc(method_name, params)
 
-        if not error and method:
-            self.result_edit.setProperty('data_type', method.get_result_type(params))
-
-        self.result_edit.setPlainText(result)
-        self.result_edit.setProperty('hasError', True if error else False)
-        self.style().polish(self.result_edit)
-
-    def do_rpc(self, method_name, params):
+    def do_rpc(self, method_name, params, async=True):
         """Call the full client.
 
         Returns:
             Result or raises an exception with an error.
         """
-        postdata = json.dumps({'method': method_name, 'params': params, 'id': 'jsonrpc'})
-
-        try:
-            connection = urllib.urlopen(self.profile.as_url(), postdata)
-            respdata = connection.read()
-            connection.close()
-        except Exception as e:
-            return str(e)
+        if async:
+            downloader = RPCDownloader(self.profile, method_name, params)
+            self.download_async(downloader, self.set_result)
         else:
-            r = json.loads(respdata)
-            result = r.get('result', '')
-            error = r.get('error', '')
-            if result:
-                if type(result) not in (str, unicode):
-                    result = json.dumps(result, indent=2)
-                else:
-                    result = result.strip('"')
-            if error:
-                raise Exception('%s\n(Error code: %s' % (error['message'].strip('"'), error['code']))
-            return result
+            postdata = json.dumps({'method': method_name, 'params': params, 'id': 'jsonrpc'})
+            result = ''
+            error = ''
+
+            try:
+                connection = urllib.urlopen(self.profile.as_url(), postdata)
+                respdata = connection.read()
+                connection.close()
+            except Exception as e:
+                error = str(e)
+            else:
+                r = json.loads(respdata)
+                result = r.get('result', '')
+                error = r.get('error', '')
+                if result:
+                    if type(result) not in (str, unicode):
+                        result = json.dumps(result, indent=2)
+                    else:
+                        result = result.strip('"')
+                if error:
+                    if type(error) not in (str, unicode):
+                        error = json.dumps(error, indent=2)
+                    else:
+                        error = error.strip('"')
+            return result, error
+
+    def set_result(self, method_name, result, error):
+        method = known_methods_dict.get(method_name)
+        self.result_edit.setProperty('data_type', None)
+
+        if not error and method:
+            self.result_edit.setProperty('data_type', method.get_result_type(params))
+
+        self.result_edit.setPlainText(error if error else result)
+        self.result_edit.setProperty('hasError', True if error else False)
+        self.style().polish(self.result_edit)
 
     def context_menu(self, position):
         menu = self.result_edit.createStandardContextMenu()

@@ -8,6 +8,7 @@ from bitcoin.core import x, lx, b2x
 from hashmal_lib.gui_utils import floated_buttons
 from hashmal_lib.core import BlockHeader
 from hashmal_lib.items import *
+from hashmal_lib.downloader import Downloader
 from base import BaseDock, Plugin, Category
 
 def make_plugin():
@@ -69,16 +70,13 @@ insight_explorer = type('insight_explorer', (BlockExplorer,), dict(name='insight
                 parsers = {'raw_tx':lambda d: d.get('rawtx'), 'raw_header': header_from_insight_block}))
 known_explorers = {'Bitcoin': [insight_explorer()]}
 
-class Downloader(QObject):
-    """Asynchronous downloading via QThreads."""
-    start = pyqtSignal()
+class BlockchainDownloader(Downloader):
     finished = pyqtSignal(str, str, str, str, name='finished')
     def __init__(self, explorer, data_type, identifier):
-        super(Downloader, self).__init__()
+        super(BlockchainDownloader, self).__init__()
         self.explorer = explorer
         self.data_type = data_type
         self.identifier = identifier
-        self.start.connect(self.download)
 
     @pyqtSlot()
     def download(self):
@@ -251,12 +249,6 @@ class Blockchain(BaseDock):
         while len(self.recent_data.keys()) > int(self.option('cache_size', 25)):
             self.recent_data.popitem(False)
 
-    def make_downloader(self, data_type, identifier):
-        self.downloader_thread = QThread()
-        self.downloader = Downloader(self.explorer, data_type, identifier)
-        self.downloader.moveToThread(self.downloader_thread)
-        self.downloader.finished.connect(self.downloader_thread.quit)
-
     def do_download(self):
         self.download_button.setEnabled(False)
         identifier = str(self.id_edit.text())
@@ -268,10 +260,9 @@ class Blockchain(BaseDock):
             return
 
         self.raw_edit.setText('Downloading...')
-        self.make_downloader(data_type, identifier)
-        self.downloader.finished.connect(self.set_result)
-        self.downloader_thread.start()
-        self.downloader.start.emit()
+
+        downloader = BlockchainDownloader(self.explorer, data_type, identifier)
+        self.download_async(downloader, self.set_result)
 
     def set_result(self, data_type, identifier, raw, error):
         """Set result of tx downloader thread."""

@@ -14,6 +14,7 @@ from help_widgets import QuickTips
 from gui_utils import script_file_filter, hashmal_style, floated_buttons, monospace_font
 from plugin_manager import PluginManager
 from plugins import BaseDock
+from downloader import DownloadController
 
 known_script_formats = ['Human', 'Hex']
 
@@ -38,6 +39,8 @@ class HashmalMain(QMainWindow):
 
         active_params = self.config.get_option('chainparams', 'Bitcoin')
         chainparams.set_to_preset(active_params)
+
+        self.download_controller = DownloadController()
 
         self.setDockNestingEnabled(True)
         # Plugin Handler loads plugins and handles their dock widgets.

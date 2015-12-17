@@ -208,3 +208,7 @@ class BaseDock(QDockWidget):
         """Called when toggleViewAction() is triggered so this dock can get focus."""
         if self.isVisible():
             self.needsFocus.emit()
+
+    def download_async(self, downloader, callback):
+        """Execute a downloader.Downloader subclass in a separate thread and call callback with the results."""
+        self.handler.gui.download_controller.do_download(downloader, callback)

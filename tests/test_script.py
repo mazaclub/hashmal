@@ -16,7 +16,7 @@ class ScriptTest(unittest.TestCase):
         s = Script(i.hex.decode('hex'))
         self.assertEqual(s.get_human(), i.human)
 
-        i = ScriptItem('6a01010131', 'OP_RETURN 0x01 1')
+        i = ScriptItem('6a01010131', 'OP_RETURN 0x01 "1"')
         s = Script(i.hex.decode('hex'))
         self.assertEqual(s.get_human(), i.human)
 
@@ -31,6 +31,11 @@ class ScriptTest(unittest.TestCase):
         self.assertEqual(s.get_human(), i.human)
 
         i = ScriptItem('51', 'OP_1')
+        s = Script.from_human(i.human)
+        self.assertEqual(s.get_hex(), i.hex)
+        self.assertEqual(s.get_human(), i.human)
+
+        i = ScriptItem('510474657374', 'OP_1 "test"')
         s = Script.from_human(i.human)
         self.assertEqual(s.get_hex(), i.hex)
         self.assertEqual(s.get_human(), i.human)
@@ -86,12 +91,3 @@ class ParsingTest(unittest.TestCase):
             result, _ = transform_human(text)
             self.assertEqual(expected, result)
 
-    def test_string_literal_transform(self):
-        str_tests = [
-            ('1 "1"', '0x01 0x31', '0x01 1'),
-            ('test 123 "123"', 'test 0x0123 0x313233', 'test 0x0123 123')
-        ]
-        for text, expected, human in str_tests:
-            result, _ = transform_human(text)
-            self.assertEqual(expected, result)
-            self.assertEqual(Script.from_human(result).get_human(), human)

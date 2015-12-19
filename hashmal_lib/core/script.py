@@ -33,13 +33,17 @@ class Script(CScript):
             # data to be pushed
             pushdata = word
 
+            # Make sure hex is formatted.
             if is_hex(pushdata):
                 if pushdata.startswith('0x'):
                     pushdata = pushdata[2:]
                 if len(pushdata) % 2 != 0:
                     pushdata = ''.join(['0', pushdata])
+            # Hex-encode text.
             else:
-                pushdata = word.encode('hex')
+                if pushdata.startswith('"') and pushdata.endswith('"'):
+                    pushdata = pushdata[1:-1]
+                pushdata = pushdata.encode('hex')
             hex_str.append(push_script(pushdata))
 
         hex_str = ''.join(hex_str)
@@ -77,7 +81,7 @@ class Script(CScript):
                     s.append(op_name)
                 elif opcode < OPCODES_BY_NAME['OP_PUSHDATA1']:
                     if all(ord(c) < 128 and ord(c) > 31 for c in data):
-                        s.append(data)
+                        s.append(''.join(['"', data, '"']))
                     else:
                         s.append(''.join(['0x', data.encode('hex')]))
             except StopIteration:
@@ -101,10 +105,6 @@ def transform_human(text, variables=None):
     if variables is None:
         variables = {} # No mutable default value.
     # these are parseActions for pyparsing.
-    def str_literal_to_hex(s, loc, toks):
-        for i, t in enumerate(toks):
-            toks[i] = ''.join(['0x', t.encode('hex')])
-        return toks
     def var_name_to_value(s, loc, toks):
         for i, t in enumerate(toks):
             val = variables.get(t[1:])
@@ -133,7 +133,6 @@ def transform_human(text, variables=None):
         return toks
     # ^ parseActions for pyparsing end here.
     str_literal = QuotedString('"')
-    str_literal.setParseAction(str_literal_to_hex)
     var_name = Combine(Word('$') + Word(pyparsing.alphas))
     var_name.setParseAction(var_name_to_value)
 
@@ -182,7 +181,6 @@ def transform_human(text, variables=None):
 
     s = text
     s = var_name.transformString(s)
-    s = str_literal.transformString(s)
     s = implicit_op.transformString(s)
     s = implicit_hex.transformString(s)
     s = explicit_hex.transformString(s)

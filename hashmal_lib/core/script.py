@@ -4,7 +4,7 @@ import bitcoin
 from bitcoin.base58 import CBase58Data
 from bitcoin.core.script import CScript, OPCODE_NAMES, OPCODES_BY_NAME
 
-from utils import push_script
+from utils import is_hex, push_script
 
 class Script(CScript):
     """Transaction script.
@@ -33,13 +33,12 @@ class Script(CScript):
             # data to be pushed
             pushdata = word
 
-            try:
-                i = int(pushdata, 16)
+            if is_hex(pushdata):
                 if pushdata.startswith('0x'):
                     pushdata = pushdata[2:]
                 if len(pushdata) % 2 != 0:
                     pushdata = ''.join(['0', pushdata])
-            except Exception:
+            else:
                 pushdata = word.encode('hex')
             hex_str.append(push_script(pushdata))
 
@@ -77,7 +76,10 @@ class Script(CScript):
                 if op_name:
                     s.append(op_name)
                 elif opcode < OPCODES_BY_NAME['OP_PUSHDATA1']:
-                    s.append(''.join(['0x', data.encode('hex')]))
+                    if all(ord(c) < 128 and ord(c) > 31 for c in data):
+                        s.append(data)
+                    else:
+                        s.append(''.join(['0x', data.encode('hex')]))
             except StopIteration:
                 break
             except Exception:

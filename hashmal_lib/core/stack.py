@@ -1,3 +1,6 @@
+import hashlib
+import sys
+
 import bitcoin
 from bitcoin.core.script import *
 from bitcoin.core.scripteval import *
@@ -6,7 +9,6 @@ from bitcoin.core.scripteval import (
         _ISA_UNOP, _ISA_BINOP, _CheckExec, _bord, MAX_STACK_ITEMS
 )
 
-import sys
 
 def e(*args):
     """For hex-encoding things."""

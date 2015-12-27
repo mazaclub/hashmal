@@ -1,5 +1,6 @@
 import hashlib
 import sys
+from collections import namedtuple
 
 import bitcoin
 from bitcoin.core.script import *
@@ -14,18 +15,36 @@ def e(*args):
     """For hex-encoding things."""
     return tuple([i.encode('hex') for i in args])
 
+StackState = namedtuple('StackState', ('stack', 'last_op', 'log'))
+
+class ScriptExecution(object):
+    def __init__(self, tx_script=None, txTo=None, inIdx=0, flags=None):
+        super(ScriptExecution, self).__init__()
+        self.evaluate(tx_script, txTo, inIdx, flags)
+
+    def evaluate(self, tx_script, txTo=None, inIdx=0, flags=None):
+        self.steps = []
+        if flags is None:
+            flags = ()
+
+        stack = Stack(tx_script, txTo, inIdx, flags)
+        if stack.init_stack:
+            self.steps.append(StackState(list(stack.init_stack), 'scriptSig'))
+        iterator = stack.step()
+        while 1:
+            try:
+                state, last_op, log = iterator.next()
+                self.steps.append(StackState(list(state), last_op, log))
+            except StopIteration:
+                break
+            except Exception:
+                break
+        return self.steps
 
 class Stack(object):
     """State of a Script's execution."""
-    def __init__(self):
+    def __init__(self, tx_script, txTo=None, inIdx=0, flags=None):
         super(Stack, self).__init__()
-        self.tx_script = None
-        self.txTo = None
-        self.inIdx = 0
-        self.flags = ()
-        self.init_stack = []
-
-    def set_script(self, tx_script, txTo=None, inIdx=0, flags=None):
         self.tx_script = tx_script
         self.txTo = txTo
         self.inIdx = inIdx
@@ -52,8 +71,7 @@ class Stack(object):
 
         Re-implemented _EvalScript from python-bitcoinlib for stack log.
         """
-        init_stack = self.init_stack
-        stack = init_stack
+        stack = self.init_stack
         scriptIn = self.tx_script
         txTo = self.txTo
         inIdx = self.inIdx
@@ -115,7 +133,7 @@ class Stack(object):
                 elif fExec:
                     stack.append(sop_data)
 #                    continue
-                    yield (stack, '%s was pushed to the stack.' % e(sop_data))
+                    yield (stack, sop, '%s was pushed to the stack.' % e(sop_data))
                     continue
 
             elif fExec or (OP_IF <= sop <= OP_ENDIF):
@@ -434,7 +452,7 @@ class Stack(object):
                 else:
                     err_raiser(EvalScriptError, 'unsupported opcode 0x%x' % sop)
 
-            yield (stack, last)
+            yield (stack, sop, last)
 
             # size limits
             if len(stack) + len(altstack) > MAX_STACK_ITEMS:

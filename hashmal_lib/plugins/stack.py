@@ -5,10 +5,11 @@ from bitcoin.core.scripteval import EvalScript
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from hashmal_lib.core import Transaction
-from hashmal_lib.core.stack import Stack
+from hashmal_lib.core import Transaction, Script
+from hashmal_lib.core.stack import Stack, ScriptExecution
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 from hashmal_lib.items import *
+from hashmal_lib.widgets import ScriptExecutionWidget
 from base import BaseDock, Plugin, Category
 
 def make_plugin():
@@ -30,90 +31,58 @@ class StackEval(BaseDock):
         self.widget().setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 
     def init_data(self):
-        self.stack = Stack()
-        self.step_counter = -1
         self.tx = None
         self.inIdx = 0
+        self.execution = ScriptExecution()
 
     def init_actions(self):
         set_as_spending = ('Set as spending transaction', self.set_spending_tx)
         self.advertised_actions[RAW_TX] = [set_as_spending]
 
-    def reset_step_counter(self):
-        self.step_counter = -1
-
     def reset(self):
-        self.reset_step_counter()
-        self.stack_view.clear()
-        self.stack_log.clear()
-        self.stack_result.clear()
-        self.stack_result.setProperty('hasError', False)
-        self.style().polish(self.stack_result)
+#        self.stack_result.clear()
+#        self.stack_result.setProperty('hasError', False)
+#        self.style().polish(self.stack_result)
         # Clear selected step.
         cursor = QTextCursor(self.tx_script.document())
         cursor.setPosition(0)
         self.tx_script.setTextCursor(cursor)
 
     def create_layout(self):
-        form = QFormLayout()
+        vbox = QVBoxLayout()
 
         tabs = QTabWidget()
         tabs.addTab(self.create_main_tab(), 'Stack')
         tabs.addTab(self.create_tx_tab(), 'Transaction')
         self.setFocusProxy(tabs)
-        form.addRow(tabs)
+        vbox.addWidget(tabs)
 
-        return form
+        return vbox
 
     def create_main_tab(self):
-        form = QFormLayout()
-        form.setRowWrapPolicy(QFormLayout.WrapAllRows)
+        self.execution_widget = ScriptExecutionWidget(self.execution)
 
         # Raw script input.
         self.tx_script = QPlainTextEdit()
         self.tx_script.setWhatsThis('Enter a raw script here to evaluate it.')
-        self.tx_script.textChanged.connect(self.reset_step_counter)
+        # TODO
+#        self.tx_script.textChanged.connect(self.reset_step_counter)
         self.tx_script.setFont(monospace_font)
-        # Result of the latest script op.
-        self.stack_result = QLineEdit()
-        self.stack_result.setReadOnly(True)
 
-        # Visualization of stack.
-        self.stack_view = QListWidget()
-        self.stack_view.setWhatsThis('The stack is displayed here as a list.')
-        # Log of script ops.
-        self.stack_log = QTreeWidget()
-        self.stack_log.setWhatsThis('Detailed descriptions of each script evaluation step are displayed here.')
-        self.stack_log.setColumnCount(3)
-        self.stack_log.setHeaderLabels(['Step', 'Op', 'Result'])
-        self.stack_log.header().setDefaultSectionSize(50)
-        self.stack_log.header().setResizeMode(0, QHeaderView.Fixed)
-        self.stack_log.header().setResizeMode(1, QHeaderView.ResizeToContents)
-        self.stack_log.header().setResizeMode(2, QHeaderView.Stretch)
-        self.stack_log.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        vbox = QVBoxLayout()
+        vbox.addWidget(QLabel('Script:'))
+        vbox.addWidget(self.tx_script)
+        vbox.addWidget(self.execution_widget, stretch=1)
 
-        # Controls
-        self.step_button = QPushButton('Step')
-        self.step_button.setToolTip('Evaluate the next operation')
-        self.step_button.clicked.connect(self.do_step)
-        self.reset_button = QPushButton('Reset')
-        self.reset_button.setToolTip('Reset the current evaluation')
-        self.reset_button.clicked.connect(self.reset)
         self.do_button = QPushButton('Evaluate')
         self.do_button.setToolTip('Evaluate the entire script')
         self.do_button.clicked.connect(self.do_evaluate)
 
-
-        form.addRow('Script:', self.tx_script)
-        form.addRow('Stack:', self.stack_view)
-        form.addRow('Stack log:', self.stack_log)
-        form.addRow(self.stack_result)
-
-        btn_hbox = floated_buttons([self.step_button, self.reset_button, self.do_button], left=True)
-        form.addRow(btn_hbox)
+        btn_hbox = floated_buttons([self.do_button], left=True)
+        vbox.addLayout(btn_hbox)
 
         w = QWidget()
-        w.setLayout(form)
+        w.setLayout(vbox)
         return w
 
     def create_tx_tab(self):
@@ -183,6 +152,10 @@ class StackEval(BaseDock):
         self.tx_script.setTextCursor(cursor)
 
     def do_evaluate(self):
+        scr = Script(str(self.tx_script.toPlainText()).decode('hex'))
+        self.execution_widget.evaluate(scr)
+        return
+        # TODO
         while 1:
             if not self.do_step():
                 break
@@ -190,42 +163,3 @@ class StackEval(BaseDock):
         cursor.setPosition(0)
         self.tx_script.setTextCursor(cursor)
 
-    def do_step(self):
-        """Returns whether another step can be done."""
-        if self.step_counter == -1:
-            txt = str(self.tx_script.toPlainText())
-            scr = CScript(txt.decode('hex'))
-            # So we can show the opcode in the stack log
-            self.script_ops = [i for i in scr.raw_iter()]
-            self.stack.set_script(scr, self.tx, self.inIdx)
-            self.stack_iterator = self.stack.step()
-            self.stack_log.clear()
-            self.step_counter += 1
-
-        step_again = False
-        try:
-            self.step_counter += 1
-            stack_state, action = self.stack_iterator.next()
-            new_stack = [i.encode('hex') for i in reversed(stack_state)]
-            self.stack_view.clear()
-            self.stack_view.addItems(new_stack)
-
-            op_name = OPCODE_NAMES.get(self.script_ops[self.step_counter - 1][0], 'PUSHDATA')
-            self.highlight_step(self.script_ops[self.step_counter - 1])
-            item = QTreeWidgetItem(map(lambda i: str(i), [self.step_counter, op_name, action]))
-            item.setTextAlignment(0, Qt.AlignLeft)
-            item.setToolTip(1, 'Step {} operation'.format(self.step_counter))
-            item.setToolTip(2, 'Result of step {}'.format(self.step_counter))
-            self.stack_log.insertTopLevelItem(0, item)
-            self.stack_result.setText(action)
-            self.stack_result.setProperty('hasError', False)
-            step_again = True
-        except StopIteration:
-            self.stack_result.setText('End of script.')
-        except Exception as e:
-            self.stack_result.setText(str(e))
-            self.stack_result.setProperty('hasError', True)
-        finally:
-            self.style().polish(self.stack_result)
-
-        return step_again

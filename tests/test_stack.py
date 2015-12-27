@@ -4,7 +4,7 @@ import bitcoin
 from bitcoin.core.scripteval import EvalScript
 
 from hashmal_lib.core.script import Script, transform_human
-from hashmal_lib.core.stack import Stack
+from hashmal_lib.core.stack import Stack, ScriptExecution
 
 class StackTest(unittest.TestCase):
     def setUp(self):
@@ -13,17 +13,12 @@ class StackTest(unittest.TestCase):
         self.script_push_dup = Script.from_human('0x80 OP_DUP')
 
     def test_evaluate_script(self):
-        my_stack = Stack()
-        my_stack.set_script(self.script_simple_addition)
-        stack = my_stack.evaluate()
-        self.assertEqual(1, len(stack))
-        self.assertEqual('\x05', stack[0])
+        execution = ScriptExecution()
+        final_state = execution.evaluate(self.script_simple_addition)[-1]
+        self.assertEqual(['\x05'], final_state.stack)
 
-        my_stack.set_script(self.script_push_dup)
-        stack = my_stack.evaluate()
-        self.assertEqual(2, len(stack))
-        self.assertEqual('\x80', stack[0])
-        self.assertEqual('\x80', stack[1])
+        final_state = execution.evaluate(self.script_push_dup)[-1]
+        self.assertEqual(['\x80', '\x80'], final_state.stack)
 
     def test_python_bitcoinlib_evaluate_script(self):
         stack = []
@@ -51,11 +46,9 @@ class StackTest(unittest.TestCase):
             ]
         }
 
-        my_stack = Stack()
+        execution = ScriptExecution()
         for my_script, expected_states in step_tests.items():
-            my_stack.set_script(my_script)
-            iterator = my_stack.step()
-            for i in expected_states:
-                stack_state, _ = iterator.next()
-                self.assertEqual(i, stack_state)
+            steps = execution.evaluate(my_script)
+            for i, L in enumerate(expected_states):
+                self.assertEqual(L, steps[i].stack)
 

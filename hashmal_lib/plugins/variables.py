@@ -10,6 +10,7 @@ from base import BaseDock, Plugin
 from hashmal_lib.core import Transaction, Block
 from hashmal_lib.gui_utils import floated_buttons, HBox
 from hashmal_lib.items import *
+from hashmal_lib.core.utils import is_hex
 
 def make_plugin():
     return Plugin(Variables)
@@ -22,13 +23,6 @@ Attributes:
     category (str): Category; for plugin context menus. (e.g. hashmal_lib.items.RAW_TX)
     classify (function): Function returning whether a value has this variable type.
 """
-
-def is_hex(x):
-    try:
-        i = int(x, 16)
-        return True
-    except Exception:
-        return False
 
 def is_raw_tx(x):
     try:
@@ -74,6 +68,9 @@ class VarsModel(QtCore.QAbstractTableModel):
     def __init__(self, data, parent=None):
         super(VarsModel, self).__init__(parent)
         self.vars_data = data
+        self.reverse_lookup = {}
+        for k, v in self.vars_data.items():
+            self.reverse_lookup[v] = k
         self.classification_cache = {}
 
     def columnCount(self, parent = QtCore.QModelIndex()):
@@ -141,13 +138,19 @@ class VarsModel(QtCore.QAbstractTableModel):
     def set_key(self, key, value):
         self.beginInsertRows( QtCore.QModelIndex(), self.rowCount(), self.rowCount() )
         self.vars_data[key] = value
+        self.reverse_lookup[value] = key
         self.endInsertRows()
 
     def remove_key(self, key):
         row = self.vars_data.keys().index(key)
         self.beginRemoveRows( QtCore.QModelIndex(), row, row )
+        value = self.vars_data[key]
+        del self.reverse_lookup[value]
         del self.vars_data[key]
         self.endRemoveRows()
+
+    def key_for_value(self, value):
+        return self.reverse_lookup.get(value)
 
     def invalidate_cache(self):
         self.classification_cache.clear()
@@ -300,6 +303,24 @@ class Variables(BaseDock):
         except ValueError:
             self.status_message('No variable named "{}"'.format(key), True)
         self.dataChanged.emit()
+
+    def key_for_value(self, value, strict=True):
+        """Reverse-lookup a key.
+
+        If strict is True, only one representation will be checked.
+        """
+        if strict:
+            return self.model.key_for_value(value)
+        formats = [value]
+        if isinstance(value, str):
+            if value.startswith('0x'):
+                formats.append(value[2:])
+            elif value.startswith('"') and value.endswith('"'):
+                formats.append(value[1:-1])
+        for i in formats:
+            key = self.model.key_for_value(i)
+            if key:
+                return key
 
     def save_variables(self):
         self.set_option('data', self.data)

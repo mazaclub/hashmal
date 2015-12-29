@@ -5,7 +5,8 @@ from bitcoin.core.scripteval import EvalScript
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from hashmal_lib.core import Transaction, Script
+from hashmal_lib.core import Transaction
+from hashmal_lib.core.script import Script, transform_human
 from hashmal_lib.core.utils import is_hex
 from hashmal_lib.core.stack import Stack, ScriptExecution
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
@@ -89,6 +90,7 @@ class ScriptExecutionModel(QAbstractItemModel):
     def __init__(self, execution, parent=None):
         super(ScriptExecutionModel, self).__init__(parent)
         self.execution = execution
+        self.plugin_handler = None
         self.rootItem = ScriptExecutionItem(('Step', 'Op', 'Stack', 'Log'))
         self.header_tooltips = ['Step Number', 'Operation', 'Stack State', 'Description']
         self.setup_data(self.execution, self.rootItem)
@@ -163,6 +165,12 @@ class ScriptExecutionModel(QAbstractItemModel):
             scr = Script(step.stack).get_human().split()
             for i, data in enumerate(step.stack):
                 human = scr[i]
+                # Variable name
+                if self.plugin_handler:
+                    key = self.plugin_handler.get_plugin('Variables').dock.key_for_value(human, strict=False)
+                    if key:
+                        human = '$' + key
+
                 data_item = SubLevelScriptItem([i, '', data.encode('hex'), human], step_item)
                 step_item.appendChild(data_item)
             parent.appendChild(step_item)

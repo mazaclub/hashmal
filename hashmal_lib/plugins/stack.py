@@ -30,8 +30,13 @@ class ScriptExecutionDelegate(QStyledItemDelegate):
             # Human-readable representation of stack item
             if not is_root:
                 txt = index.data(Qt.DisplayRole).toString().trimmed()
+
+                # Variable name
+                if txt.startsWith('$'):
+                    color = QColor(QSettings().value('color/variables', 'darkMagenta'))
+                    option.palette.setColor(QPalette.Text, color)
                 # String literal
-                if txt.startsWith('"') and txt.endsWith('"'):
+                elif txt.startsWith('"') and txt.endsWith('"'):
                     color = QColor(QSettings().value('color/strings', 'gray'))
                     option.palette.setColor(QPalette.Text, color)
 
@@ -76,6 +81,9 @@ class StackEval(BaseDock):
 
     def create_main_tab(self):
         self.execution_widget = ScriptExecutionWidget(self.execution)
+        # For variable substitution
+        self.execution_widget.model.plugin_handler = self.handler
+
         self.execution_delegate = ScriptExecutionDelegate()
         self.execution_widget.view.setItemDelegate(self.execution_delegate)
 

@@ -29,7 +29,7 @@ class ScriptExecution(object):
 
         stack = Stack(tx_script, txTo, inIdx, flags)
         if stack.init_stack:
-            self.steps.append(StackState(list(stack.init_stack), 'scriptSig'))
+            self.steps.append(StackState(list(stack.init_stack), '', 'scriptSig'))
         iterator = stack.step()
         while 1:
             try:

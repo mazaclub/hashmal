@@ -85,6 +85,7 @@ class SubLevelScriptItem(ScriptExecutionItem):
         return super(SubLevelScriptItem, self).data(column, role)
 
 class ScriptExecutionModel(QAbstractItemModel):
+    """Model of a script's execution."""
     def __init__(self, execution, parent=None):
         super(ScriptExecutionModel, self).__init__(parent)
         self.execution = execution
@@ -167,11 +168,17 @@ class ScriptExecutionModel(QAbstractItemModel):
             parent.appendChild(step_item)
         self.endResetModel()
 
-    def evaluate(self):
+    def evaluate(self, execution=None):
+        if execution:
+            self.execution = execution
         self.rootItem = ScriptExecutionItem(('Step', 'Op', 'Stack', 'Log'))
         self.setup_data(self.execution, self.rootItem)
 
+    def clear(self):
+        self.evaluate(ScriptExecution())
+
 class ScriptExecutionWidget(QWidget):
+    """Model and view showing a script's execution."""
     def __init__(self, execution, parent=None):
         super(ScriptExecutionWidget, self).__init__(parent)
 
@@ -184,21 +191,24 @@ class ScriptExecutionWidget(QWidget):
         self.view.selectionModel().currentRowChanged.connect(self.on_selection_changed)
         self.view.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
         self.view.setAlternatingRowColors(True)
+        self.view.setWhatsThis('This view displays the steps of the script\'s execution.')
 
         self.stack_label = QLabel('Stack:')
-        self.stack_view = QLineEdit()
+        self.stack_edit = QLineEdit()
+        self.stack_edit.setWhatsThis('The selected stack or stack item is shown here.')
         self.log_label = QLabel('Log:')
         self.log_edit = QLineEdit()
-        for i in [self.stack_view, self.log_edit]:
+        self.log_edit.setWhatsThis('The result of the selected step, or the selected stack item in human-readable form, is shown here.')
+        for i in [self.stack_edit, self.log_edit]:
             i.setReadOnly(True)
 
         self.mapper = QDataWidgetMapper()
         self.mapper.setModel(self.model)
-        self.mapper.addMapping(self.stack_view, 2)
+        self.mapper.addMapping(self.stack_edit, 2)
         self.mapper.addMapping(self.log_edit, 3)
 
         self.widgets_form = form = QFormLayout()
-        form.addRow(self.stack_label, self.stack_view)
+        form.addRow(self.stack_label, self.stack_edit)
         form.addRow(self.log_label, self.log_edit)
 
         vbox = QVBoxLayout()
@@ -208,10 +218,11 @@ class ScriptExecutionWidget(QWidget):
         self.setLayout(vbox)
 
     def evaluate(self, tx_script, txTo=None, inIdx=0, flags=None):
+        """Evaluate a script."""
         if flags is None:
             flags = ()
         self.execution.evaluate(tx_script, txTo, inIdx, flags)
-        self.model.evaluate()
+        self.model.evaluate(self.execution)
 
     def on_selection_changed(self, selected, deselected):
         try:
@@ -224,7 +235,7 @@ class ScriptExecutionWidget(QWidget):
             self.mapper.setCurrentIndex(0)
 
     def change_labels(self, is_root):
-        """Change the widget labels  depending on what is being viewed."""
+        """Change the widget labels depending on what is being viewed."""
         if is_root:
             self.log_label.setText('Log:')
             self.stack_label.setText('Stack:')
@@ -232,3 +243,33 @@ class ScriptExecutionWidget(QWidget):
             self.log_label.setText('Text:')
             self.stack_label.setText('Data: ')
 
+    def select_next(self):
+        """Select the next execution step or stack item."""
+        try:
+            index = self.view.selectionModel().selectedIndexes()[0]
+            next_row = index.row() + 1
+            next_index = self.model.index(next_row, index.column(), index.parent())
+        except IndexError:
+            next_index = self.model.index(self.model.rowCount() - 1, 0)
+        finally:
+            if not next_index.isValid():
+                return
+            self.view.selectionModel().select(next_index, QItemSelectionModel.SelectCurrent | QItemSelectionModel.Rows)
+            self.on_selection_changed(next_index, None)
+
+    def select_prev(self):
+        """Select the previous execution step or stack item."""
+        try:
+            index = self.view.selectionModel().selectedIndexes()[0]
+            prev_row = max(0, index.row() - 1)
+            prev_index = self.model.index(prev_row, index.column(), index.parent())
+        except IndexError:
+            prev_index = self.model.index(0, 0)
+        finally:
+            if not prev_index.isValid():
+                return
+            self.view.selectionModel().select(prev_index, QItemSelectionModel.SelectCurrent | QItemSelectionModel.Rows)
+            self.on_selection_changed(prev_index, None)
+
+    def clear(self):
+        self.model.clear()

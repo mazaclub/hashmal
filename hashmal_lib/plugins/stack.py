@@ -40,13 +40,8 @@ class StackEval(BaseDock):
         self.advertised_actions[RAW_TX] = [set_as_spending]
 
     def reset(self):
-#        self.stack_result.clear()
-#        self.stack_result.setProperty('hasError', False)
-#        self.style().polish(self.stack_result)
-        # Clear selected step.
-        cursor = QTextCursor(self.tx_script.document())
-        cursor.setPosition(0)
-        self.tx_script.setTextCursor(cursor)
+        self.tx_script.clear()
+        self.execution_widget.clear()
 
     def create_layout(self):
         vbox = QVBoxLayout()
@@ -65,8 +60,6 @@ class StackEval(BaseDock):
         # Raw script input.
         self.tx_script = QPlainTextEdit()
         self.tx_script.setWhatsThis('Enter a raw script here to evaluate it.')
-        # TODO
-#        self.tx_script.textChanged.connect(self.reset_step_counter)
         self.tx_script.setFont(monospace_font)
 
         vbox = QVBoxLayout()
@@ -74,11 +67,21 @@ class StackEval(BaseDock):
         vbox.addWidget(self.tx_script)
         vbox.addWidget(self.execution_widget, stretch=1)
 
+        self.clear_button = QPushButton('Clear')
+        self.clear_button.setToolTip('Clear the current script.')
+        self.clear_button.clicked.connect(self.reset)
         self.do_button = QPushButton('Evaluate')
-        self.do_button.setToolTip('Evaluate the entire script')
+        self.do_button.setToolTip('Evaluate the entire script.')
         self.do_button.clicked.connect(self.do_evaluate)
 
-        btn_hbox = floated_buttons([self.do_button], left=True)
+        self.next_button = QPushButton('Next')
+        self.next_button.setToolTip('Step forward in script execution.')
+        self.next_button.clicked.connect(self.execution_widget.select_next)
+        self.prev_button = QPushButton('Previous')
+        self.prev_button.setToolTip('Step backward in script execution.')
+        self.prev_button.clicked.connect(self.execution_widget.select_prev)
+
+        btn_hbox = floated_buttons([self.clear_button, self.do_button, self.prev_button, self.next_button], left=True)
         vbox.addLayout(btn_hbox)
 
         w = QWidget()
@@ -90,6 +93,7 @@ class StackEval(BaseDock):
 
         # Spending transaction
         self.tx_edit = QPlainTextEdit()
+        self.tx_edit.setWhatsThis('Enter a serialized transaction here. If you have a raw transaction stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically.')
         self.tx_edit.setFont(monospace_font)
         self.tx_edit.textChanged.connect(self.set_tx)
         # Input with scriptSig to include
@@ -97,6 +101,7 @@ class StackEval(BaseDock):
         self.input_idx.setEnabled(False)
         self.input_idx.valueChanged.connect(self.set_input_index)
         self.input_idx.setToolTip('Input in the containing transaction with the relevant scriptSig.')
+        self.input_idx.setWhatsThis('Use this to specify the input you want to evaluate spending.')
         in_idx_box = QHBoxLayout()
         in_idx_box.addWidget(QLabel('Input containing scriptSig:'))
         in_idx_box.addWidget(self.input_idx)
@@ -124,6 +129,12 @@ class StackEval(BaseDock):
     def set_tx(self):
         """Set the spending transaction and (en|dis)able the input index box."""
         txt = str(self.tx_edit.toPlainText())
+        # Variable substition
+        if txt.startswith('$'):
+            var_value = self.handler.get_plugin('Variables').dock.get_key(txt[1:])
+            if var_value:
+                self.tx_edit.setPlainText(var_value)
+                return
         try:
             assert txt
             self.tx = Transaction.deserialize(txt.decode('hex'))
@@ -138,28 +149,7 @@ class StackEval(BaseDock):
     def set_input_index(self, idx):
         self.inIdx = idx
 
-    def highlight_step(self, op):
-        """Highlights the relevant text in the input widget."""
-        opcode, data, byte_index = op
-        if data is None:
-            data = ''
-
-        pos = byte_index * 2
-        length = 2 + 2 * len(data)
-        cursor = QTextCursor(self.tx_script.document())
-        cursor.setPosition(pos)
-        cursor.setPosition(pos + length, QTextCursor.KeepAnchor)
-        self.tx_script.setTextCursor(cursor)
-
     def do_evaluate(self):
         scr = Script(str(self.tx_script.toPlainText()).decode('hex'))
-        self.execution_widget.evaluate(scr)
-        return
-        # TODO
-        while 1:
-            if not self.do_step():
-                break
-        cursor = QTextCursor(self.tx_script.document())
-        cursor.setPosition(0)
-        self.tx_script.setTextCursor(cursor)
+        self.execution_widget.evaluate(scr, self.tx, self.inIdx)
 

@@ -15,6 +15,26 @@ from base import BaseDock, Plugin, Category
 def make_plugin():
     return Plugin(StackEval)
 
+class ScriptExecutionDelegate(QStyledItemDelegate):
+    """Delegate for drawing script execution views."""
+    def paint(self, painter, option, index):
+        self.apply_style(option, index)
+        return super(ScriptExecutionDelegate, self).paint(painter, option, index)
+
+    def apply_style(self, option, index):
+        is_root = not index.parent().isValid()
+        col = index.column()
+
+        # Log column
+        if col == 3:
+            # Human-readable representation of stack item
+            if not is_root:
+                txt = index.data(Qt.DisplayRole).toString().trimmed()
+                # String literal
+                if txt.startsWith('"') and txt.endsWith('"'):
+                    color = QColor(QSettings().value('color/strings', 'gray'))
+                    option.palette.setColor(QPalette.Text, color)
+
 class StackEval(BaseDock):
 
     tool_name = 'Stack Evaluator'
@@ -56,6 +76,8 @@ class StackEval(BaseDock):
 
     def create_main_tab(self):
         self.execution_widget = ScriptExecutionWidget(self.execution)
+        self.execution_delegate = ScriptExecutionDelegate()
+        self.execution_widget.view.setItemDelegate(self.execution_delegate)
 
         # Raw script input.
         self.tx_script = QPlainTextEdit()

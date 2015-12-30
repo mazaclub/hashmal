@@ -171,7 +171,12 @@ class ScriptExecutionModel(QAbstractItemModel):
                     if key:
                         human = '$' + key
 
-                data_item = SubLevelScriptItem([i, '', data.encode('hex'), human], step_item)
+                stack_data = data
+                try:
+                    stack_data = stack_data.encode('hex')
+                except Exception:
+                    stack_data = str(stack_data)
+                data_item = SubLevelScriptItem([i, '', stack_data, human], step_item)
                 step_item.appendChild(data_item)
             parent.appendChild(step_item)
         self.endResetModel()

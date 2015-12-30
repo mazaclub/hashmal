@@ -2,6 +2,7 @@ from collections import namedtuple
 
 import block
 import transaction
+import opcodes
 
 class ParamsPreset(object):
     """Chainparams preset.
@@ -18,6 +19,13 @@ class ParamsPreset(object):
         - block_header_fields (list): Block header format. Same form as tx_fields.
             If not specified, the 80-byte Bitcoin block header format is used.
         - block_fields (list): Block (excluding header) format.
+        - opcode_overrides (list): List of 3-tuples in the form:
+            (value, name, func), where:
+                - value (int): Opcode value.
+                - name (str): Opcode name.
+                - func: Function that takes stack data and executes the opcode.
+                    This function should take the arguments (stack, txTo, inIdx, flags, err_raiser) and
+                    return (stack, opcode, log_message).
 
     """
     def __init__(self, **kwargs):
@@ -25,6 +33,7 @@ class ParamsPreset(object):
         self.tx_fields = []
         self.block_header_fields = list(_bitcoin_header_fields)
         self.block_fields = list(_bitcoin_block_fields)
+        self.opcode_overrides = list(_bitcoin_opcode_overrides)
 
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -41,6 +50,8 @@ _bitcoin_header_fields = [
 _bitcoin_block_fields = [
     ('vtx', 'vectortx', None, None)
 ]
+
+_bitcoin_opcode_overrides = []
 
 BitcoinPreset = ParamsPreset(
         name='Bitcoin',
@@ -119,6 +130,16 @@ def set_block_fields(fields):
     """
     block.block_fields = list(fields)
 
+def get_opcode_overrides():
+    return opcodes.overridden_opcodes
+
+def set_opcode_overrides(ops):
+    """Set the overridden behavior of specified opcodes.
+
+    This affects all Stack steps that run afterward.
+    """
+    opcodes.set_overridden_opcodes(ops)
+
 def set_to_preset(name):
     """Reset chainparams to the preset name."""
     # Will throw an exception if name isn't a preset.
@@ -126,3 +147,4 @@ def set_to_preset(name):
     set_tx_fields(params.tx_fields)
     set_block_header_fields(params.block_header_fields)
     set_block_fields(params.block_fields)
+    set_opcode_overrides(params.opcode_overrides)

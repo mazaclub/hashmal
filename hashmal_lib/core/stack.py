@@ -10,6 +10,8 @@ from bitcoin.core.scripteval import (
         _ISA_UNOP, _ISA_BINOP, _CheckExec, _bord, MAX_STACK_ITEMS
 )
 
+import opcodes
+
 
 def e(*args):
     """For hex-encoding things."""
@@ -113,8 +115,8 @@ class Stack(object):
                         altstack=altstack, vfExec=vfExec, pbegincodehash=pbegincodehash, nOpCount=nOpCount[0])
 
 
-            if sop in DISABLED_OPCODES:
-                err_raiser(EvalScriptError, 'opcode %s is disabled' % OPCODE_NAMES[sop])
+            if sop in opcodes.disabled_opcodes:
+                err_raiser(EvalScriptError, 'opcode %s is disabled' % opcodes.opcode_names[sop])
 
             if sop > OP_16:
                 nOpCount[0] += 1
@@ -140,7 +142,10 @@ class Stack(object):
 
             elif fExec or (OP_IF <= sop <= OP_ENDIF):
 
-                if sop == OP_1NEGATE or ((sop >= OP_1) and (sop <= OP_16)):
+                if opcodes.is_overridden(sop):
+                    yield opcodes.override(sop, stack, txTo, inIdx, flags, err_raiser)
+
+                elif sop == OP_1NEGATE or ((sop >= OP_1) and (sop <= OP_16)):
                     v = sop - (OP_1 - 1)
                     stack.append(bitcoin.core._bignum.bn2vch(v))
 
@@ -361,7 +366,7 @@ class Stack(object):
                     check_args(2)
                     n = _CastToBigNum(stack.pop(), err_raiser)
                     if n < 0 or n >= len(stack):
-                        err_raiser(EvalScriptError, "Argument for %s out of bounds" % OPCODE_NAMES[sop])
+                        err_raiser(EvalScriptError, "Argument for %s out of bounds" % opcodes.opcode_names[sop])
                     vch = stack[-n-1]
                     rolled = False # for "last"
                     if sop == OP_ROLL:

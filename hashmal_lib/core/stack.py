@@ -17,20 +17,25 @@ def e(*args):
     """For hex-encoding things."""
     return tuple([i.encode('hex') for i in args])
 
+# Contains info about the tx's block, etc.
+# Mainly for opcodes like CHECKLOCKTIMEVERIFY.
+ExecutionData = namedtuple('ExecutionData', ('block_height', 'block_time'))
+
 StackState = namedtuple('StackState', ('stack', 'last_op', 'log'))
 
 class ScriptExecution(object):
-    def __init__(self, tx_script=None, txTo=None, inIdx=0, flags=None):
+    def __init__(self, tx_script=None, txTo=None, inIdx=0, flags=None, execution_data=None):
         super(ScriptExecution, self).__init__()
-        self.evaluate(tx_script, txTo, inIdx, flags)
+        self.error = None
+        self.steps = []
 
-    def evaluate(self, tx_script, txTo=None, inIdx=0, flags=None):
+    def evaluate(self, tx_script, txTo=None, inIdx=0, flags=None, execution_data=None):
         self.error = None
         self.steps = []
         if flags is None:
             flags = ()
 
-        stack = Stack(tx_script, txTo, inIdx, flags)
+        stack = Stack(tx_script, txTo, inIdx, flags, execution_data)
         if stack.init_stack:
             self.steps.append(StackState(list(stack.init_stack), '', 'scriptSig'))
         iterator = stack.step()
@@ -47,7 +52,7 @@ class ScriptExecution(object):
 
 class Stack(object):
     """State of a Script's execution."""
-    def __init__(self, tx_script, txTo=None, inIdx=0, flags=None):
+    def __init__(self, tx_script, txTo=None, inIdx=0, flags=None, execution_data=None):
         super(Stack, self).__init__()
         self.tx_script = tx_script
         self.txTo = txTo
@@ -55,6 +60,7 @@ class Stack(object):
         if flags is None:
             flags = ()
         self.flags = flags
+        self.execution_data = execution_data
         if txTo is None:
             self.init_stack = []
         else:
@@ -80,6 +86,7 @@ class Stack(object):
         txTo = self.txTo
         inIdx = self.inIdx
         flags = self.flags
+        execution_data = self.execution_data
         if len(scriptIn) > MAX_SCRIPT_SIZE:
             raise EvalScriptError('script too large; got %d bytes; maximum %d bytes' %
                                             (len(scriptIn), MAX_SCRIPT_SIZE),
@@ -143,7 +150,8 @@ class Stack(object):
             elif fExec or (OP_IF <= sop <= OP_ENDIF):
 
                 if opcodes.is_overridden(sop):
-                    yield opcodes.override(sop, stack, txTo, inIdx, flags, err_raiser)
+                    yield opcodes.override(sop, stack, txTo, inIdx, flags, execution_data, err_raiser)
+                    continue
 
                 elif sop == OP_1NEGATE or ((sop >= OP_1) and (sop <= OP_16)):
                     v = sop - (OP_1 - 1)

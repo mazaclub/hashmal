@@ -69,7 +69,8 @@ ClamsPreset = ParamsPreset(
             ('vout', 'outputs', None, None),
             ('nLockTime', b'<I', 4, 0),
             ('ClamSpeech', 'bytes', None, b'')],
-        block_fields = list(_bitcoin_block_fields) + [('blockSig', 'bytes', None, None)]
+        block_fields = list(_bitcoin_block_fields) + [('blockSig', 'bytes', None, None)],
+        opcode_overrides=[(0xb0, 'OP_CHECKLOCKTIMEVERIFY', opcodes.clams_checklocktimeverify)]
 )
 
 FreicoinPreset = ParamsPreset(

@@ -5,6 +5,7 @@ import stack
 import block
 import transaction
 import utils
+import opcodes
 
 from script import Script
 from stack import Stack

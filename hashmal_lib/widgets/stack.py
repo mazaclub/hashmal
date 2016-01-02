@@ -190,6 +190,31 @@ class ScriptExecutionModel(QAbstractItemModel):
     def clear(self):
         self.evaluate(ScriptExecution())
 
+class StackWidget(QListWidget):
+    """List view of a stack."""
+    def __init__(self, *args):
+        super(StackWidget, self).__init__(*args)
+        self.setAlternatingRowColors(True)
+        self.script = Script()
+
+    @pyqtProperty(str)
+    def human(self):
+        return self.script.get_human()
+
+    @human.setter
+    def human(self, value):
+        self.clear()
+        s = []
+        self.script = Script.from_human(str(value))
+        iterator = self.script.human_iter()
+        while 1:
+            try:
+                s.append(next(iterator))
+            except Exception:
+                break
+        s.reverse()
+        self.addItems(s)
+
 class ScriptExecutionWidget(QWidget):
     """Model and view showing a script's execution."""
     def __init__(self, execution, parent=None):
@@ -207,21 +232,21 @@ class ScriptExecutionWidget(QWidget):
         self.view.setWhatsThis('This view displays the steps of the script\'s execution.')
 
         self.stack_label = QLabel('Stack:')
-        self.stack_edit = QLineEdit()
-        self.stack_edit.setWhatsThis('The selected stack or stack item is shown here.')
+        self.stack_list = StackWidget()
+        self.stack_list.setWhatsThis('The selected stack or stack item is shown here.')
         self.log_label = QLabel('Log:')
         self.log_edit = QLineEdit()
         self.log_edit.setWhatsThis('The result of the selected step, or the selected stack item in human-readable form, is shown here.')
-        for i in [self.stack_edit, self.log_edit]:
+        for i in [self.log_edit]:
             i.setReadOnly(True)
 
         self.mapper = QDataWidgetMapper()
         self.mapper.setModel(self.model)
-        self.mapper.addMapping(self.stack_edit, 2)
+        self.mapper.addMapping(self.stack_list, 2, 'human')
         self.mapper.addMapping(self.log_edit, 3)
 
         self.widgets_form = form = QFormLayout()
-        form.addRow(self.stack_label, self.stack_edit)
+        form.addRow(self.stack_label, self.stack_list)
         form.addRow(self.log_label, self.log_edit)
 
         vbox = QVBoxLayout()

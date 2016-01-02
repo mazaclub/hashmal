@@ -2,8 +2,9 @@ import pyparsing
 from pyparsing import Word, QuotedString, OneOrMore, Combine
 import bitcoin
 from bitcoin.base58 import CBase58Data
-from bitcoin.core.script import CScript, OPCODE_NAMES, OPCODES_BY_NAME
+from bitcoin.core.script import CScript
 
+import opcodes
 from utils import is_hex, push_script
 
 class Script(CScript):
@@ -25,7 +26,7 @@ class Script(CScript):
             if word.startswith('PUSHDATA'):
                 continue
 
-            opcode = OPCODES_BY_NAME.get(word)
+            opcode = opcodes.opcodes_by_name.get(word)
             if opcode:
                 hex_str.append(hex(opcode)[2:])
                 continue
@@ -75,7 +76,7 @@ class Script(CScript):
         while 1:
             try:
                 opcode, data, byte_index = next(iterator)
-                op_name = OPCODE_NAMES.get(opcode)
+                op_name = opcodes.opcode_names.get(opcode)
                 if op_name and not op_name.startswith('OP_PUSHDATA'):
                     s = op_name
                 else:
@@ -151,7 +152,7 @@ def transform_human(text, variables=None):
     # Here we populate the list of contextual tips.
 
     # Explicit opcode names
-    op_names = [str(i) for i in OPCODE_NAMES.keys()]
+    op_names = [str(i) for i in opcodes.opcode_names.keys()]
     op_names_explicit = ' '.join(op_names)
     def is_small_int(op):
         """True if op is one of OP_1, OP_2, ...OP_16"""

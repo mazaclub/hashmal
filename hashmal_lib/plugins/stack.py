@@ -1,6 +1,4 @@
 import bitcoin
-from bitcoin.core.script import CScript, OPCODE_NAMES
-from bitcoin.core.scripteval import EvalScript
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *

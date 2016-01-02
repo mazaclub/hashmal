@@ -1,11 +1,11 @@
 import bitcoin
-from bitcoin.core.script import CScript, OPCODE_NAMES
+from bitcoin.core.script import CScript
 from bitcoin.core.scripteval import EvalScript
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from hashmal_lib.core import Transaction
+from hashmal_lib.core import Transaction, opcodes
 from hashmal_lib.core.script import Script, transform_human
 from hashmal_lib.core.utils import is_hex
 from hashmal_lib.core.stack import Stack, ScriptExecution
@@ -59,7 +59,7 @@ class TopLevelScriptItem(ScriptExecutionItem):
                 log_data[i] = ''.join(['"', word.decode('hex'), '"'])
         self.log_data = ' '.join(log_data)
 
-        self.op_name = OPCODE_NAMES.get(self.item_data[1], 'PUSHDATA')
+        self.op_name = opcodes.opcode_names.get(self.item_data[1], 'PUSHDATA')
 
     def data(self, column, role = Qt.DisplayRole):
         item_data = super(TopLevelScriptItem, self).data(column, role)

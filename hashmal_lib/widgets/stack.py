@@ -231,13 +231,17 @@ class ScriptExecutionWidget(QWidget):
         self.view.setAlternatingRowColors(True)
         self.view.setWhatsThis('This view displays the steps of the script\'s execution.')
 
+        self.error_edit = QLineEdit('')
+        self.error_edit.setProperty('hasError', True)
+        self.error_edit.hide()
+
         self.stack_label = QLabel('Stack:')
         self.stack_list = StackWidget()
         self.stack_list.setWhatsThis('The selected stack or stack item is shown here.')
         self.log_label = QLabel('Log:')
         self.log_edit = QLineEdit()
         self.log_edit.setWhatsThis('The result of the selected step, or the selected stack item in human-readable form, is shown here.')
-        for i in [self.log_edit]:
+        for i in [self.error_edit, self.log_edit]:
             i.setReadOnly(True)
 
         self.mapper = QDataWidgetMapper()
@@ -246,6 +250,7 @@ class ScriptExecutionWidget(QWidget):
         self.mapper.addMapping(self.log_edit, 3)
 
         self.widgets_form = form = QFormLayout()
+        form.addRow(self.error_edit)
         form.addRow(self.stack_label, self.stack_list)
         form.addRow(self.log_label, self.log_edit)
 
@@ -261,6 +266,12 @@ class ScriptExecutionWidget(QWidget):
             flags = ()
         self.execution.evaluate(tx_script, txTo, inIdx, flags)
         self.model.evaluate(self.execution)
+        if self.execution.error:
+            self.error_edit.setText(str(self.execution.error))
+            self.error_edit.show()
+        else:
+            self.error_edit.clear()
+            self.error_edit.hide()
 
     def on_selection_changed(self, selected, deselected):
         try:

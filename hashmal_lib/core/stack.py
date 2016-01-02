@@ -23,6 +23,7 @@ class ScriptExecution(object):
         self.evaluate(tx_script, txTo, inIdx, flags)
 
     def evaluate(self, tx_script, txTo=None, inIdx=0, flags=None):
+        self.error = None
         self.steps = []
         if flags is None:
             flags = ()
@@ -37,7 +38,8 @@ class ScriptExecution(object):
                 self.steps.append(StackState(list(state), last_op, log))
             except StopIteration:
                 break
-            except Exception:
+            except Exception as e:
+                self.error = e
                 break
         return self.steps
 

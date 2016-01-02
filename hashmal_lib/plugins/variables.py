@@ -226,19 +226,15 @@ class Variables(BaseDock):
         # Controls for adding/removing variables
 
         self.new_var_key = QLineEdit()
+        self.new_var_key.setPlaceholderText('Key')
         self.new_var_key.setWhatsThis('Enter the name to give the new variable here.')
         self.setFocusProxy(self.new_var_key)
         self.new_var_value = QLineEdit()
+        self.new_var_value.setPlaceholderText('Value')
         self.new_var_value.setWhatsThis('Enter the value to give the new variable here.')
-        add_var_btn = QPushButton('Set')
+        add_var_btn = QPushButton('&Add')
         add_var_btn.clicked.connect(self.add_new_var)
         add_var_hbox = HBox(self.new_var_key, QLabel(':'), self.new_var_value, add_var_btn)
-
-        self.del_var_key = QLineEdit()
-        self.del_var_key.setWhatsThis('Enter the name of the variable you want to delete here.')
-        del_var_button = QPushButton('Delete')
-        del_var_button.clicked.connect(self.remove_var)
-        del_var_hbox = HBox(self.del_var_key, del_var_button)
 
         self.auto_save_check = QCheckBox('Automatically save')
         self.auto_save_check.setChecked(self.auto_save)
@@ -252,7 +248,6 @@ class Variables(BaseDock):
         self.save_button.setToolTip('Save variables to config file')
 
         form.addRow('Add:', add_var_hbox)
-        form.addRow('Delete:', del_var_hbox)
         form.addRow(floated_buttons([self.auto_save_check, self.save_button]))
         return form
 
@@ -373,11 +368,6 @@ class Variables(BaseDock):
         self.status_message('Set variable {} to {}'.format(k, v))
         self.new_var_key.clear()
         self.new_var_value.clear()
-
-    def remove_var(self):
-        k = str(self.del_var_key.text())
-        self.remove_key(k)
-        self.del_var_key.clear()
 
     def on_var_types_augmented(self, arg):
         self.filters = variable_types.keys()

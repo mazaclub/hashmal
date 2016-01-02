@@ -69,25 +69,37 @@ class Script(CScript):
 
         return ''.join(s)
 
-    def get_human(self):
-        """Get the script as a human-readable string."""
-        s = []
+    def human_iter(self):
         iterator = self.raw_iter()
+        s = ''
         while 1:
             try:
                 opcode, data, byte_index = next(iterator)
                 op_name = OPCODE_NAMES.get(opcode)
                 if op_name:
-                    s.append(op_name)
+                    s = op_name
                 elif opcode < OPCODES_BY_NAME['OP_PUSHDATA1']:
                     if all(ord(c) < 128 and ord(c) > 31 for c in data):
-                        s.append(''.join(['"', data, '"']))
+                        s = ''.join(['"', data, '"'])
                     else:
-                        s.append(''.join(['0x', data.encode('hex')]))
+                        s = ''.join(['0x', data.encode('hex')])
+                yield s
             except StopIteration:
                 break
             except Exception:
-                s.append('(CANNOT_PARSE)')
+                yield '(CANNOT_PARSE)'
+
+    def get_human(self):
+        """Get the script as a human-readable string."""
+        s = []
+        iterator = self.human_iter()
+        while 1:
+            try:
+                s.append(next(iterator))
+            except StopIteration:
+                break
+            except Exception:
+                break
         return ' '.join(s)
 
 

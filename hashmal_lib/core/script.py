@@ -76,9 +76,9 @@ class Script(CScript):
             try:
                 opcode, data, byte_index = next(iterator)
                 op_name = OPCODE_NAMES.get(opcode)
-                if op_name:
+                if op_name and not op_name.startswith('OP_PUSHDATA'):
                     s = op_name
-                elif opcode < OPCODES_BY_NAME['OP_PUSHDATA1']:
+                else:
                     if all(ord(c) < 128 and ord(c) > 31 for c in data):
                         s = ''.join(['"', data, '"'])
                     else:

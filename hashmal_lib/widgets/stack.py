@@ -260,11 +260,11 @@ class ScriptExecutionWidget(QWidget):
         vbox.addLayout(form)
         self.setLayout(vbox)
 
-    def evaluate(self, tx_script, txTo=None, inIdx=0, flags=None):
+    def evaluate(self, tx_script, txTo=None, inIdx=0, flags=None, execution_data=None):
         """Evaluate a script."""
         if flags is None:
             flags = ()
-        self.execution.evaluate(tx_script, txTo, inIdx, flags)
+        self.execution.evaluate(tx_script, txTo, inIdx, flags, execution_data)
         self.model.evaluate(self.execution)
         if self.execution.error:
             self.error_edit.setText(str(self.execution.error))

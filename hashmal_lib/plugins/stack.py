@@ -4,8 +4,8 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from hashmal_lib.core import Transaction, Script
-from hashmal_lib.core.stack import Stack, ScriptExecution
-from hashmal_lib.gui_utils import monospace_font, floated_buttons
+from hashmal_lib.core.stack import Stack, ScriptExecution, ExecutionData
+from hashmal_lib.gui_utils import monospace_font, floated_buttons, AmountEdit
 from hashmal_lib.items import *
 from hashmal_lib.widgets import ScriptExecutionWidget
 from base import BaseDock, Plugin, Category
@@ -72,6 +72,7 @@ class StackEval(BaseDock):
         tabs = QTabWidget()
         tabs.addTab(self.create_main_tab(), 'Stack')
         tabs.addTab(self.create_tx_tab(), 'Transaction')
+        tabs.addTab(self.create_block_tab(), 'Block')
         self.setFocusProxy(tabs)
         vbox.addWidget(tabs)
 
@@ -147,6 +148,31 @@ class StackEval(BaseDock):
         w.setLayout(form)
         return w
 
+    def create_block_tab(self):
+        form = QFormLayout()
+
+        desc = QLabel(''.join(['For most purposes, this tab can be ignored.\n\n'
+                        'You can simulate the block that contains the script you\'re testing. ',
+                        'This allows you to use certain opcodes like CHECKLOCKTIMEVERIFY, which require ',
+                        'data about the block a transaction is in.']))
+        desc.setWordWrap(True)
+        form.addRow(desc)
+
+        self.block_height_edit = AmountEdit()
+        self.block_height_edit.setToolTip('Height of the block your script is in')
+        self.block_height_edit.setWhatsThis('Use this to simulate the height of the block that your script is in.')
+
+        self.block_time_edit = AmountEdit()
+        self.block_time_edit.setToolTip('Timestamp of the block your script is in')
+        self.block_time_edit.setWhatsThis('Use this to simulate the timestamp of the block that your script is in.')
+
+        form.addRow('Block height:', self.block_height_edit)
+        form.addRow('Block time:', self.block_time_edit)
+
+        w = QWidget()
+        w.setLayout(form)
+        return w
+
     def set_spending_tx(self, txt):
         """Called from other tools to set the spending transaction."""
         if not txt:
@@ -179,5 +205,8 @@ class StackEval(BaseDock):
 
     def do_evaluate(self):
         scr = Script(str(self.tx_script.toPlainText()).decode('hex'))
-        self.execution_widget.evaluate(scr, self.tx, self.inIdx)
+        exec_data = None
+        if not self.block_height_edit.property('hasError').toBool() and not self.block_time_edit.property('hasError').toBool():
+            exec_data = ExecutionData(self.block_height_edit.get_amount(), self.block_time_edit.get_amount())
+        self.execution_widget.evaluate(scr, self.tx, self.inIdx, execution_data=exec_data)
 

@@ -185,7 +185,7 @@ class StackEval(BaseDock):
         txt = str(self.tx_edit.toPlainText())
         # Variable substition
         if txt.startswith('$'):
-            var_value = self.handler.get_plugin('Variables').dock.get_key(txt[1:])
+            var_value = self.handler.get_plugin('Variables').ui.get_key(txt[1:])
             if var_value:
                 self.tx_edit.setPlainText(var_value)
                 return

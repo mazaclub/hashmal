@@ -173,7 +173,7 @@ class TxAnalyzer(BaseDock):
         txt = str(self.raw_tx_edit.toPlainText())
         # Variable substitution
         if txt.startswith('$'):
-            var_value = self.handler.get_plugin('Variables').dock.get_key(txt[1:])
+            var_value = self.handler.get_plugin('Variables').ui.get_key(txt[1:])
             if var_value:
                 self.raw_tx_edit.setPlainText(var_value)
             return

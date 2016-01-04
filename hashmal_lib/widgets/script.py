@@ -12,7 +12,7 @@ def transform_human_script(text, main_window):
     """Transform user input into something Script can read.
 
     Main window is needed for tool integration."""
-    variables = main_window.plugin_handler.get_plugin('Variables').dock.data
+    variables = main_window.plugin_handler.get_plugin('Variables').ui.data
     return transform_human(text, variables)
 
 class ScriptEdit(QTextEdit):
@@ -111,7 +111,7 @@ class ScriptHighlighter(QSyntaxHighlighter):
             if match_type == 'Variable':
                 length += 1 # account for '$' prefix
                 var_name = str(text[idx+1: idx+length]).strip()
-                if self.gui.plugin_handler.get_plugin('Variables').dock.get_key(var_name):
+                if self.gui.plugin_handler.get_plugin('Variables').ui.get_key(var_name):
                     fmt.setForeground( QColor(settings.value('color/variables', 'darkMagenta')) )
             elif match_type == 'String literal':
                 fmt.setForeground( QColor(settings.value('color/strings', 'gray')) )

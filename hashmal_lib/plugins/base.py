@@ -52,16 +52,23 @@ class Plugin(object):
     A module's make_plugin() function should return
     an instance of this class.
     """
-    def __init__(self, dock_widget):
-        self.dock_class = dock_widget
-        self.dock = None
+    def __init__(self, ui_class):
+        self.ui_class = ui_class
+        self.ui = None
         # name is set when the entry point is loaded.
         self.name = ''
+        # If False, plugin has no dedicated GUI.
+        self.has_gui = True
 
-    def instantiate_dock(self, plugin_handler):
-        instance = self.dock_class(plugin_handler)
-        self.dock = instance
+    def instantiate_ui(self, plugin_handler):
+        instance = self.ui_class(plugin_handler)
+        self.ui = instance
 
+    def augmenters(self):
+        return self.ui.augmenters if self.ui else None
+
+    def get_augmenter(self, hook_name):
+        return getattr(self.ui, hook_name) if self.ui else None
 
 class BaseDock(QDockWidget):
     """Base class for docks.

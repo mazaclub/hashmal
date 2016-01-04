@@ -55,7 +55,7 @@ class Augmentations(list):
 
 
 class PluginHandler(QWidget):
-    """Handles loading/unloading plugins and managing their dock widgets."""
+    """Handles loading/unloading plugins and managing their UI widgets."""
     def __init__(self, main_window):
         super(PluginHandler, self).__init__(main_window)
         self.gui = main_window
@@ -81,7 +81,9 @@ class PluginHandler(QWidget):
         for c in sorted([x[0] for x in Category.categories()]):
             _categories[c] = []
         for plugin in self.loaded_plugins:
-            _categories[plugin.dock.category[0]].append(plugin)
+            if not plugin.has_gui:
+                continue
+            _categories[plugin.ui.category[0]].append(plugin)
 
         shortcuts = add_shortcuts(_categories.keys())
         categories = OrderedDict()
@@ -93,16 +95,16 @@ class PluginHandler(QWidget):
                 continue
             category_menu = menu.addMenu(i)
             for plugin in sorted(plugins, key = lambda x: x.name):
-                category_menu.addAction(plugin.dock.toggleViewAction())
+                category_menu.addAction(plugin.ui.toggleViewAction())
 
     def load_plugin(self, plugin_maker, name):
         plugin_instance = plugin_maker()
 
-        dock_tool_name = plugin_instance.dock_class.tool_name
-        plugin_instance.name = dock_tool_name if dock_tool_name else name
-        plugin_instance.instantiate_dock(self)
+        tool_name = plugin_instance.ui_class.tool_name
+        plugin_instance.name = tool_name if tool_name else name
+        plugin_instance.instantiate_ui(self)
         # Don't load plugins with unknown category metadata.
-        if plugin_instance.dock.category not in Category.categories():
+        if plugin_instance.ui.category not in Category.categories():
             return
 
         self.loaded_plugins.append(plugin_instance)
@@ -133,7 +135,7 @@ class PluginHandler(QWidget):
             self.do_augment_hook(*i)
 
     def set_plugin_enabled(self, plugin_name, is_enabled):
-        """Enable or disable a plugin and its dock."""
+        """Enable or disable a plugin and its UI."""
         plugin = self.get_plugin(plugin_name)
         if plugin is None:
             return
@@ -142,13 +144,12 @@ class PluginHandler(QWidget):
         if not is_enabled and plugin_name in required_plugins:
             return
 
-        dock = plugin.dock
-        self.set_dock_signals(dock, is_enabled)
-        dock.is_enabled = is_enabled
+        if plugin.has_gui:
+            self.set_dock_signals(plugin.ui, is_enabled)
+            plugin.ui.is_enabled = is_enabled
+            plugin.ui.setVisible(is_enabled)
 
-        if not is_enabled:
-            dock.setVisible(False)
-        else:
+        if is_enabled:
             # Run augmentations that were disabled.
             for i in self.augmentations.disabled().for_plugin(plugin.name):
                 if not i.has_run:
@@ -179,12 +180,14 @@ class PluginHandler(QWidget):
         """Assign shortcuts to visibility-toggling actions."""
         favorites = self.gui.config.get_option('favorite_plugins', [])
         for plugin in self.loaded_plugins:
-            dock = plugin.dock
+            if not plugin.has_gui:
+                continue
+            ui = plugin.ui
             # Keyboard shortcut
             shortcut = 'Alt+' + str(1 + favorites.index(plugin.name)) if plugin.name in favorites else ''
-            dock.toggleViewAction().setShortcut(shortcut)
-            dock.toggleViewAction().setEnabled(dock.is_enabled)
-            dock.toggleViewAction().setVisible(dock.is_enabled)
+            ui.toggleViewAction().setShortcut(shortcut)
+            ui.toggleViewAction().setEnabled(ui.is_enabled)
+            ui.toggleViewAction().setVisible(ui.is_enabled)
 
     def add_plugin_actions(self, instance, menu, category, data):
         """Add the relevant actions to a context menu.
@@ -198,27 +201,27 @@ class PluginHandler(QWidget):
         """
         separator_added = False
         # Add the caller's actions first.
-        dock_actions = instance.get_actions(category, local=True)
-        if dock_actions:
-            for action_name, action_receiver in dock_actions:
+        ui_actions = instance.get_actions(category, local=True)
+        if ui_actions:
+            for action_name, action_receiver in ui_actions:
                 menu.addAction(action_name, partial(action_receiver, data))
         # Then add other plugins' actions.
         for plugin in self.loaded_plugins:
-            dock = plugin.dock
-            if not dock.is_enabled:
+            ui = plugin.ui
+            if not ui.is_enabled:
                 continue
-            if dock.__class__ == instance.__class__:
+            if ui.__class__ == instance.__class__:
                 continue
 
-            dock_actions = dock.get_actions(category)
-            if dock_actions:
+            ui_actions = ui.get_actions(category)
+            if ui_actions:
                 # Add the separator before plugin actions.
                 if not separator_added:
                     menu.addSeparator()
                     separator_added = True
-                dock_menu = menu.addMenu(plugin.name)
-                for action_name, action_receiver in dock_actions:
-                    dock_menu.addAction(action_name, partial(action_receiver, data))
+                ui_menu = menu.addMenu(plugin.name)
+                for action_name, action_receiver in ui_actions:
+                    ui_menu.addAction(action_name, partial(action_receiver, data))
 
     def do_augment_hook(self, class_name, hook_name, data, callback=None):
         """Consult plugins that can augment hook_name."""
@@ -229,11 +232,10 @@ class PluginHandler(QWidget):
                 self.waiting_augmentations.append(augmentation)
             return
         for plugin in self.loaded_plugins:
-            dock = plugin.dock
-            if hook_name in dock.augmenters:
+            if hook_name in plugin.augmenters():
 
                 # Set up augmentations.
-                for i in dock.augmenters:
+                for i in plugin.augmenters():
                     augmentation = self.augmentations.get(plugin.name, i)
                     if augmentation is None:
                         augmentation = Augmentation(plugin, i, requester=class_name, data=data, callback=callback)
@@ -258,25 +260,26 @@ class PluginHandler(QWidget):
         if (
             augmentation.has_run or
             not augmentation.is_enabled or
-            augmentation.requester == augmentation.augmenter_plugin.dock.__class__.__name__
+            augmentation.requester == augmentation.augmenter_plugin.ui.__class__.__name__
         ): return
-        dock = augmentation.augmenter_plugin.dock
-        func = getattr(dock, augmentation.hook_name)
+        func = augmentation.augmenter_plugin.get_augmenter(augmentation.hook_name)
         data = func(augmentation.data)
         if augmentation.callback:
             augmentation.callback(data)
         augmentation.has_run = True
 
+    # TODO access data retrievers from Plugin, not UI
     def get_data_retrievers(self):
         """Get a list of plugins that claim to be able to retrieve blockchain data."""
         retrievers = []
         for plugin in self.loaded_plugins:
-            dock = plugin.dock
+            dock = plugin.ui
             if not dock.is_enabled: continue
             if hasattr(dock, 'retrieve_blockchain_data'):
                 retrievers.append(plugin)
         return retrievers
 
+    # TODO access data retrievers from Plugin, not UI
     def download_blockchain_data(self, data_type, identifier):
         """Download blockchain data with the pre-chosen plugin.
 
@@ -286,24 +289,26 @@ class PluginHandler(QWidget):
         """
         plugin_name = self.config.get_option('data_retriever', 'Blockchain')
         plugin = self.get_plugin(plugin_name)
-        if not plugin or not hasattr(plugin.dock, 'retrieve_blockchain_data'):
+        if not plugin or not hasattr(plugin.ui, 'retrieve_blockchain_data'):
             plugin = self.get_plugin('Blockchain')
-        if not data_type in plugin.dock.supported_blockchain_data_types():
+        if not data_type in plugin.ui.supported_blockchain_data_types():
             raise Exception('Plugin "%s" does not support downloading "%s" data.' % (plugin.name, data_type))
-        return plugin.dock.retrieve_blockchain_data(data_type, identifier)
+        return plugin.ui.retrieve_blockchain_data(data_type, identifier)
 
     def evaluate_current_script(self):
         """Evaluate the script being edited with the Stack Evaluator tool."""
         script_hex = self.gui.script_editor.get_data('Hex')
         if not script_hex: return
-        self.bring_to_front(self.get_plugin('Stack Evaluator').dock)
-        self.get_plugin('Stack Evaluator').dock.tx_script.setPlainText(script_hex)
-        self.get_plugin('Stack Evaluator').dock.do_evaluate()
+        self.bring_to_front(self.get_plugin('Stack Evaluator').ui)
+        self.get_plugin('Stack Evaluator').ui.tx_script.setPlainText(script_hex)
+        self.get_plugin('Stack Evaluator').ui.do_evaluate()
 
     def do_default_layout(self):
         last_small = last_large = None
         for plugin in self.loaded_plugins:
-            dock = plugin.dock
+            if not plugin.has_gui:
+                continue
+            dock = plugin.ui
             # Large docks go to the bottom.
             if dock.is_large:
                 self.gui.addDockWidget(Qt.BottomDockWidgetArea, dock)
@@ -318,8 +323,8 @@ class PluginHandler(QWidget):
                 last_small = dock
             dock.setVisible(False)
 
-        self.get_plugin('Variables').dock.setVisible(True)
-        self.get_plugin('Stack Evaluator').dock.setVisible(True)
+        self.get_plugin('Variables').ui.setVisible(True)
+        self.get_plugin('Stack Evaluator').ui.setVisible(True)
 
     def update_enabled_plugins(self):
         """Enable or disable plugin docks according to config file."""

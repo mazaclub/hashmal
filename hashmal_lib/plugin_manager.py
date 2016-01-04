@@ -53,7 +53,7 @@ class PluginsModel(QAbstractTableModel):
             if role in [Qt.DisplayRole, Qt.ToolTipRole]:
                 data = plugin.name
         elif col == 1:
-            category_name, category_desc = plugin.dock.category
+            category_name, category_desc = plugin.ui.category
             if role in [Qt.DisplayRole]:
                 data = category_name
             elif role in [Qt.ToolTipRole]:
@@ -124,10 +124,10 @@ class PluginDetails(QWidget):
         """Set the plugin that this widget needs to represent."""
         self.is_ready = False
         self.name_label.setText(plugin.name)
-        self.category_label.setText(plugin.dock.category.name)
-        self.category_label.setToolTip(plugin.dock.category.description)
+        self.category_label.setText(plugin.ui.category.name)
+        self.category_label.setToolTip(plugin.ui.category.description)
         desc = []
-        for i in plugin.dock.description.split('\n'):
+        for i in plugin.ui.description.split('\n'):
             desc.append('<p>{}</p>'.format(i))
         self.desc_edit.setHtml(''.join(desc))
 
@@ -137,7 +137,7 @@ class PluginDetails(QWidget):
             self.plugin_is_enabled.setEnabled(False)
         else:
             self.plugin_is_enabled.setEnabled(True)
-            self.plugin_is_enabled.setChecked(plugin.dock.is_enabled)
+            self.plugin_is_enabled.setChecked(plugin.ui.is_enabled)
         self.is_ready = True
 
     def set_enabled(self, is_checked):

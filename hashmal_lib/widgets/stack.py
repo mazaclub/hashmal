@@ -167,7 +167,7 @@ class ScriptExecutionModel(QAbstractItemModel):
                 human = scr[i]
                 # Variable name
                 if self.plugin_handler:
-                    key = self.plugin_handler.get_plugin('Variables').dock.key_for_value(human, strict=False)
+                    key = self.plugin_handler.get_plugin('Variables').ui.key_for_value(human, strict=False)
                     if key:
                         human = '$' + key
 

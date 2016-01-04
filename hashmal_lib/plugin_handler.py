@@ -144,10 +144,11 @@ class PluginHandler(QWidget):
         if not is_enabled and plugin_name in required_plugins:
             return
 
+        plugin.ui.is_enabled = is_enabled
         if plugin.has_gui:
             self.set_dock_signals(plugin.ui, is_enabled)
-            plugin.ui.is_enabled = is_enabled
-            plugin.ui.setVisible(is_enabled)
+            if not is_enabled:
+                plugin.ui.setVisible(False)
 
         if is_enabled:
             # Run augmentations that were disabled.

@@ -70,7 +70,54 @@ class Plugin(object):
     def get_augmenter(self, hook_name):
         return getattr(self.ui, hook_name) if self.ui else None
 
-class BaseDock(QDockWidget):
+class BasePluginUI(object):
+    """Base class for plugin user interfaces."""
+    tool_name = ''
+    description = ''
+    category = Category.General
+
+    def __init__(self, handler):
+        self.handler = handler
+        self.config = config.get_config()
+        self.config.optionChanged.connect(self.on_option_changed)
+        self.is_enabled = True
+
+        self.augmenters = []
+        for name in dir(self):
+            if name in known_augmenters:
+                self.augmenters.append(name)
+
+    def on_option_changed(self, key):
+        """Called when a config option changes."""
+        pass
+
+    def options(self):
+        """Return the config dict for this plugin."""
+        return self.config.get_option(self.tool_name, {})
+
+    def option(self, key, default=None):
+        """Return a config option for this plugin."""
+        options = self.options()
+        return options.get(key, default)
+
+    def set_option(self, key, value):
+        """Set a plugin-specific config option."""
+        options = self.options()
+        options[key] = value
+        self.save_options(options)
+
+    def save_options(self, options):
+        """Save options to config file."""
+        self.config.set_option(self.tool_name, options)
+
+    def augment(self, target, data, callback=None):
+        """Ask other plugins if they have anything to contribute.
+
+        Allows plugins to enhance other plugins.
+        """
+        return self.handler.do_augment_hook(self.__class__.__name__, target, data, callback)
+
+class BaseDock(BasePluginUI, QDockWidget):
     """Base class for docks.
 
     Optional methods:
@@ -85,20 +132,17 @@ class BaseDock(QDockWidget):
     needsUpdate = QtCore.pyqtSignal()
     statusMessage = QtCore.pyqtSignal(str, bool, name='statusMessage')
 
-    tool_name = ''
-    description = ''
     # If True, dock will be placed on the bottom by default.
     # Otherwise, dock will be placed on the right.
     is_large = False
-    category = Category.General
 
     def __init__(self, handler):
-        super(BaseDock, self).__init__('', handler)
-        self.handler = handler
-        self.config = config.get_config()
+        # We use explicit initialization methods so we don't have trouble with multiple inheritance.
+        BasePluginUI.__init__(self, handler)
+        QDockWidget.__init__(self, '', handler)
+
         self.advertised_actions = {}
         self.local_actions = {}
-        self.is_enabled = True
 
         self.init_data()
         self.init_actions()
@@ -109,17 +153,10 @@ class BaseDock(QDockWidget):
         self.toggleViewAction().triggered.connect(self.visibility_toggled)
         self.setWidget(self.main_widget)
 
-        self.config.optionChanged.connect(self.on_option_changed)
-
         self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea | QtCore.Qt.BottomDockWidgetArea)
         self.setFeatures(QDockWidget.DockWidgetClosable | QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
         self.setObjectName(self.tool_name)
         self.setWindowTitle(self.tool_name)
-
-        self.augmenters = []
-        for name in dir(self):
-            if name in known_augmenters:
-                self.augmenters.append(name)
 
     def init_data(self):
         """Initialize attributes such as data containers."""
@@ -156,10 +193,6 @@ class BaseDock(QDockWidget):
         """Synchronize. Called when needsUpdate is emitted."""
         pass
 
-    def on_option_changed(self, key):
-        """Called when a config option changes."""
-        pass
-
     def get_actions(self, category, local=False):
         """Get the advertised actions for category.
 
@@ -184,32 +217,6 @@ class BaseDock(QDockWidget):
         """
         msg = ''.join([ '[%s] --> %s' % (self.tool_name, msg) ])
         self.statusMessage.emit(msg, error)
-
-    def augment(self, target, data, callback=None):
-        """Ask other plugins if they have anything to contribute.
-
-        Allows plugins to enhance other plugins.
-        """
-        return self.handler.do_augment_hook(self.__class__.__name__, target, data, callback)
-
-    def options(self):
-        """Return the config dict for this plugin."""
-        return self.config.get_option(self.tool_name, {})
-
-    def option(self, key, default=None):
-        """Return a config option for this plugin."""
-        options = self.options()
-        return options.get(key, default)
-
-    def set_option(self, key, value):
-        """Set a plugin-specific config option."""
-        options = self.options()
-        options[key] = value
-        self.save_options(options)
-
-    def save_options(self, options):
-        """Save options to config file."""
-        self.config.set_option(self.tool_name, options)
 
     def visibility_toggled(self):
         """Called when toggleViewAction() is triggered so this dock can get focus."""

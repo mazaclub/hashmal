@@ -1,6 +1,6 @@
 import base
 from base import augmenter
-from base import BaseDock
+from base import BasePluginUI, BaseDock
 from base import Plugin, Category
 
 import addr_encoder

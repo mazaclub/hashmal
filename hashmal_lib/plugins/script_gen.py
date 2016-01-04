@@ -7,7 +7,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from base import BaseDock, Plugin, Category
-from hashmal_lib.core.utils import push_script
+from hashmal_lib.core.utils import is_hex, push_script
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 
 def make_plugin():
@@ -34,7 +34,11 @@ def template_to_script(template, variables):
             try:
                 h160 = CBase58Data(v).to_bytes()
             except Exception:
-                return 'Error: Could not decode <{}> address.'.format(k)
+                # Check if value is a hash160.
+                if is_hex(v) and (len(v) == 42 if v.startswith('0x') else len(v) == 40):
+                    h160 = v[2:].decode('hex') if v.startswith('0x') else v.decode('hex')
+                else:
+                    return 'Error: Could not decode <{}> address.'.format(k)
             _vars[k] = ''.join(['0x', h160.encode('hex')])
         elif var_type == 'text':
             _vars[k] = ''.join(['0x', v.encode('hex')])

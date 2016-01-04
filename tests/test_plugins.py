@@ -80,10 +80,16 @@ class ScriptGenTest(unittest.TestCase):
             if i.name == 'Pay-To-Public-Key-Hash Output':
                 template = i
                 break
-        template_vars = {'recipient': '1111111111111111111114oLvT2'}
 
-        script_out = script_gen.template_to_script(template, template_vars)
-        self.assertEqual('OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG', script_out)
+        templates_vars = [
+                {'recipient': '1111111111111111111114oLvT2'},
+                {'recipient': '0' * 40},
+                {'recipient': '0x' + '0' * 40}
+        ]
+
+        for template_vars in templates_vars:
+            script_out = script_gen.template_to_script(template, template_vars)
+            self.assertEqual('OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG', script_out)
 
     def test_op_return_script(self):
         template = None

@@ -36,9 +36,10 @@ class ScriptExecution(object):
             flags = ()
 
         stack = Stack(tx_script, txTo, inIdx, flags, execution_data)
-        if stack.init_stack:
-            self.steps.append(StackState(list(stack.init_stack), '', 'scriptSig'))
-        iterator = stack.step()
+        if stack.txTo:
+            iterator = stack.verify_step()
+        else:
+            iterator = stack.step()
         while 1:
             try:
                 state, last_op, log = iterator.next()
@@ -61,11 +62,7 @@ class Stack(object):
             flags = ()
         self.flags = flags
         self.execution_data = execution_data
-        if txTo is None:
-            self.init_stack = []
-        else:
-            scriptSig = txTo.vin[inIdx].scriptSig
-            self.init_stack = [i for i in scriptSig]
+        self.init_stack = []
 
     def evaluate(self):
         iterator = self.step()
@@ -75,6 +72,69 @@ class Stack(object):
             except StopIteration:
                 break
         return stack
+
+    def verify_step(self):
+        """Generator for verifying a script.
+
+        Re-implemented VerifyScript from python-bitcoinlib for stack log.
+        """
+        if not self.txTo:
+            raise VerifyScriptError('Verification requires a transaction')
+
+        # Store original tx script.
+        tx_script = self.tx_script
+
+        self.init_stack = []
+        # Set tx_script to scriptSig of transaction.
+        self.tx_script = scriptSig = self.txTo.vin[self.inIdx].scriptSig
+
+        iterator = self.step()
+        while 1:
+            try:
+                yield iterator.next()
+            except StopIteration:
+                break
+
+        # Store copy of current stack for P2SH verification.
+        stack_copy = list(self.init_stack)
+        # Set tx_script to the original script being tested.
+        self.tx_script = tx_script
+
+        iterator = self.step()
+        while 1:
+            try:
+                yield iterator.next()
+            except StopIteration:
+                break
+
+        if len(self.init_stack) == 0:
+            raise VerifyScriptError("scriptPubKey left an empty stack")
+        if not _CastToBool(self.init_stack[-1]):
+            raise VerifyScriptError("scriptPubKey returned false")
+
+        # Pay-To-Script-Hash verification.
+        if tx_script.is_p2sh():
+            if not scriptSig.is_push_only():
+                raise VerifyScriptError("P2SH scriptSig not is_push_only()")
+            if not len(stack_copy):
+                raise VerifyScriptError("scriptSig left an empty stack")
+
+            # Set tx script to the pubkey from scriptSig.
+            self.tx_script = pubkey = CScript(stack_copy.pop())
+            self.init_stack = stack_copy
+
+            iterator = self.step()
+            while 1:
+                try:
+                    yield iterator.next()
+                except StopIteration:
+                    break
+
+            if not len(stack_copy):
+                raise VerifyScriptError("P2SH inner scriptPubKey left an empty stack")
+
+            if not _CastToBool(stack_copy[-1]):
+                raise VerifyScriptError("P2SH inner scriptPubKey returned false")
 
     def step(self):
         """Generator for evaluating a script.

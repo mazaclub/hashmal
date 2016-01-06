@@ -163,6 +163,7 @@ class ScriptExecutionModel(QAbstractItemModel):
             step_item = TopLevelScriptItem((count, step.last_op, step.stack, step.log), parent)
             # Loop through stack items.
             scr = Script(step.stack).get_human().split()
+            sub_level_item_data = []
             for i, data in enumerate(step.stack):
                 human = scr[i]
                 # Variable name
@@ -176,7 +177,11 @@ class ScriptExecutionModel(QAbstractItemModel):
                     stack_data = stack_data.encode('hex')
                 except Exception:
                     stack_data = str(stack_data)
-                data_item = SubLevelScriptItem([i, '', stack_data, human], step_item)
+                sub_level_item_data.append([i, '', stack_data, human])
+            # Reverse items for a more visually-accurate stack.
+            sub_level_item_data.reverse()
+            for sub in sub_level_item_data:
+                data_item = SubLevelScriptItem(sub, step_item)
                 step_item.appendChild(data_item)
             parent.appendChild(step_item)
         self.endResetModel()

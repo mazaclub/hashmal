@@ -16,7 +16,7 @@ class PluginsModel(QAbstractTableModel):
         self.favorite_plugins = self.config.get_option('favorite_plugins', [])
 
     def columnCount(self, parent=QModelIndex()):
-        return 4
+        return 6
 
     def rowCount(self, parent=QModelIndex()):
         return len(self.plugins)
@@ -28,8 +28,10 @@ class PluginsModel(QAbstractTableModel):
         headers = [
                 {Qt.DisplayRole: 'Plugin', Qt.ToolTipRole: 'Plugin Name'},
                 {Qt.DisplayRole: 'Category', Qt.ToolTipRole: 'Plugin Category'},
-                {Qt.DisplayRole: 'Enabled?', Qt.ToolTipRole: 'Whether the plugin is enabled'},
-                {Qt.DisplayRole: 'Favorite?', Qt.ToolTipRole: 'Whether the plugin is a favorite'},
+                {Qt.DisplayRole: 'Enabled', Qt.ToolTipRole: 'Whether the plugin is enabled'},
+                {Qt.DisplayRole: 'Favorite', Qt.ToolTipRole: 'Whether the plugin is a favorite'},
+                {Qt.DisplayRole: 'GUI', Qt.ToolTipRole: 'Whether the plugin has a graphical user interface'},
+                {Qt.DisplayRole: 'Description', Qt.ToolTipRole: 'Plugin description'}
         ]
 
         data = None
@@ -50,11 +52,11 @@ class PluginsModel(QAbstractTableModel):
         plugin = self.plugin_for_index(index)
 
         if col == 0:
-            if role in [Qt.DisplayRole, Qt.ToolTipRole]:
+            if role in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole]:
                 data = plugin.name
         elif col == 1:
             category_name, category_desc = plugin.ui.category
-            if role in [Qt.DisplayRole]:
+            if role in [Qt.DisplayRole, Qt.EditRole]:
                 data = category_name
             elif role in [Qt.ToolTipRole]:
                 data = category_desc
@@ -62,12 +64,71 @@ class PluginsModel(QAbstractTableModel):
             is_enabled = plugin.name in self.enabled_plugins
             if role in [Qt.DisplayRole]:
                 data = 'Yes' if is_enabled else 'No'
+            elif role == Qt.EditRole:
+                data = is_enabled
         elif col == 3:
             is_favorite = plugin.name in self.favorite_plugins
             if role in [Qt.DisplayRole]:
                 data = 'Yes' if is_favorite else 'No'
+            elif role == Qt.EditRole:
+                data = is_favorite
+        elif col == 4:
+            has_gui = plugin.has_gui
+            if role in [Qt.DisplayRole]:
+                data = 'Yes' if has_gui else 'No'
+            elif role == Qt.EditRole:
+                data = has_gui
+        elif col == 5:
+            if role in [Qt.DisplayRole, Qt.EditRole]:
+                data = plugin.ui.description
 
         return QVariant(data)
+
+    def setData(self, index, value, role = Qt.EditRole):
+        if not index.isValid():
+            return False
+
+        col = index.column()
+        plugin = self.plugin_for_index(index)
+
+        if col == 2:
+            is_checked = value.toBool()
+            enabled = self.enabled_plugins
+            name = plugin.name
+            is_enabled = name in enabled
+
+            # No need to do anything.
+            if (is_checked and is_enabled) or (not is_checked and not is_enabled):
+                return False
+            # Enable plugin.
+            elif is_checked and not is_enabled:
+                enabled.append(name)
+            # Disable plugin.
+            elif not is_checked and is_enabled:
+                enabled.remove(name)
+
+            self.config.set_option('enabled_plugins', enabled)
+            return True
+        elif col == 3:
+            is_checked = value.toBool()
+            favorites = self.favorite_plugins
+            name = plugin.name
+            in_favorites = name in favorites
+
+            # No need to do anything.
+            if (is_checked and in_favorites) or (not is_checked and not in_favorites):
+                return False
+            # Add to favorites.
+            elif is_checked and not in_favorites:
+                favorites.append(name)
+            # Remove from favorites.
+            elif not is_checked and in_favorites:
+                favorites.remove(name)
+
+            self.config.set_option('favorite_plugins', favorites)
+            return True
+
+        return True
 
     def plugin_for_index(self, index):
         if not index.isValid():
@@ -94,22 +155,33 @@ class PluginDetails(QWidget):
     def __init__(self, manager, parent=None):
         super(PluginDetails, self).__init__(parent)
         self.manager = manager
-        # Changing plugin_is_favorite only updates shortcuts if this is True.
-        self.is_ready = False
 
-        self.name_label = QLabel()
-        self.category_label = QLabel()
+        self.name_label = QLineEdit()
+        self.category_label = QLineEdit()
         self.desc_edit = QTextEdit()
         self.name_label.setToolTip('Plugin name')
         self.desc_edit.setToolTip('Plugin description')
         self.desc_edit.setReadOnly(True)
         self.desc_edit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
-        self.plugin_is_enabled = QCheckBox('Enabled plugin')
+        for i in [self.name_label, self.category_label, self.desc_edit]:
+            i.setReadOnly(True)
+        self.plugin_is_enabled = QCheckBox('Enabled')
         self.plugin_is_enabled.setToolTip('Whether this plugin is enabled')
-        self.plugin_is_enabled.stateChanged.connect(self.set_enabled)
-        self.plugin_is_favorite = QCheckBox('Favorite plugin')
+        self.plugin_is_favorite = QCheckBox('Favorite')
         self.plugin_is_favorite.setToolTip('Favorite plugins are assigned keyboard shortcuts in the Tools menu')
-        self.plugin_is_favorite.stateChanged.connect(self.set_favorite)
+        self.has_gui = QCheckBox('GUI')
+        self.has_gui.setToolTip('Whether this plugin has a graphical user interface')
+        self.has_gui.setEnabled(False)
+
+        self.mapper = QDataWidgetMapper()
+        self.mapper.setModel(self.manager.model)
+        self.mapper.setSubmitPolicy(QDataWidgetMapper.AutoSubmit)
+        self.mapper.addMapping(self.name_label, 0)
+        self.mapper.addMapping(self.category_label, 1)
+        self.mapper.addMapping(self.plugin_is_enabled, 2)
+        self.mapper.addMapping(self.plugin_is_favorite, 3)
+        self.mapper.addMapping(self.has_gui, 4)
+        self.mapper.addMapping(self.desc_edit, 5)
 
         form = QFormLayout()
         form.setContentsMargins(0,6,0,0)
@@ -117,68 +189,17 @@ class PluginDetails(QWidget):
         form.addRow('Category:', self.category_label)
         form.addRow(self.plugin_is_enabled)
         form.addRow(self.plugin_is_favorite)
+        form.addRow(self.has_gui)
         form.addRow(self.desc_edit)
         self.setLayout(form)
 
-    def set_plugin(self, plugin):
-        """Set the plugin that this widget needs to represent."""
-        self.is_ready = False
-        self.name_label.setText(plugin.name)
-        self.category_label.setText(plugin.ui.category.name)
-        self.category_label.setToolTip(plugin.ui.category.description)
-        desc = []
-        for i in plugin.ui.description.split('\n'):
-            desc.append('<p>{}</p>'.format(i))
-        self.desc_edit.setHtml(''.join(desc))
+    def set_index(self, index):
+        """Set the mapper's index."""
+        self.mapper.setCurrentIndex(index.row())
+        plugin = self.manager.model.plugin_for_index(index)
 
-        is_in_favorites = plugin.name in self.manager.config.get_option('favorite_plugins', [])
-        self.plugin_is_favorite.setChecked(is_in_favorites)
-        if plugin.name in required_plugins:
-            self.plugin_is_enabled.setEnabled(False)
-        else:
-            self.plugin_is_enabled.setEnabled(True)
-            self.plugin_is_enabled.setChecked(plugin.ui.is_enabled)
-        self.is_ready = True
-
-    def set_enabled(self, is_checked):
-        if not self.is_ready:
-            return
-        is_checked = True if is_checked else False
-        enabled = self.manager.config.get_option('enabled_plugins', default_plugins)
-        name = str(self.name_label.text())
-        is_enabled = name in enabled
-
-        # No need to do anything.
-        if (is_checked and is_enabled) or (not is_checked and not is_enabled):
-            return
-        # Enable plugin.
-        elif is_checked and not is_enabled:
-            enabled.append(name)
-        # Disable plugin.
-        elif not is_checked and is_enabled:
-            enabled.remove(name)
-
-        self.manager.config.set_option('enabled_plugins', enabled)
-
-    def set_favorite(self, is_checked):
-        if not self.is_ready:
-            return
-        is_checked = True if is_checked else False
-        favorites = self.manager.config.get_option('favorite_plugins', [])
-        name = str(self.name_label.text())
-        in_favorites = name in favorites
-
-        # No need to do anything.
-        if (is_checked and in_favorites) or (not is_checked and not in_favorites):
-            return
-        # Add to favorites.
-        elif is_checked and not in_favorites:
-            favorites.append(name)
-        # Remove from favorites.
-        elif not is_checked and in_favorites:
-            favorites.remove(name)
-
-        self.manager.config.set_option('favorite_plugins', favorites)
+        self.plugin_is_enabled.setEnabled(not plugin.name in required_plugins)
+        self.plugin_is_favorite.setEnabled(plugin.has_gui)
 
 class PluginManager(QDialog):
     """GUI for the plugin system."""
@@ -205,18 +226,22 @@ class PluginManager(QDialog):
         self.view.setSortingEnabled(True)
         self.view.setAlternatingRowColors(True)
         self.view.setWordWrap(True)
+
         self.view.horizontalHeader().setResizeMode(0, QHeaderView.Stretch)
         self.view.horizontalHeader().setResizeMode(1, QHeaderView.ResizeToContents)
         self.view.horizontalHeader().setHighlightSections(False)
+        for i in [4, 5]:
+            self.view.horizontalHeader().setSectionHidden(i, True)
         self.view.verticalHeader().setDefaultSectionSize(22)
         self.view.verticalHeader().setVisible(False)
+
         self.view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.view.setSelectionMode(QAbstractItemView.SingleSelection)
         self.view.selectionModel().selectionChanged.connect(self.update_details_area)
         self.view.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         self.view.sortByColumn(0, Qt.AscendingOrder)
 
-        details_area = self.create_details_area()
+        self.plugin_details = PluginDetails(self)
 
         filter_edit = QLineEdit()
         def filter_view():
@@ -236,14 +261,10 @@ class PluginManager(QDialog):
         vbox.addLayout(filter_box)
         vbox.addWidget(self.view)
         vbox.addWidget(Separator())
-        vbox.addWidget(details_area)
+        vbox.addWidget(self.plugin_details)
         self.setLayout(vbox)
 
         self.view.selectRow(0)
-
-    def create_details_area(self):
-        self.plugin_details = PluginDetails(self)
-        return self.plugin_details
 
     def update_details_area(self, selected, deselected):
         """Update the plugin details area when selection changes."""
@@ -252,8 +273,5 @@ class PluginManager(QDialog):
             index = selected.indexes()[0]
         except IndexError:
             return
-        plugin = self.model.plugin_for_index(index)
-        if str(self.plugin_details.name_label.text()) == plugin.name:
-            return
-        self.plugin_details.set_plugin(plugin)
+        self.plugin_details.set_index(index)
 

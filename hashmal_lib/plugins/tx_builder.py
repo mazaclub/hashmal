@@ -69,9 +69,11 @@ class TxBuilder(BaseDock):
         form = QFormLayout()
         self.version_edit = AmountEdit()
         self.version_edit.setText('1')
+        self.version_edit.setWhatsThis('Use this field to specify the version of your transaction. In Bitcoin, transactions are currently version 1.')
 
         self.locktime_edit = AmountEdit()
         self.locktime_edit.setText('0')
+        self.locktime_edit.setWhatsThis('Use this field to specify the locktime of your transaction. For most common transactions, locktime is zero.')
 
         version_desc = QLabel('A transaction\'s version determines how it is interpreted.\n\nBitcoin transactions are currently version 1.')
         locktime_desc = QLabel('A transaction\'s locktime defines the earliest time or block that it may be added to the blockchain.\n\nLocktime only applies if it\'s non-zero and at least one input has a Sequence that\'s not the maximum possible value.')
@@ -93,6 +95,7 @@ class TxBuilder(BaseDock):
     def create_inputs_tab(self):
         form = QFormLayout()
         self.inputs_tree = InputsTree()
+        self.inputs_tree.view.setWhatsThis('The inputs of your transaction are displayed here.')
         self.inputs_editor = InputsEditor(self.handler.gui, self.inputs_tree)
         self.inputs_editor.setEnabled(False)
 
@@ -113,6 +116,7 @@ class TxBuilder(BaseDock):
 
         add_input_button = QPushButton('New input')
         add_input_button.setToolTip('Add a new input')
+        add_input_button.setWhatsThis('Clicking this button will add a new input to your transaction.')
         add_input_button.clicked.connect(add_input)
 
         form.addRow(self.inputs_tree)
@@ -130,6 +134,7 @@ class TxBuilder(BaseDock):
     def create_outputs_tab(self):
         form = QFormLayout()
         self.outputs_tree = OutputsTree()
+        self.outputs_tree.view.setWhatsThis('The outputs of your transaction are displayed here.')
         self.outputs_editor = OutputsEditor(self.handler.gui, self.outputs_tree)
         self.outputs_editor.setEnabled(False)
 
@@ -149,6 +154,7 @@ class TxBuilder(BaseDock):
 
         add_output_button = QPushButton('New output')
         add_output_button.setToolTip('Add a new output')
+        add_output_button.setWhatsThis('Clicking this button will add a new output to your transaction.')
         add_output_button.clicked.connect(add_output)
 
         form.addRow(self.outputs_tree)
@@ -309,17 +315,22 @@ class InputsEditor(BaseEditor):
         super(InputsEditor, self).__init__(tree, parent)
         self.prev_tx = QLineEdit()
         self.prev_tx.setToolTip('Transaction ID of the tx with the output being spent')
+        self.prev_tx.setWhatsThis('Use this field to specify the transaction that contains the output you\'re spending.')
 
         self.prev_vout = AmountEdit()
         self.prev_vout.setToolTip('Output index of the previous transaction')
+        self.prev_vout.setWhatsThis('Use this field to specify the output you are spending of the previous transaction.')
 
         self.script = ScriptEditor(main_window)
         self.script.setToolTip('Script that will be put on the stack before the previous output\'s script.')
+        self.script.setWhatsThis('Enter a script here. This script will be evaluated directly before the script of the output you are spending. Any values that are pushed onto the stack when this script finishes its execution are present when the output script is evaluated afterward.')
 
         self.sequence = AmountEdit()
         self.sequence.setText('4294967295')
+        self.sequence.setWhatsThis('Use this field to specify the sequence value. It\'s likely that you should leave this as its default (maximum) value.')
         maxify_input_sequence = QPushButton('Max')
         maxify_input_sequence.clicked.connect(lambda: self.sequence.setText('0xffffffff'))
+        maxify_input_sequence.setWhatsThis('This button will set the sequence to its default value.')
 
         for i in [self.prev_tx, self.prev_vout, self.script, self.sequence]:
             i.setFont(monospace_font)
@@ -355,8 +366,10 @@ class OutputsEditor(BaseEditor):
         super(OutputsEditor, self).__init__(tree, parent)
         self.out_value = OutputAmountEdit()
         self.out_value.setToolTip('Output amount')
+        self.out_value.setWhatsThis('Use this field to specify the value of this output. Depending on your settings, the value may be in satoshis (no decimals), or coins (1 coin = 100000000 satoshis).')
         self.script = ScriptEditor(main_window)
         self.script.setToolTip('Script that will be put on the stack after the input that spends it.')
+        self.script.setWhatsThis('Enter a script here. This script will be evaluated directly after the script of the input that spends it in the future. This script will have access to the values that are on the stack after the input script that spends it has executed.')
         for i in [self.out_value, self.script]:
             i.setFont(monospace_font)
 

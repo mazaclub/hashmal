@@ -120,17 +120,25 @@ class TxAnalyzer(BaseDock):
         form.setRowWrapPolicy(QFormLayout.WrapLongRows)
 
         self.inputs_box = QSpinBox()
+        self.inputs_box.setToolTip('Input to verify')
 
         self.verify_button = QPushButton('Verify')
         self.verify_button.clicked.connect(self.verify_input)
+        self.verify_button.setToolTip('Verify an input')
+        self.verify_button.setWhatsThis('This button will attempt to verify an input.\n\nIf no plugin is available to retrieve blockchain data, such as the "Blockchain" or "Wallet RPC" plugins, this will not function. The plugin used to retrieve blockchain data can be changed in the Settings dialog.')
 
         self.verify_all_button = QPushButton('Verify All')
         self.verify_all_button.clicked.connect(self.verify_inputs)
+        self.verify_all_button.setToolTip('Verify all inputs')
+        self.verify_all_button.setWhatsThis('This button will attempt to verify all inputs.\n\nIf no plugin is available to retrieve blockchain data, such as the "Blockchain" or "Wallet RPC" plugins, this will not function. The plugin used to retrieve blockchain data can be changed in the Settings dialog.')
 
         self.result_edit = QLineEdit()
+        self.result_edit.setToolTip('Verification result')
+        self.result_edit.setWhatsThis('The result of verifying an input is shown here.')
         self.result_edit.setReadOnly(True)
 
         self.inputs_table = InputStatusTable()
+        self.inputs_table.setToolTip('Verification results')
         self.inputs_table.setWhatsThis('This table displays which inputs you have verified for the transaction being analyzed.')
 
         form.addRow('Verify Input:', floated_buttons([self.inputs_box, self.verify_button]))

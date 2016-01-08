@@ -271,6 +271,7 @@ class Variables(BaseDock):
         add_var_hbox = HBox(self.new_var_key, QLabel(':'), self.new_var_value, add_var_btn)
 
         self.auto_save_check = QCheckBox('Automatically save')
+        self.auto_save_check.setWhatsThis('If this box is checked, then your stored variables will automatically be saved whenever one is added or deleted.')
         self.auto_save_check.setChecked(self.auto_save)
         def change_auto_save(is_checked):
             is_checked = True if is_checked else False
@@ -280,6 +281,7 @@ class Variables(BaseDock):
         self.save_button = QPushButton('Save')
         self.save_button.clicked.connect(self.save_variables)
         self.save_button.setToolTip('Save variables to config file')
+        self.save_button.setWhatsThis('This button will save your stored variables in the Hashmal config file.')
 
         form.addRow('Add:', add_var_hbox)
         form.addRow(floated_buttons([self.auto_save_check, self.save_button]))

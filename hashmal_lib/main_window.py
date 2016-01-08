@@ -233,6 +233,7 @@ class HashmalMain(QMainWindow):
 
         whats_this_button = QPushButton('?')
         whats_this_button.setMaximumWidth(20)
+        whats_this_button.setWhatsThis('This button activates What\'s This? mode.\n\nIn What\'s This? mode, you can click something you are not familiar with and a description of it will be shown if one exists.')
         whats_this_button.clicked.connect(lambda: QWhatsThis.enterWhatsThisMode())
         toolbar.addWidget(whats_this_button)
         toolbar.addSeparator()

@@ -138,8 +138,10 @@ class BlockWidget(QWidget):
     def __init__(self, parent=None):
         super(BlockWidget, self).__init__(parent)
         self.header_widget = BlockHeaderWidget()
+        self.header_widget.view.setWhatsThis('The header of the block is displayed here.')
         self.header_widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         self.txs_widget = BlockTxsWidget()
+        self.txs_widget.view.setWhatsThis('The transactions in the block are displayed here.\n\nRight-click a transaction ID to access the transaction it represents.')
 
         splitter = QSplitter()
         splitter.setChildrenCollapsible(False)

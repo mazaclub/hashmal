@@ -484,6 +484,8 @@ class TxWidget(QWidget):
 
         self.tx_id = QLineEdit()
         self.tx_id.setReadOnly(True)
+        self.tx_id.setToolTip('Transaction ID')
+        self.tx_id.setWhatsThis('The ID (hash) of the transaction is displayed here.')
 
         self.version_edit = QLineEdit()
         self.version_edit.setReadOnly(True)

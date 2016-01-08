@@ -28,16 +28,24 @@ class ScriptExecution(object):
         super(ScriptExecution, self).__init__()
         self.error = None
         self.steps = []
+        # Whether the script exited with a nonzero value.
+        self.script_passed = None
+        # Whether the script has been verified.
+        self.script_verified = False
 
     def evaluate(self, tx_script, txTo=None, inIdx=0, flags=None, execution_data=None):
         self.error = None
         self.steps = []
         if flags is None:
             flags = ()
+        self.script_passed = None
+        self.script_verified = False
 
         stack = Stack(tx_script, txTo, inIdx, flags, execution_data)
+        verifying = False
         if stack.txTo:
             iterator = stack.verify_step()
+            verifying = True
         else:
             iterator = stack.step()
         while 1:
@@ -49,6 +57,11 @@ class ScriptExecution(object):
             except Exception as e:
                 self.error = e
                 break
+
+        if verifying:
+            self.script_verified = True
+        top_value = _CastToBool(self.steps[-1].stack[-1])
+        self.script_passed = top_value
         return self.steps
 
 class Stack(object):

@@ -130,7 +130,7 @@ class StackEval(BaseDock):
         self.input_idx.setEnabled(False)
         self.input_idx.valueChanged.connect(self.set_input_index)
         self.input_idx.setToolTip('Input in the containing transaction with the relevant scriptSig.')
-        self.input_idx.setWhatsThis('Use this to specify the input you want to evaluate spending.')
+        self.input_idx.setWhatsThis('Use this to specify the input you want to simulate.')
         in_idx_box = QHBoxLayout()
         in_idx_box.addWidget(QLabel('Input containing scriptSig:'))
         in_idx_box.addWidget(self.input_idx)
@@ -138,11 +138,11 @@ class StackEval(BaseDock):
 
 
         desc = QLabel(' '.join(['You can specify the transaction that contains the script you\'re testing.',
-                        'This allows you to evaluate whether an input is spent successfully.']))
+                        'This allows you to evaluate whether an input spends successfully.']))
         desc.setWordWrap(True)
         form.addRow(desc)
         form.addRow('Raw Transaction:', self.tx_edit)
-        form.addRow('Input to spend:', self.input_idx)
+        form.addRow('Spending Input:', self.input_idx)
 
         w = QWidget()
         w.setLayout(form)

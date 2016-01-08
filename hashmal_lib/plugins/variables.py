@@ -155,6 +155,33 @@ class VarsModel(QtCore.QAbstractTableModel):
     def invalidate_cache(self):
         self.classification_cache.clear()
 
+class VarsProxyModel(QSortFilterProxyModel):
+    def __init__(self, parent=None):
+        super(VarsProxyModel, self).__init__(parent)
+        self.category_filter = 'None'
+
+    def set_category_filter(self, text):
+        self.category_filter = text
+        self.invalidateFilter()
+
+    def keyForIndex(self, index, role=QtCore.Qt.DisplayRole):
+        idx = self.mapToSource(index)
+        data_idx = self.sourceModel().createIndex(idx.row(), 0, role)
+        return self.sourceModel().data(data_idx, role)
+
+    def valueForIndex(self, index, role=QtCore.Qt.DisplayRole):
+        idx = self.mapToSource(index)
+        data_idx = self.sourceModel().createIndex(idx.row(), 1, role)
+        return self.sourceModel().data(data_idx, role)
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        if self.category_filter and self.category_filter != 'None':
+            categories = self.sourceModel().dataAt(source_row, 1, QtCore.Qt.UserRole).toList()
+            if self.category_filter not in categories:
+                return False
+        return True
+
+
 class Variables(BaseDock):
 
     tool_name = 'Variables'
@@ -200,10 +227,12 @@ class Variables(BaseDock):
         form = QFormLayout()
 
         self.model = VarsModel(self.data)
+        self.proxy_model = VarsProxyModel()
+        self.proxy_model.setSourceModel(self.model)
 
         self.view = QTableView()
         self.view.setWhatsThis('This table displays the variables you have defined.')
-        self.view.setModel(self.model)
+        self.view.setModel(self.proxy_model)
         self.view.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
         self.view.horizontalHeader().setHighlightSections(False)
         self.view.verticalHeader().setDefaultSectionSize(22)
@@ -256,16 +285,7 @@ class Variables(BaseDock):
 
     def filter_table(self):
         filter_str = str(self.filter_combo.currentText())
-        for i in range(self.model.rowCount()):
-            if filter_str == 'None':
-                self.view.showRow(i)
-                continue
-
-            if filter_str in self.model.dataAt(i, 1, QtCore.Qt.UserRole).toList():
-                self.view.showRow(i)
-            else:
-                self.view.hideRow(i)
-
+        self.proxy_model.set_category_filter(filter_str)
 
     def store_as_variable(self, value):
         """Prompt to store a value."""
@@ -326,34 +346,29 @@ class Variables(BaseDock):
         menu = QMenu()
 
         def copy_key(index):
-            text = self.model.keyForIndex(index).toString()
+            text = self.proxy_model.keyForIndex(index).toString()
             QApplication.clipboard().setText(str(text))
 
         def copy_value(index):
-            text = self.model.valueForIndex(index).toString()
+            text = self.proxy_model.valueForIndex(index).toString()
             QApplication.clipboard().setText(str(text))
 
         def delete_key(index):
-            name = self.model.keyForIndex(index).toString()
+            name = self.proxy_model.keyForIndex(index).toString()
             self.remove_key(str(name))
 
         menu.addAction('Copy Key', lambda: copy_key(self.view.currentIndex()))
         menu.addAction('Copy Value', lambda: copy_value(self.view.currentIndex()))
         menu.addAction('Delete', lambda: delete_key(self.view.currentIndex()))
 
-        idx = self.view.currentIndex()
-        row = idx.row()
-        idx = self.model.createIndex(row, 1)
-        data_value = str(self.model.data(idx).toString())
+        idx = self.proxy_model.mapToSource(self.view.currentIndex())
+        data_value = str(self.model.valueForIndex(idx).toString())
         # Add context menu actions for all applicable variable types.
         data_categories = map(lambda x: variable_types[str(x.toString())], self.model.data(idx, role=QtCore.Qt.UserRole).toList())
         for i in data_categories:
             self.handler.add_plugin_actions(self, menu, i.category, data_value)
 
         menu.exec_(self.view.viewport().mapToGlobal(position))
-
-    def refresh_data(self):
-        self.filter_table()
 
     def add_new_var(self):
         k = str(self.new_var_key.text())

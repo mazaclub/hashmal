@@ -99,7 +99,7 @@ class StackEval(BaseDock):
         self.clear_button = QPushButton('Clear')
         self.clear_button.setToolTip('Clear the current script.')
         self.clear_button.clicked.connect(self.reset)
-        self.do_button = QPushButton('Evaluate')
+        self.do_button = QPushButton('&Evaluate')
         self.do_button.setToolTip('Evaluate the entire script.')
         self.do_button.clicked.connect(self.do_evaluate)
 

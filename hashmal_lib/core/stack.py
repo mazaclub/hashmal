@@ -58,10 +58,11 @@ class ScriptExecution(object):
                 self.error = e
                 break
 
-        if verifying:
-            self.script_verified = True
-        top_value = _CastToBool(self.steps[-1].stack[-1])
-        self.script_passed = top_value
+        if self.steps and self.steps[-1].stack:
+            if verifying:
+                self.script_verified = True
+            top_value = _CastToBool(self.steps[-1].stack[-1])
+            self.script_passed = top_value
         return self.steps
 
 class Stack(object):

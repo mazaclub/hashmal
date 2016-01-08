@@ -231,7 +231,7 @@ class ScriptExecutionWidget(QWidget):
         self.view.setModel(self.model)
         self.view.setSelectionMode(QAbstractItemView.SingleSelection)
         self.view.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.view.selectionModel().currentRowChanged.connect(self.on_selection_changed)
+        self.view.selectionModel().selectionChanged.connect(self.on_selection_changed)
         self.view.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
         self.view.setAlternatingRowColors(True)
         self.view.setWhatsThis('This view displays the steps of the script\'s execution.')
@@ -277,10 +277,12 @@ class ScriptExecutionWidget(QWidget):
         else:
             self.error_edit.clear()
             self.error_edit.hide()
+        last_item = self.model.index(self.model.rootItem.childCount() - 1, 0)
+        self.view.selectionModel().select(last_item, QItemSelectionModel.SelectCurrent | QItemSelectionModel.Rows)
 
     def on_selection_changed(self, selected, deselected):
         try:
-            idx = selected
+            idx = selected.indexes()[0]
             is_root = not idx.parent().isValid()
             self.change_labels(is_root)
             self.mapper.setRootIndex(idx.parent())

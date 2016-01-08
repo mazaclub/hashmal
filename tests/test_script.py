@@ -30,7 +30,7 @@ class ScriptTest(unittest.TestCase):
         self.assertEqual(s.get_hex(), i.hex)
         self.assertEqual(s.get_human(), i.human)
 
-        i = ScriptItem('51', 'OP_1')
+        i = ScriptItem('0051', 'OP_0 OP_1')
         s = Script.from_human(i.human)
         self.assertEqual(s.get_hex(), i.hex)
         self.assertEqual(s.get_human(), i.human)

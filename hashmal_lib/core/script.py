@@ -5,7 +5,7 @@ from bitcoin.base58 import CBase58Data
 from bitcoin.core.script import CScript
 
 import opcodes
-from utils import is_hex, push_script
+from utils import is_hex, push_script, format_hex_string
 
 class Script(CScript):
     """Transaction script.
@@ -27,8 +27,8 @@ class Script(CScript):
                 continue
 
             opcode = opcodes.opcodes_by_name.get(word)
-            if opcode:
-                hex_str.append(hex(opcode)[2:])
+            if opcode is not None:
+                hex_str.append(format_hex_string(hex(opcode), with_prefix=False))
                 continue
 
             # data to be pushed
@@ -132,16 +132,7 @@ def transform_human(text, variables=None):
     def hex_to_formatted_hex(s, loc, toks):
         """Add "0x" prefix and ensure even length."""
         for i, t in enumerate(toks):
-            new_tok = t
-            # Add '0x' prefix
-            if not t.startswith('0x'):
-                if t.startswith('x'):
-                    new_tok = ''.join(['0', t])
-                else:
-                    new_tok = ''.join(['0x', t])
-            # Even-length string
-            if len(new_tok) % 2 != 0:
-                new_tok = ''.join([new_tok[0:2], '0', new_tok[2:]])
+            new_tok = format_hex_string(t)
             toks[i] = new_tok
         return toks
     # ^ parseActions for pyparsing end here.

@@ -64,15 +64,6 @@ class Stack(object):
         self.execution_data = execution_data
         self.init_stack = []
 
-    def evaluate(self):
-        iterator = self.step()
-        while 1:
-            try:
-                stack, _ = iterator.next()
-            except StopIteration:
-                break
-        return stack
-
     def verify_step(self):
         """Generator for verifying a script.
 

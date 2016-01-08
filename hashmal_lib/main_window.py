@@ -30,6 +30,7 @@ class HashmalMain(QMainWindow):
         self.changes_saved = True
         # {Qt.DockWidgetArea: [dock0, dock1, ...], ...}
         self.dock_orders = defaultdict(list)
+        self.setCorner(QtCore.Qt.BottomRightCorner, QtCore.Qt.RightDockWidgetArea)
 
         self.config = Config()
 

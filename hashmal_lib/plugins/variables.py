@@ -159,9 +159,14 @@ class VarsProxyModel(QSortFilterProxyModel):
     def __init__(self, parent=None):
         super(VarsProxyModel, self).__init__(parent)
         self.category_filter = 'None'
+        self.key_filter = ''
 
     def set_category_filter(self, text):
         self.category_filter = text
+        self.invalidateFilter()
+
+    def set_key_filter(self, text):
+        self.key_filter = text
         self.invalidateFilter()
 
     def keyForIndex(self, index, role=QtCore.Qt.DisplayRole):
@@ -178,6 +183,11 @@ class VarsProxyModel(QSortFilterProxyModel):
         if self.category_filter and self.category_filter != 'None':
             categories = self.sourceModel().dataAt(source_row, 1, QtCore.Qt.UserRole).toList()
             if self.category_filter not in categories:
+                return False
+        if self.key_filter:
+            idx = self.sourceModel().index(source_row, 0, source_parent)
+            key = str(self.sourceModel().data(idx).toString())
+            if self.key_filter not in key:
                 return False
         return True
 
@@ -244,12 +254,7 @@ class Variables(BaseDock):
         self.view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.view.setAlternatingRowColors(True)
 
-        self.filter_combo = QComboBox()
-        self.filter_combo.setWhatsThis('Use this to filter the displayed variables by their values.')
-        self.filter_combo.addItems(self.filters)
-        self.filter_combo.currentIndexChanged.connect(self.filter_table)
-
-        form.addRow('Filter:', self.filter_combo)
+        form.addRow(self.create_filters_box())
         form.addRow(self.view)
 
         # Controls for adding/removing variables
@@ -280,12 +285,36 @@ class Variables(BaseDock):
         form.addRow(floated_buttons([self.auto_save_check, self.save_button]))
         return form
 
+    def create_filters_box(self):
+        form = QFormLayout()
+
+        # Filtering by variable name.
+        self.filter_key = QLineEdit()
+        self.filter_key.setWhatsThis('Use this to filter the displayed variables by their names.')
+        self.filter_key.setPlaceholderText('Filter by key')
+        def filter_by_key():
+            s = str(self.filter_key.text())
+            self.proxy_model.set_key_filter(s)
+        self.filter_key.textChanged.connect(filter_by_key)
+
+        # Filtering by data category.
+        self.filter_category = QComboBox()
+        self.filter_category.setWhatsThis('Use this to filter the displayed variables by their value types.')
+        self.filter_category.addItems(self.filters)
+        def filter_by_category():
+            s = str(self.filter_category.currentText())
+            self.proxy_model.set_category_filter(s)
+        self.filter_category.currentIndexChanged.connect(filter_by_category)
+
+        form.addRow('Key:', self.filter_key)
+        form.addRow('Category:', self.filter_category)
+
+        self.filter_group = QGroupBox('Filters')
+        self.filter_group.setLayout(form)
+        return self.filter_group
+
     def is_valid_key(self, key):
         return isinstance(key, str) and key and key.isalnum()
-
-    def filter_table(self):
-        filter_str = str(self.filter_combo.currentText())
-        self.proxy_model.set_category_filter(filter_str)
 
     def store_as_variable(self, value):
         """Prompt to store a value."""
@@ -386,10 +415,11 @@ class Variables(BaseDock):
 
     def on_var_types_augmented(self, arg):
         self.filters = variable_types.keys()
-        self.filter_combo.clear()
-        self.filter_combo.addItems(self.filters)
+        self.filter_category.clear()
+        self.filter_category.addItems(self.filters)
         self.model.invalidate_cache()
 
     def on_option_changed(self, key):
         if key == 'chainparams':
             self.model.invalidate_cache()
+            self.proxy_model.invalidateFilter()

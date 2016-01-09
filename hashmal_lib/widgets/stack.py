@@ -7,7 +7,7 @@ from PyQt4.QtCore import *
 
 from hashmal_lib.core import Transaction, opcodes
 from hashmal_lib.core.script import Script, transform_human
-from hashmal_lib.core.utils import is_hex
+from hashmal_lib.core.utils import is_hex, format_hex_string
 from hashmal_lib.core.stack import Stack, ScriptExecution
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 from hashmal_lib.items import *
@@ -55,8 +55,12 @@ class TopLevelScriptItem(ScriptExecutionItem):
         # Convert log data representations to human-readable ones.
         log_data = self.item_data[3].split()
         for i, word in enumerate(log_data):
-            if is_hex(word) and len(word) % 2 == 0 and all(ord(c) < 128 and ord(c) > 31 for c in word.decode('hex')):
-                log_data[i] = ''.join(['"', word.decode('hex'), '"'])
+            if is_hex(word):
+                hex_word = format_hex_string(word, with_prefix=False)
+                # Don't try to get a string representation of negative numbers.
+                if not int(hex_word, 16) < 0:
+                    if all(ord(c) < 128 and ord(c) > 31 for c in hex_word.decode('hex')):
+                        log_data[i] = ''.join(['"', hex_word.decode('hex'), '"'])
         self.log_data = ' '.join(log_data)
 
         self.op_name = opcodes.opcode_names.get(self.item_data[1], 'PUSHDATA')

@@ -55,12 +55,13 @@ class TopLevelScriptItem(ScriptExecutionItem):
         # Convert log data representations to human-readable ones.
         log_data = self.item_data[3].split()
         for i, word in enumerate(log_data):
-            if is_hex(word):
+            # Try to put the data in human-readable form.
+            try:
                 hex_word = format_hex_string(word, with_prefix=False)
-                # Don't try to get a string representation of negative numbers.
-                if not int(hex_word, 16) < 0:
-                    if all(ord(c) < 128 and ord(c) > 31 for c in hex_word.decode('hex')):
-                        log_data[i] = ''.join(['"', hex_word.decode('hex'), '"'])
+                if all(ord(c) < 128 and ord(c) > 31 for c in hex_word.decode('hex')):
+                    log_data[i] = ''.join(['"', hex_word.decode('hex'), '"'])
+            except Exception:
+                pass
         self.log_data = ' '.join(log_data)
 
         self.op_name = opcodes.opcode_names.get(self.item_data[1], 'PUSHDATA')

@@ -8,13 +8,23 @@ See https://github.com/mazaclub/hashmal/wiki/Plugins[the wiki] for more informat
 A plugin is a module containing the function `make_plugin()`, which returns an instance of
 the class `Plugin` defined in `hashmal_lib.plugins.base`.
 
-A `Plugin` instance is initialized with a class representing a dock widget.
-This is subject to change.
+A `Plugin` instance is initialized with a class representing a widget.
+
+=== Plugin UIs
+
+A plugin's widget is a subclass of `BasePluginUI` defined `hashmal_lib.plugins.base`. If a plugin's widget
+is a dock widget, it should subclass `BaseDock`. If a plugin has no GUI, the attribute `has_gui` of the Plugin
+instance should be set to `False` and the plugin's widget should subclass `BasePluginUI` instead of `BaseDock`.
+
+Currently, the only UI that offers a GUI is `BaseDock`. Therefore, there are only two options for a plugin's UI:
+
+- `BasePluginUI` if the plugin has no GUI.
+- `BaseDock` if the plugin has a GUI.
 
 == Augmenters
 
 Augmenters are a way for plugins to enhance other plugins. Effectively, meta-plugins.
 The decorator `@augmenter` defined in `hashmal_lib.plugins.base` is used to mark a
 dock's method as being an augmenter. When a dock is doing something that can be augmented,
-it will call the base class method `augment()` with arguments specifying what can be augmented.
+it will call the base class method `augment()`. It may pass relevant data to this method as well.
 The Dock Handler will then iterate through docks, looking for relevant augmenters and calling them.

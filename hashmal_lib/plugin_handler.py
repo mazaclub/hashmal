@@ -281,7 +281,7 @@ class PluginHandler(QWidget):
         """Download blockchain data with the pre-chosen plugin.
 
         Args:
-            data_type (str): Type of data (e.g. RAW_TX, defined in hashmal_lib.items).
+            data_type (str): Type of data (e.g. 'raw_transaction').
             identifier (str): Data identifier (e.g. transaction ID).
         """
         plugin_name = self.config.get_option('data_retriever', 'Blockchain')

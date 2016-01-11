@@ -11,10 +11,6 @@ from PyQt4.QtCore import pyqtSignal, QObject
 from hashmal_lib.core import Transaction, BlockHeader, Block
 from base import Plugin, BasePluginUI
 
-RAW_BLOCK_HEADER = 'Raw Block Header'
-RAW_BLOCK = 'Raw Block'
-RAW_TX = 'Raw Transaction'
-
 class Item(object):
     """A value and metadata."""
     name = ''

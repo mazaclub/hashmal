@@ -141,11 +141,7 @@ class BaseDock(BasePluginUI, QDockWidget):
         BasePluginUI.__init__(self, handler)
         QDockWidget.__init__(self, '', handler)
 
-        self.advertised_actions = {}
-        self.local_actions = {}
-
         self.init_data()
-        self.init_actions()
         my_layout = self.create_layout()
         self.main_widget = QWidget()
         self.main_widget.setLayout(my_layout)
@@ -162,26 +158,6 @@ class BaseDock(BasePluginUI, QDockWidget):
         """Initialize attributes such as data containers."""
         pass
 
-    def init_actions(self):
-        """Initialize advertised actions.
-
-        Subclasses with actions to advertise should create a list of tuples for
-        each category they advertise in their 'advertised_actions' attribute.
-
-        Subclasses can also use the 'local_actions' attribute to specify actions that
-        should be shown only when using the subclass.
-
-        Tuples are in the form (action_name, action)
-
-        Example:
-            If a subclass can deserialize a raw transaction via the method 'deserialize_tx',
-            it would do the following:
-
-            deserialize_raw_tx = ('Deserialize', self.deserialize_tx)
-            self.advertised_actions[hashmal_lib.items.RAW_TX] = [deserialize_raw_tx]
-        """
-        pass
-
     def create_layout(self):
         """Returns the main layout for our widget.
 
@@ -192,21 +168,6 @@ class BaseDock(BasePluginUI, QDockWidget):
     def refresh_data(self):
         """Synchronize. Called when needsUpdate is emitted."""
         pass
-
-    def get_actions(self, category, local=False):
-        """Get the advertised actions for category.
-
-        If local is True, only actions that are relevant when using the
-        subclass are returned.
-
-        category is not limited to but can be one of the following:
-            - hash160
-        In addition, it can be a constant defined in hashmal_lib.items.
-
-        """
-        if local:
-            return self.local_actions.get(category)
-        return self.advertised_actions.get(category)
 
     def status_message(self, msg, error=False):
         """Show a message on the status bar.

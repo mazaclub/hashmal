@@ -187,6 +187,7 @@ class Variables(BaseDock):
         def maybe_save():
             if self.auto_save:
                 self.save_variables()
+        self.init_actions()
         self.dataChanged.connect(maybe_save)
 
     @augmenter
@@ -206,6 +207,7 @@ class Variables(BaseDock):
         self.filters = variable_types.keys()
 
     def init_actions(self):
+        self.local_actions = {}
         def copy_h160(x):
             h160 = CBase58Data(x).encode('hex')
             QApplication.clipboard().setText(h160)

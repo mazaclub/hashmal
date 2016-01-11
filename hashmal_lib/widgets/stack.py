@@ -10,7 +10,6 @@ from hashmal_lib.core.script import Script, transform_human
 from hashmal_lib.core.utils import is_hex, format_hex_string
 from hashmal_lib.core.stack import Stack, ScriptExecution
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
-from hashmal_lib.items import *
 
 
 class ScriptExecutionItem(object):

@@ -9,7 +9,7 @@ from PyQt4 import QtCore
 
 from base import BaseDock, Plugin, augmenter
 from item_types import ItemAction, item_types
-from hashmal_lib.core import Transaction, Block
+from hashmal_lib.core import Transaction, Block, BlockHeader
 from hashmal_lib.gui_utils import floated_buttons, HBox
 from hashmal_lib.core.utils import is_hex
 
@@ -207,6 +207,7 @@ class Variables(BaseDock):
         self.filters = variable_types.keys()
 
     def init_actions(self):
+        """Initialize actions to be shown on context menus for variables."""
         self.local_actions = {}
         def copy_h160(x):
             h160 = CBase58Data(x).encode('hex')
@@ -225,6 +226,12 @@ class Variables(BaseDock):
             QApplication.clipboard().setText(blockhash)
         copy_block_hash = ('Copy Block Hash', copy_blockhash)
         self.local_actions['Block'] = [copy_block_hash]
+
+        def copy_header_blockhash(rawheader):
+            headerhash = b2lx(BlockHeader.deserialize(x(rawheader)).GetHash())
+            QApplication.clipboard().setText(headerhash)
+        copy_header_block_hash = ('Copy Block Hash', copy_header_blockhash)
+        self.local_actions['Block Header'] = [copy_header_block_hash]
 
     def create_layout(self):
         form = QFormLayout()

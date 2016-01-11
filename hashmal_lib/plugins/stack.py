@@ -6,9 +6,9 @@ from PyQt4.QtCore import *
 from hashmal_lib.core import Transaction, Script
 from hashmal_lib.core.stack import Stack, ScriptExecution, ExecutionData
 from hashmal_lib.gui_utils import monospace_font, floated_buttons, AmountEdit
-from hashmal_lib.items import *
 from hashmal_lib.widgets import ScriptExecutionWidget
-from base import BaseDock, Plugin, Category
+from base import BaseDock, Plugin, Category, augmenter
+from item_types import ItemAction
 
 def make_plugin():
     return Plugin(StackEval)
@@ -53,14 +53,14 @@ class StackEval(BaseDock):
         super(StackEval, self).__init__(handler)
         self.widget().setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 
+    @augmenter
+    def item_actions(self, *args):
+        return ItemAction(self.tool_name, 'Transaction', 'Set as spending transaction', self.set_spending_item)
+
     def init_data(self):
         self.tx = None
         self.inIdx = 0
         self.execution = ScriptExecution()
-
-    def init_actions(self):
-        set_as_spending = ('Set as spending transaction', self.set_spending_tx)
-        self.advertised_actions[RAW_TX] = [set_as_spending]
 
     def reset(self):
         self.tx_script.clear()
@@ -173,12 +173,10 @@ class StackEval(BaseDock):
         w.setLayout(form)
         return w
 
-    def set_spending_tx(self, txt):
+    def set_spending_item(self, item):
         """Called from other tools to set the spending transaction."""
-        if not txt:
-            return
         self.needsFocus.emit()
-        self.tx_edit.setPlainText(txt)
+        self.tx_edit.setPlainText(item.raw())
 
     def set_tx(self):
         """Set the spending transaction and (en|dis)able the input index box."""

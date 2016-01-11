@@ -130,6 +130,7 @@ class PluginHandler(QWidget):
                 sys.exit(1)
 
         self.update_enabled_plugins()
+        self.enable_required_plugins()
         self.plugins_loaded = True
         for i in self.waiting_augmentations:
             self.do_augment_hook(*i)
@@ -190,39 +191,36 @@ class PluginHandler(QWidget):
             ui.toggleViewAction().setEnabled(ui.is_enabled)
             ui.toggleViewAction().setVisible(ui.is_enabled)
 
-    def add_plugin_actions(self, instance, menu, category, data):
+    def add_plugin_actions(self, instance, menu, data):
         """Add the relevant actions to a context menu.
 
         Args:
             instance: Instance of class that is requesting actions.
             menu (QMenu): Context menu to add actions to.
-            category (str): Category of actions (e.g. RAW_TX, defined in hashmal_lib.items).
             data: Data to call the action(s) with.
 
         """
-        separator_added = False
-        # Add the caller's actions first.
-        ui_actions = instance.get_actions(category, local=True)
-        if ui_actions:
-            for action_name, action_receiver in ui_actions:
-                menu.addAction(action_name, partial(action_receiver, data))
-        # Then add other plugins' actions.
-        for plugin in self.loaded_plugins:
-            ui = plugin.ui
-            if not ui.is_enabled:
-                continue
-            if ui.__class__ == instance.__class__:
-                continue
 
-            ui_actions = ui.get_actions(category)
-            if ui_actions:
-                # Add the separator before plugin actions.
-                if not separator_added:
-                    menu.addSeparator()
-                    separator_added = True
-                ui_menu = menu.addMenu(plugin.name)
-                for action_name, action_receiver in ui_actions:
-                    ui_menu.addAction(action_name, partial(action_receiver, data))
+        items = self.get_plugin('Item Types')
+        item = items.instantiate_item(data)
+        if not item:
+            return
+
+        actions = items.get_item_actions(item.name)
+        if not actions:
+            return
+
+        menu.addSeparator()
+        # Add a menu for relevant plugins in sorted order.
+        for plugin_name in sorted(actions.keys()):
+            if plugin_name == instance.tool_name:
+                continue
+            plugin_menu = menu.addMenu(plugin_name)
+
+            # Add the plugin's actions.
+            plugin_actions = actions[plugin_name]
+            for label, func in plugin_actions:
+                plugin_menu.addAction(label, partial(func, item))
 
     def do_augment_hook(self, class_name, hook_name, data, callback=None):
         """Consult plugins that can augment hook_name."""
@@ -235,12 +233,10 @@ class PluginHandler(QWidget):
         for plugin in self.loaded_plugins:
             if hook_name in plugin.augmenters():
 
-                # Set up augmentations.
-                for i in plugin.augmenters():
-                    augmentation = self.augmentations.get(plugin.name, i)
-                    if augmentation is None:
-                        augmentation = Augmentation(plugin, i, requester=class_name, data=data, callback=callback)
-                        self.augmentations.append(augmentation)
+                augmentation = self.augmentations.get(plugin.name, hook_name)
+                if augmentation is None:
+                    augmentation = Augmentation(plugin, hook_name, requester=class_name, data=data, callback=callback)
+                    self.augmentations.append(augmentation)
 
                 augmentation = self.augmentations.get(plugin.name, hook_name)
                 if augmentation is None:
@@ -326,6 +322,17 @@ class PluginHandler(QWidget):
 
         self.get_plugin('Variables').ui.setVisible(True)
         self.get_plugin('Stack Evaluator').ui.setVisible(True)
+
+    def enable_required_plugins(self):
+        """Ensure that all required plugins are enabled."""
+        enabled_plugins = self.config.get_option('enabled_plugins', default_plugins)
+        needs_save = False
+        for i in required_plugins:
+            if i not in enabled_plugins:
+                enabled_plugins.append(i)
+                needs_save = True
+        if needs_save:
+            self.config.set_option('enabled_plugins', enabled_plugins)
 
     def update_enabled_plugins(self):
         """Enable or disable plugin docks according to config file."""

@@ -9,8 +9,8 @@ from hashmal_lib.core import Transaction, chainparams
 from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.widgets.script import ScriptEditor
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font, OutputAmountEdit
-from hashmal_lib.items import *
-from base import BaseDock, Plugin, Category
+from base import BaseDock, Plugin, Category, augmenter
+from item_types import ItemAction
 
 def make_plugin():
     return Plugin(TxBuilder)
@@ -27,11 +27,12 @@ class TxBuilder(BaseDock):
         self.raw_tx.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.raw_tx.customContextMenuRequested.connect(self.context_menu)
 
+    @augmenter
+    def item_actions(self, *args):
+        return [ItemAction(self.tool_name, 'Transaction', 'Edit', self.deserialize_item)]
+
     def init_data(self):
         self.tx = None
-
-    def init_actions(self):
-        self.advertised_actions[RAW_TX] = [('Edit', self.deserialize_raw)]
 
     def create_layout(self):
         vbox = QVBoxLayout()
@@ -61,7 +62,7 @@ class TxBuilder(BaseDock):
 
         txt = str(self.raw_tx.toPlainText())
         if txt:
-            self.handler.add_plugin_actions(self, menu, RAW_TX, txt)
+            self.handler.add_plugin_actions(self, menu, txt)
 
         menu.exec_(self.raw_tx.viewport().mapToGlobal(position))
 
@@ -191,6 +192,9 @@ class TxBuilder(BaseDock):
         w = QWidget()
         w.setLayout(self.tx_fields_layout)
         return w
+
+    def deserialize_item(self, item):
+        self.deserialize_raw(item.raw())
 
     def deserialize_raw(self, rawtx):
         """Update editor widgets with rawtx's data."""

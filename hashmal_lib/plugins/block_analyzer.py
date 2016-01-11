@@ -2,10 +2,10 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import bitcoin
 from bitcoin.core import CBlockHeader, CBlock, x, b2x, lx, b2lx
-from base import BaseDock, Plugin, Category
+from base import BaseDock, Plugin, Category, augmenter
+from item_types import ItemAction
 from hashmal_lib.gui_utils import Separator
 from hashmal_lib.widgets.block import BlockWidget
-from hashmal_lib.items import *
 from hashmal_lib.core import BlockHeader, Block
 
 def make_plugin():
@@ -42,9 +42,12 @@ class BlockAnalyzer(BaseDock):
         self.header = None
         self.block = None
 
-    def init_actions(self):
-        deserialize = ('Deserialize', self.deserialize_raw)
-        self.advertised_actions[RAW_BLOCK] = self.advertised_actions[RAW_BLOCK_HEADER] = [deserialize]
+    @augmenter
+    def item_actions(self, *args):
+        return [
+            ItemAction(self.tool_name, 'Block', 'Deserialize', self.deserialize_item),
+            ItemAction(self.tool_name, 'Block Header', 'Deserialize', self.deserialize_item)
+        ]
 
     def create_layout(self):
         self.raw_block_invalid = QLabel('Cannot parse block or block header.')
@@ -82,10 +85,9 @@ class BlockAnalyzer(BaseDock):
         # Clears the widget if block_header is None.
         self.block_widget.set_block(self.header, self.block)
 
-    def deserialize_raw(self, txt):
-        """This is for context menus."""
+    def deserialize_item(self, item):
         self.needsFocus.emit()
-        self.raw_block_edit.setPlainText(txt)
+        self.raw_block_edit.setPlainText(item.raw())
         self.check_raw_block()
 
     def txs_context_menu(self, position):
@@ -95,7 +97,7 @@ class BlockAnalyzer(BaseDock):
             r = selected.row()
             tx = self.block.vtx[r]
             raw_tx = b2x(tx.serialize())
-            self.handler.add_plugin_actions(self, menu, RAW_TX, raw_tx)
+            self.handler.add_plugin_actions(self, menu, raw_tx)
 
         menu.exec_(self.block_widget.txs_widget.view.viewport().mapToGlobal(position))
 

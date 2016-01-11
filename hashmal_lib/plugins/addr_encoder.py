@@ -7,17 +7,50 @@ from PyQt4 import QtCore
 
 from base import BaseDock, Plugin, Category, augmenter
 from hashmal_lib.gui_utils import monospace_font, Separator
-from variables import is_hex, VariableType
+from item_types import Item, ItemAction
 
 def make_plugin():
     return Plugin(AddrEncoder)
 
-def is_address(x):
-    try:
-        data = CBase58Data(x)
-    except Exception:
-        return False
-    return len(x) >= 26 and len(x) <= 35
+class Hash160Item(Item):
+    name = 'Hash160'
+    @classmethod
+    def coerce_item(cls, data):
+        def ensure_hex(v):
+            if v.startswith('0x'):
+                v = v[2:]
+            if len(v.decode('hex')) != 20:
+                raise Exception('Value is not a hash160')
+            return v
+
+        try:
+            value = ensure_hex(data)
+            if value:
+                return cls(value)
+        except Exception:
+            return None
+
+    def raw(self):
+        return self.value
+
+class AddressItem(Item):
+    name = 'Address'
+    @classmethod
+    def coerce_item(cls, data):
+        def coerce_address(v):
+            addr_data = CBase58Data(v)
+            if len(v) >= 26 and len(v) <= 35:
+                return addr_data
+
+        try:
+            value = coerce_address(data)
+            if value:
+                return cls(value)
+        except Exception:
+            return None
+
+    def raw(self):
+        return b2x(self.value.to_bytes())
 
 def decode_address(txt):
     """Decode txt into a RIPEMD-160 hash.
@@ -50,21 +83,19 @@ class AddrEncoder(BaseDock):
         super(AddrEncoder, self).__init__(handler)
         self.widget().setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 
-    def init_actions(self):
-        encode_hash160 = ('Encode Address', self.encode_hash160)
-        self.advertised_actions['hash160'] = [encode_hash160]
-
     def init_data(self):
         pass
 
     @augmenter
-    def variable_types(self, data):
-        if not data.get('Address'):
-            address = VariableType('Address', 'address', is_address)
-            data[address.name] = address
-        if not data.get('Hash160'):
-            hash160 = VariableType('Hash160', 'hash160', lambda x: is_hex(x) and (len(x) == 42 if x.startswith('0x') else len(x) == 40))
-            data[hash160.name] = hash160
+    def item_types(self, arg):
+        return [AddressItem, Hash160Item]
+
+    @augmenter
+    def item_actions(self, *args):
+        return [
+            ItemAction(self.tool_name, 'Address', 'Decode', self.decode_item),
+            ItemAction(self.tool_name, 'Hash160', 'Encode', self.encode_item)
+        ]
 
     def create_layout(self):
         form = QFormLayout()
@@ -118,6 +149,11 @@ class AddrEncoder(BaseDock):
         self.hash_line.setText(b2x(addr_bytes))
         self.addr_version.setValue(version)
 
+    def decode_item(self, item):
+        self.needsFocus.emit()
+        self.address_line.setText(str(item))
+        self.decode_address()
+
     def encode_address(self):
         hash160 = str(self.hash_line.text())
         if len(hash160) != 40:
@@ -141,3 +177,6 @@ class AddrEncoder(BaseDock):
         self.needsFocus.emit()
         self.hash_line.setText(hash160)
         self.encode_address()
+
+    def encode_item(self, item):
+        self.encode_hash160(item.raw())

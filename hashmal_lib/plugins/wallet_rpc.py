@@ -9,25 +9,12 @@ from PyQt4.QtCore import *
 import hashmal_lib
 from hashmal_lib.plugins import BaseDock, Plugin, Category
 from hashmal_lib.gui_utils import floated_buttons
-from hashmal_lib.items import *
 from hashmal_lib.downloader import Downloader
 
-RPCMethod = namedtuple('RPCMethod', ('method', 'get_result_type'))
-"""RPC method.
-
-An RPCMethod instance is not necessary for a given RPC method to be used.
-This class is just for special cases.
-
-get_result_type is a function that takes the parameters used in a call, and returns
-the kind of data the result is. This way, context menus can have relevant actions (e.g. Deserialize transaction).
-"""
-
 known_methods = [
-            RPCMethod('getblock', lambda params: RAW_BLOCK if len(params) > 1 and params[1] == False else None), # non-verbose
-            RPCMethod('getrawtransaction', lambda params: RAW_TX if len(params) == 1 or (len(params) > 1 and params[1] == 0) else None) # non-verbose
+    'getblock',
+    'getrawtransaction'
 ]
-
-known_methods_dict = dict((i.method, i) for i in known_methods)
 
 def make_plugin():
     return Plugin(WalletRPC)
@@ -106,7 +93,7 @@ class WalletRPC(BaseDock):
     is_large = True
     def __init__(self, *args):
         super(WalletRPC, self).__init__(*args)
-        self.augment('rpc_methods', {'known_rpc_methods': known_methods}, callback=self.on_methods_augmented)
+        self.augment('rpc_methods', None, callback=self.on_methods_augmented)
 
     def init_data(self):
         self.profile = RPCProfile(self.options())
@@ -156,7 +143,7 @@ class WalletRPC(BaseDock):
 
         self.method_edit = QLineEdit()
         self.method_edit.setWhatsThis('Enter the RPC method you want to use here. Some methods have auto-completion support, but any method that a node accepts can be entered here.')
-        method_completer = QCompleter([i.method for i in known_methods])
+        method_completer = QCompleter(known_methods)
         method_completer.setCompletionMode(QCompleter.InlineCompletion)
         self.method_edit.setCompleter(method_completer)
 
@@ -218,7 +205,6 @@ class WalletRPC(BaseDock):
     def call_rpc(self):
         """Call do_rpc() with text from widgets."""
         method_name = str(self.method_edit.text())
-        method = known_methods_dict.get(method_name)
 
         params = shlex.split(str(self.params_edit.text()))
         # Parse JSON strings.
@@ -268,12 +254,6 @@ class WalletRPC(BaseDock):
             return result, error
 
     def set_result(self, method_name, result, error):
-        method = known_methods_dict.get(method_name)
-        self.result_edit.setProperty('data_type', None)
-
-        if not error and method:
-            self.result_edit.setProperty('data_type', method.get_result_type(params))
-
         self.result_edit.setPlainText(error if error else result)
         self.result_edit.setProperty('hasError', True if error else False)
         self.style().polish(self.result_edit)
@@ -281,10 +261,10 @@ class WalletRPC(BaseDock):
     def context_menu(self, position):
         menu = self.result_edit.createStandardContextMenu()
 
-        data_type = str(self.result_edit.property('data_type').toString())
-        if data_type:
+        # Add plugin actions if there's no error.
+        if not self.result_edit.property('hasError').toBool():
             txt = str(self.result_edit.toPlainText())
-            self.handler.add_plugin_actions(self, menu, data_type, txt)
+            self.handler.add_plugin_actions(self, menu, txt)
 
         menu.exec_(self.result_edit.mapToGlobal(position))
 
@@ -300,7 +280,11 @@ class WalletRPC(BaseDock):
         self.status_message('Saved RPC options.')
 
     def on_methods_augmented(self, data):
+        if type(data) is type(''):
+            known_methods.append(data)
+        else:
+            known_methods.extend(data)
         self.method_edit.setCompleter()
-        completer = QCompleter([i.method for i in data])
+        completer = QCompleter(known_methods)
         completer.setCompletionMode(QCompleter.InlineCompletion)
         self.method_edit.setCompleter(completer)

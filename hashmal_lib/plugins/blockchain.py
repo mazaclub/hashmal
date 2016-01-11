@@ -7,7 +7,6 @@ from bitcoin.core import x, lx, b2x
 
 from hashmal_lib.gui_utils import floated_buttons
 from hashmal_lib.core import BlockHeader
-from hashmal_lib.items import *
 from hashmal_lib.downloader import Downloader
 from base import BaseDock, Plugin, Category
 
@@ -236,11 +235,8 @@ class Blockchain(BaseDock):
         menu = self.raw_edit.createStandardContextMenu(position)
 
         txt = str(self.raw_edit.toPlainText())
-        data_type = known_data_types[str(self.data_group.checkedButton().text())]
-        categories = {'raw_tx': RAW_TX, 'raw_header': RAW_BLOCK_HEADER}
-        category = categories.get(data_type, '')
-        if txt and category:
-            self.handler.add_plugin_actions(self, menu, category, txt)
+        if txt:
+            self.handler.add_plugin_actions(self, menu, txt)
 
         menu.exec_(self.raw_edit.viewport().mapToGlobal(position))
 

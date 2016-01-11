@@ -6,6 +6,7 @@ parts of Hashmal to use consistent metadata.
 from collections import namedtuple, defaultdict
 
 from bitcoin.core import x, lx, b2x, b2lx
+from PyQt4.QtCore import pyqtSignal, QObject
 
 from hashmal_lib.core import Transaction, BlockHeader, Block
 from base import Plugin, BasePluginUI
@@ -18,17 +19,15 @@ class Item(object):
     """A value and metadata."""
     name = ''
     @classmethod
-    def is_item(cls, data):
-        """Returns whether data is of this item type."""
-        pass
-
-    @classmethod
     def coerce_item(cls, data):
         """Attempt to coerce data into an item of this type."""
         return None
 
     def __init__(self, value):
         self.value = value
+
+    def __str__(self):
+        return str(self.value)
 
     def raw(self):
         """Returns the raw representation of this item, if applicable."""
@@ -158,6 +157,10 @@ def make_plugin():
     p.get_item_actions = get_actions
     return p
 
+class ItemTypesObject(QObject):
+    """This class exists so that a signal can be emitted when item_types changes."""
+    itemTypesChanged = pyqtSignal(list, name='itemTypesChanged')
+
 class ItemsPlugin(BasePluginUI):
     """For augmentation purposes, we use a plugin to help with item types."""
     tool_name = 'Item Types'
@@ -165,6 +168,8 @@ class ItemsPlugin(BasePluginUI):
 
     def __init__(self, *args):
         super(ItemsPlugin, self).__init__(*args)
+        self.item_types_object = ItemTypesObject()
+        self.itemTypesChanged = self.item_types_object.itemTypesChanged
         self.augment('item_types', None, callback=self.on_item_types_augmented)
         self.augment('item_actions', None, callback=self.on_item_actions_augmented)
 
@@ -177,6 +182,8 @@ class ItemsPlugin(BasePluginUI):
             # data is not an iterable.
             if issubclass(data, Item):
                 item_types.append(data)
+
+        self.itemTypesChanged.emit(item_types)
 
     def on_item_actions_augmented(self, data):
         if isinstance(data, ItemAction):

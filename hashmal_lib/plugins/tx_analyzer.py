@@ -4,12 +4,12 @@ from bitcoin.core import b2lx
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from base import BaseDock, Plugin, Category
+from base import BaseDock, Plugin, Category, augmenter
+from item_types import ItemAction
 from hashmal_lib.gui_utils import monospace_font, floated_buttons, Separator
 from hashmal_lib.widgets.tx import TxWidget
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction
-from hashmal_lib.items import *
 
 def make_plugin():
     return Plugin(TxAnalyzer)
@@ -63,13 +63,16 @@ class TxAnalyzer(BaseDock):
         super(TxAnalyzer, self).__init__(handler)
         self.raw_tx_edit.textChanged.emit()
 
+    @augmenter
+    def item_actions(self, arg):
+        actions = [
+            ItemAction(self.tool_name, 'Transaction', 'Deserialize', self.deserialize_item),
+            ItemAction(self.tool_name, 'Transaction', 'Verify inputs', self.verify_item_inputs)
+        ]
+        return actions
+
     def init_data(self):
         self.tx = None
-
-    def init_actions(self):
-        deserialize = ('Deserialize', self.deserialize_raw)
-        verify = ('Verify inputs', self.do_verify_inputs)
-        self.advertised_actions[RAW_TX] = [deserialize, verify]
 
     def create_layout(self):
         form = QFormLayout()
@@ -154,7 +157,7 @@ class TxAnalyzer(BaseDock):
         menu = QMenu()
         if self.tx:
             txt = str(self.raw_tx_edit.toPlainText())
-            self.handler.add_plugin_actions(self, menu, RAW_TX, txt)
+            self.handler.add_plugin_actions(self, menu, txt)
 
         menu.exec_(self.mapToGlobal(position))
 
@@ -212,6 +215,12 @@ class TxAnalyzer(BaseDock):
         """Deserialize a raw transaction."""
         self.needsFocus.emit()
         self.raw_tx_edit.setPlainText(txt)
+        self.deserialize()
+
+    def deserialize_item(self, item):
+        """Deserialize a Transaction item."""
+        self.needsFocus.emit()
+        self.raw_tx_edit.setPlainText(item.raw())
         self.deserialize()
 
     def deserialize(self):
@@ -283,6 +292,9 @@ class TxAnalyzer(BaseDock):
     def verify_inputs(self):
         txt = str(self.raw_tx_edit.toPlainText())
         self.do_verify_inputs(txt)
+
+    def verify_item_inputs(self, item):
+        self.do_verify_inputs(item.raw())
 
     def refresh_data(self):
         if self.tx:

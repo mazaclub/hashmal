@@ -1,4 +1,5 @@
 from collections import OrderedDict, namedtuple
+from functools import partial
 
 from bitcoin.core import x, lx, b2x, b2lx
 from bitcoin.base58 import CBase58Data
@@ -6,45 +7,28 @@ from bitcoin.base58 import CBase58Data
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from base import BaseDock, Plugin
+from base import BaseDock, Plugin, augmenter
+from item_types import ItemAction, item_types
 from hashmal_lib.core import Transaction, Block
 from hashmal_lib.gui_utils import floated_buttons, HBox
-from hashmal_lib.items import *
 from hashmal_lib.core.utils import is_hex
 
 def make_plugin():
     return Plugin(Variables)
 
-VariableType = namedtuple('VariableType', ('name', 'category', 'classify'))
+VariableType = namedtuple('VariableType', ('name', 'classify'))
 """Variable type.
 
 Attributes:
     name (str): Human-readable name.
-    category (str): Category; for plugin context menus. (e.g. hashmal_lib.items.RAW_TX)
     classify (function): Function returning whether a value has this variable type.
 """
 
-def is_raw_tx(x):
-    try:
-        t = Transaction.deserialize(x.decode('hex'))
-        return True
-    except Exception:
-        return False
-
-def is_raw_block(x):
-    try:
-        b = Block.deserialize(x.decode('hex'))
-        return True
-    except Exception:
-        return False
-
 _var_types = [
-    VariableType('None', None, lambda x: False),
-    VariableType('Hex', None, is_hex),
-    VariableType('Text', None, lambda x: x.startswith('"') and x.endswith('"')),
-    VariableType('64 Hex Digits', None, lambda x: is_hex(x) and (len(x) == 66 if x.startswith('0x') else len(x) == 64)),
-    VariableType('Raw Transaction', RAW_TX, is_raw_tx),
-    VariableType('Raw Block', RAW_BLOCK, is_raw_block),
+    VariableType('None', lambda x: False),
+    VariableType('Hex', is_hex),
+    VariableType('Text', lambda x: x.startswith('"') and x.endswith('"')),
+    VariableType('64 Hex Digits', lambda x: is_hex(x) and (len(x) == 66 if x.startswith('0x') else len(x) == 64)),
 ]
 
 variable_types = OrderedDict()
@@ -204,7 +188,17 @@ class Variables(BaseDock):
             if self.auto_save:
                 self.save_variables()
         self.dataChanged.connect(maybe_save)
-        self.augment('variable_types', variable_types, callback=self.on_var_types_augmented)
+
+    @augmenter
+    def item_actions(self, args):
+        # Since we know that the Item Types has been instantiated now, add variable types for known item_types
+        # and connect to itemTypesChanged.
+        for i in sorted(item_types, key = lambda item_type: item_type.name):
+            var_type = VariableType(i.name, lambda x, item=i: item.coerce_item(x) is not None)
+            variable_types.update({var_type.name: var_type})
+        self.on_var_types_changed()
+        self.handler.get_plugin('Item Types').ui.itemTypesChanged.connect(self.on_item_types_changed)
+        return ItemAction(self.tool_name, 'Transaction', 'Store raw tx as...', self.store_tx_as_variable)
 
     def init_data(self):
         self.data = OrderedDict(self.option('data', {}))
@@ -212,26 +206,23 @@ class Variables(BaseDock):
         self.filters = variable_types.keys()
 
     def init_actions(self):
-        store_as = ('Store raw tx as...', self.store_as_variable)
-        self.advertised_actions[RAW_TX] = [store_as]
-
         def copy_h160(x):
             h160 = CBase58Data(x).encode('hex')
             QApplication.clipboard().setText(h160)
         copy_hash160 = ('Copy RIPEMD-160 Hash', copy_h160)
-        self.local_actions['address'] = [copy_hash160]
+        self.local_actions['Address'] = [copy_hash160]
 
         def copy_txid(rawtx):
             txid = b2lx(Transaction.deserialize(x(rawtx)).GetHash())
             QApplication.clipboard().setText(txid)
         copy_tx_id = ('Copy Transaction ID', copy_txid)
-        self.local_actions[RAW_TX] = [copy_tx_id]
+        self.local_actions['Transaction'] = [copy_tx_id]
 
         def copy_blockhash(rawblock):
             blockhash = b2lx(Block.deserialize(x(rawblock)).GetHash())
             QApplication.clipboard().setText(blockhash)
         copy_block_hash = ('Copy Block Hash', copy_blockhash)
-        self.local_actions[RAW_BLOCK] = [copy_block_hash]
+        self.local_actions['Block'] = [copy_block_hash]
 
     def create_layout(self):
         form = QFormLayout()
@@ -318,7 +309,7 @@ class Variables(BaseDock):
     def is_valid_key(self, key):
         return isinstance(key, str) and key and key.isalnum()
 
-    def store_as_variable(self, value):
+    def store_tx_as_variable(self, item):
         """Prompt to store a value."""
         key = 'rawtx'
         if self.get_key(key):
@@ -327,7 +318,7 @@ class Variables(BaseDock):
                 key = ''.join(['rawtx', str(offset)])
                 offset += 1
         self.new_var_key.setText(key)
-        self.new_var_value.setText(value)
+        self.new_var_value.setText(item.raw())
         self.needsFocus.emit()
 
     def get_key(self, key):
@@ -397,7 +388,11 @@ class Variables(BaseDock):
         # Add context menu actions for all applicable variable types.
         data_categories = map(lambda x: variable_types[str(x.toString())], self.model.data(idx, role=QtCore.Qt.UserRole).toList())
         for i in data_categories:
-            self.handler.add_plugin_actions(self, menu, i.category, data_value)
+            local_actions = self.local_actions.get(i.name)
+            if local_actions:
+                for label, func in local_actions:
+                    menu.addAction(label, partial(func, data_value))
+        self.handler.add_plugin_actions(self, menu, data_value)
 
         menu.exec_(self.view.viewport().mapToGlobal(position))
 
@@ -415,11 +410,22 @@ class Variables(BaseDock):
         self.new_var_key.clear()
         self.new_var_value.clear()
 
-    def on_var_types_augmented(self, arg):
+    def on_var_types_changed(self):
         self.filters = variable_types.keys()
         self.filter_category.clear()
         self.filter_category.addItems(self.filters)
         self.model.invalidate_cache()
+
+    def on_item_types_changed(self, new_item_types):
+        changed = False
+        for i in new_item_types:
+            if i.name in variable_types.keys():
+                continue
+            changed = True
+            var_type = VariableType(i.name, lambda x, item=i: item.coerce_item(x) is not None)
+            variable_types.update({var_type.name: var_type})
+        if changed:
+            self.on_var_types_changed()
 
     def on_option_changed(self, key):
         if key == 'chainparams':

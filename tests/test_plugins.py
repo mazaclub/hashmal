@@ -1,4 +1,5 @@
 import unittest
+from collections import OrderedDict
 
 from bitcoin.core import x, lx, b2x, b2lx
 
@@ -6,7 +7,7 @@ from hashmal_lib.plugins.addr_encoder import encode_address, decode_address
 from hashmal_lib.plugins.block_analyzer import deserialize_block_or_header
 from hashmal_lib.plugins import script_gen
 from hashmal_lib.plugins.variables import classify_data
-from hashmal_lib.core import chainparams
+from hashmal_lib.core import chainparams, Script
 
 class VariablesTest(unittest.TestCase):
     def setUp(self):
@@ -73,12 +74,15 @@ class AddrEncoderTest(unittest.TestCase):
         self.assertEqual('1111111111111111111114oLvT2', str(addr))
 
 class ScriptGenTest(unittest.TestCase):
-    def test_create_p2pkh_script(self):
-        template = None
+    def setUp(self):
+        super(ScriptGenTest, self).setUp()
+        templates = OrderedDict()
         for i in script_gen.known_templates:
-            if i.name == 'Pay-To-Public-Key-Hash Output':
-                template = i
-                break
+            templates[i.name] = i
+        self.templates = templates
+
+    def test_create_p2pkh_script(self):
+        template = self.templates['Pay-To-Public-Key-Hash Output']
 
         templates_vars = [
                 {'recipient': '1111111111111111111114oLvT2'},
@@ -91,12 +95,19 @@ class ScriptGenTest(unittest.TestCase):
             self.assertEqual('OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG', script_out)
 
     def test_op_return_script(self):
-        template = None
-        for i in script_gen.known_templates:
-            if i.name == 'Null Output':
-                template = i
-                break
+        template = self.templates['Null Output']
         template_vars = {'text': 'testing'}
 
         script_out = script_gen.template_to_script(template, template_vars)
         self.assertEqual('OP_RETURN 0x74657374696e67', script_out)
+
+    def test_is_template_script(self):
+        template = self.templates['Pay-To-Public-Key-Hash Output']
+        scr = Script.from_human('OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG')
+        self.assertTrue(script_gen.is_template_script(scr, template))
+
+        scr = Script.from_human('OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUAL OP_CHECKSIG')
+        self.assertFalse(script_gen.is_template_script(scr, template))
+
+        scr = Script.from_human('OP_DUP OP_HASH160 0x00000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG')
+        self.assertFalse(script_gen.is_template_script(scr, template))

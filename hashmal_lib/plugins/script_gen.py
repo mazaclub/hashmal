@@ -7,7 +7,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from base import BaseDock, Plugin, Category
-from hashmal_lib.core.utils import is_hex, push_script
+from hashmal_lib.core.utils import is_hex, push_script, format_hex_string
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 
 def make_plugin():
@@ -50,6 +50,39 @@ def template_to_script(template, variables):
         old = ''.join(['<', k, '>'])
         text = text.replace(old, v)
     return text
+
+def is_valid_variable_value(value, variable_type):
+    """Returns whether value is valid."""
+    if variable_type == 'address':
+        v = format_hex_string(value, with_prefix=False)
+        if len(v) == 40:
+            return True
+    return False
+
+def is_template_script(script, template):
+    """Returns whether script complies with template."""
+    iterator = script.human_iter()
+    text = template.text.split()
+    index = 0
+    while 1:
+        try:
+            s = next(iterator)
+            txt = text[index]
+            # Check variable value.
+            if txt.startswith('<') and txt.endswith('>'):
+                var_type = template.variables[txt[1:-1]]
+                if not is_valid_variable_value(s, var_type):
+                    return False
+            elif s != txt:
+                return False
+            index += 1
+        except StopIteration:
+            break
+        except Exception:
+            return False
+            break
+
+    return True
 
 class TemplateWidget(QWidget):
     def __init__(self, template):

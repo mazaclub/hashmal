@@ -199,7 +199,11 @@ class Variables(BaseDock):
             variable_types.update({var_type.name: var_type})
         self.on_var_types_changed()
         self.handler.get_plugin('Item Types').ui.itemTypesChanged.connect(self.on_item_types_changed)
-        return ItemAction(self.tool_name, 'Transaction', 'Store raw tx as...', self.store_tx_as_variable)
+        return (
+            ItemAction(self.tool_name, 'Transaction', 'Store raw tx as...', self.store_tx_as_variable),
+            ItemAction(self.tool_name, 'Block', 'Store raw block as...', self.store_block_as_variable),
+            ItemAction(self.tool_name, 'Block Header', 'Store raw header as...', self.store_block_header_as_variable),
+        )
 
     def init_data(self):
         self.data = OrderedDict(self.option('data', {}))
@@ -291,16 +295,37 @@ class Variables(BaseDock):
     def is_valid_key(self, key):
         return isinstance(key, str) and key and key.isalnum()
 
-    def store_tx_as_variable(self, item):
-        """Prompt to store a value."""
-        key = 'rawtx'
+    def fill_fields(self, key, value):
+        """Fill the input widgets with key and value."""
+        self.new_var_key.setText(key)
+        self.new_var_value.setText(value)
+
+    def _make_unique_key(self, key):
+        """Create a unique key with a given prefix."""
         if self.get_key(key):
             offset = 1
+            original = key
             while self.get_key(key):
-                key = ''.join(['rawtx', str(offset)])
+                key = ''.join([original, str(offset)])
                 offset += 1
-        self.new_var_key.setText(key)
-        self.new_var_value.setText(item.raw())
+        return key
+
+    def store_tx_as_variable(self, item):
+        """Prompt to store a tx as a value."""
+        key = self._make_unique_key('rawtx')
+        self.fill_fields(key, item.raw())
+        self.needsFocus.emit()
+
+    def store_block_as_variable(self, item):
+        """Prompt to store a block as a value."""
+        key = self._make_unique_key('rawblock')
+        self.fill_fields(key, item.raw())
+        self.needsFocus.emit()
+
+    def store_block_header_as_variable(self, item):
+        """Prompt to store a block header as a value."""
+        key = self._make_unique_key('rawheader')
+        self.fill_fields(key, item.raw())
         self.needsFocus.emit()
 
     def get_key(self, key):

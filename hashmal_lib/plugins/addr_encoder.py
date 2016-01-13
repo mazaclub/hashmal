@@ -49,6 +49,12 @@ class AddressItem(Item):
         except Exception:
             return None
 
+    def __init__(self, *args):
+        super(AddressItem, self).__init__(*args)
+        def copy_hash160():
+            QApplication.clipboard().setText(self.value.encode('hex'))
+        self.actions.append(('Copy RIPEMD-160 Hash', copy_hash160))
+
     def raw(self):
         return b2x(self.value.to_bytes())
 

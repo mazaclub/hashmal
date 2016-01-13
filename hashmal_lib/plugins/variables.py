@@ -187,7 +187,6 @@ class Variables(BaseDock):
         def maybe_save():
             if self.auto_save:
                 self.save_variables()
-        self.init_actions()
         self.dataChanged.connect(maybe_save)
 
     @augmenter
@@ -205,33 +204,6 @@ class Variables(BaseDock):
         self.data = OrderedDict(self.option('data', {}))
         self.auto_save = self.option('auto_save', False)
         self.filters = variable_types.keys()
-
-    def init_actions(self):
-        """Initialize actions to be shown on context menus for variables."""
-        self.local_actions = {}
-        def copy_h160(x):
-            h160 = CBase58Data(x).encode('hex')
-            QApplication.clipboard().setText(h160)
-        copy_hash160 = ('Copy RIPEMD-160 Hash', copy_h160)
-        self.local_actions['Address'] = [copy_hash160]
-
-        def copy_txid(rawtx):
-            txid = b2lx(Transaction.deserialize(x(rawtx)).GetHash())
-            QApplication.clipboard().setText(txid)
-        copy_tx_id = ('Copy Transaction ID', copy_txid)
-        self.local_actions['Transaction'] = [copy_tx_id]
-
-        def copy_blockhash(rawblock):
-            blockhash = b2lx(Block.deserialize(x(rawblock)).GetHash())
-            QApplication.clipboard().setText(blockhash)
-        copy_block_hash = ('Copy Block Hash', copy_blockhash)
-        self.local_actions['Block'] = [copy_block_hash]
-
-        def copy_header_blockhash(rawheader):
-            headerhash = b2lx(BlockHeader.deserialize(x(rawheader)).GetHash())
-            QApplication.clipboard().setText(headerhash)
-        copy_header_block_hash = ('Copy Block Hash', copy_header_blockhash)
-        self.local_actions['Block Header'] = [copy_header_block_hash]
 
     def create_layout(self):
         form = QFormLayout()
@@ -394,13 +366,6 @@ class Variables(BaseDock):
 
         idx = self.proxy_model.mapToSource(self.view.currentIndex())
         data_value = str(self.model.valueForIndex(idx).toString())
-        # Add context menu actions for all applicable variable types.
-        data_categories = map(lambda x: variable_types[str(x.toString())], self.model.data(idx, role=QtCore.Qt.UserRole).toList())
-        for i in data_categories:
-            local_actions = self.local_actions.get(i.name)
-            if local_actions:
-                for label, func in local_actions:
-                    menu.addAction(label, partial(func, data_value))
         self.handler.add_plugin_actions(self, menu, data_value)
 
         menu.exec_(self.view.viewport().mapToGlobal(position))

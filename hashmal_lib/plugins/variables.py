@@ -188,6 +188,7 @@ class Variables(BaseDock):
             if self.auto_save:
                 self.save_variables()
         self.dataChanged.connect(maybe_save)
+        self.dataChanged.connect(self.hide_unused_category_names)
 
     @augmenter
     def item_actions(self, args):
@@ -384,11 +385,21 @@ class Variables(BaseDock):
         self.new_var_key.clear()
         self.new_var_value.clear()
 
+    def hide_unused_category_names(self):
+        filters = list(self.filters)
+        used_categories = set()
+        for i in range(self.model.rowCount()):
+            categories = [str(x.toString()) for x in self.model.dataAt(i, 1, QtCore.Qt.UserRole).toList()]
+            used_categories.update(categories)
+        filters = filter(lambda x: x in used_categories, filters)
+        filters.insert(0, 'None')
+        self.filter_category.clear()
+        self.filter_category.addItems(filters)
+
     def on_var_types_changed(self):
         self.filters = variable_types.keys()
-        self.filter_category.clear()
-        self.filter_category.addItems(self.filters)
         self.model.invalidate_cache()
+        self.hide_unused_category_names()
 
     def on_item_types_changed(self, new_item_types):
         changed = False

@@ -328,11 +328,18 @@ class OutputsTree(QWidget):
         data = self.model.data(idx, RawRole)
         QApplication.clipboard().setText(data.toString())
 
+    def copy_amount(self):
+        """Copy the output amount to clipboard."""
+        idx = self.view.selectedIndexes()[0]
+        data = self.model.data(idx)
+        QApplication.clipboard().setText(data.toString())
+
     def customContextMenu(self, pos):
         if len(self.view.selectedIndexes()) == 0:
             return
         menu = QMenu()
         copy = menu.addMenu('Copy')
+        copy.addAction('Amount', self.copy_amount)
         copy.addAction('Output Script', self.copy_script)
         copy.addAction('Output Script (Hex)', self.copy_script_hex)
 

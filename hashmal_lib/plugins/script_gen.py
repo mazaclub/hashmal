@@ -6,7 +6,9 @@ from bitcoin.base58 import CBase58Data
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from base import BaseDock, Plugin, Category
+from base import BaseDock, Plugin, Category, augmenter
+from item_types import Item
+from hashmal_lib.core import Script
 from hashmal_lib.core.utils import is_hex, push_script, format_hex_string
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 
@@ -84,6 +86,47 @@ def is_template_script(script, template):
 
     return True
 
+class ScriptTemplateItem(Item):
+    name = 'Script Matching Template'
+    @classmethod
+    def coerce_item(cls, data):
+        if not isinstance(data, Script):
+            try:
+                data = Script.from_human(data)
+            except Exception:
+                return None
+        for i in known_templates:
+            if is_template_script(data, i):
+                print('matched template %s' % i.name)
+                return cls(data, i)
+
+    def __init__(self, value, template=''):
+        super(ScriptTemplateItem, self).__init__(value)
+        self.template = template
+        # Populate variables dict.
+        variables = {}
+        iterator = self.value.human_iter()
+        text = self.template.text.split()
+        index = 0
+        while 1:
+            try:
+                s = next(iterator)
+                txt = text[index]
+                if txt.startswith('<') and txt.endswith('>'):
+                    variables[txt[1:-1]] = s
+                index += 1
+            except Exception:
+                break
+        self.variables = variables
+
+        def copy_recipient():
+            QApplication.clipboard().setText(self.recipient())
+        if self.recipient():
+            self.actions.append(('Copy Recipient', copy_recipient))
+
+    def recipient(self):
+        return self.variables.get('recipient')
+
 class TemplateWidget(QWidget):
     def __init__(self, template):
         super(TemplateWidget, self).__init__()
@@ -152,6 +195,10 @@ class ScriptGenerator(BaseDock):
         self.template_combo.currentIndexChanged.emit(0)
         self.widget().setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 
+    @augmenter
+    def item_types(self, *args):
+        return ScriptTemplateItem
+
     def create_layout(self):
         # ComboBox for selecting which template to use.
         self.template_combo = QComboBox()
@@ -169,6 +216,8 @@ class ScriptGenerator(BaseDock):
         self.script_output.setWhatsThis('The generated script is displayed here in human-readable format.')
         self.script_output.setReadOnly(True)
         self.script_output.setFont(monospace_font)
+        self.script_output.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.script_output.customContextMenuRequested.connect(self.context_menu)
 
         self.generate_button = QPushButton('Generate')
         self.generate_button.clicked.connect(self.generate)
@@ -185,6 +234,12 @@ class ScriptGenerator(BaseDock):
         vbox.addLayout(btn_hbox)
 
         return vbox
+
+    def context_menu(self, pos):
+        menu = self.script_output.createStandardContextMenu()
+        self.handler.add_plugin_actions(self, menu, str(self.script_output.toPlainText()))
+
+        menu.exec_(self.script_output.viewport().mapToGlobal(pos))
 
     def change_template(self, index):
         name = str(self.template_combo.currentText())

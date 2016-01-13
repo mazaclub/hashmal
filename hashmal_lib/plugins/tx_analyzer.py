@@ -159,7 +159,7 @@ class TxAnalyzer(BaseDock):
             txt = str(self.raw_tx_edit.toPlainText())
             self.handler.add_plugin_actions(self, menu, txt)
 
-        menu.exec_(self.mapToGlobal(position))
+        menu.exec_(self.raw_tx_edit.viewport().mapToGlobal(position))
 
     def inputs_context_menu(self, position):
         inputs = self.tx_widget.inputs_tree

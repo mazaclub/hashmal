@@ -7,6 +7,7 @@ from collections import namedtuple, defaultdict
 
 from bitcoin.core import x, lx, b2x, b2lx
 from PyQt4.QtCore import pyqtSignal, QObject
+from PyQt4.QtGui import QApplication
 
 from hashmal_lib.core import Transaction, BlockHeader, Block
 from base import Plugin, BasePluginUI
@@ -21,6 +22,9 @@ class Item(object):
 
     def __init__(self, value):
         self.value = value
+        # Actions that this item supports without the need of any plugins.
+        # List of 2-tuples: (label, func)
+        self.actions = []
 
     def __str__(self):
         return str(self.value)
@@ -83,6 +87,12 @@ class TxItem(Item):
                 if value:
                     return cls(value)
 
+    def __init__(self, *args):
+        super(TxItem, self).__init__(*args)
+        def copy_txid():
+            QApplication.clipboard().setText(b2lx(self.value.GetHash()))
+        self.actions.append(('Copy Transaction ID', copy_txid))
+
     def raw(self):
         return b2x(self.value.serialize())
 item_types.append(TxItem)
@@ -112,6 +122,12 @@ class BlockItem(Item):
                 if value:
                     return cls(value)
 
+    def __init__(self, *args):
+        super(BlockItem, self).__init__(*args)
+        def copy_hash():
+            QApplication.clipboard().setText(b2lx(self.value.GetHash()))
+        self.actions.append(('Copy Block Hash', copy_hash))
+
     def raw(self):
         return b2x(self.value.serialize())
 item_types.append(BlockItem)
@@ -140,6 +156,12 @@ class BlockHeaderItem(Item):
             else:
                 if value:
                     return cls(value)
+
+    def __init__(self, *args):
+        super(BlockHeaderItem, self).__init__(*args)
+        def copy_hash():
+            QApplication.clipboard().setText(b2lx(self.value.GetHash()))
+        self.actions.append(('Copy Block Hash', copy_hash))
 
     def raw(self):
         return b2x(self.value.serialize())

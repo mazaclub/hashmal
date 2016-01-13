@@ -206,6 +206,9 @@ class PluginHandler(QWidget):
         if not item:
             return
 
+        for label, func in item.actions:
+            menu.addAction(label, func)
+
         actions = items.get_item_actions(item.name)
         if not actions:
             return

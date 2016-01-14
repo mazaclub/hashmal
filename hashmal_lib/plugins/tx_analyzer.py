@@ -163,6 +163,8 @@ class TxAnalyzer(BaseDock):
 
     def inputs_context_menu(self, position):
         inputs = self.tx_widget.inputs_tree
+        if not len(inputs.view.selectedIndexes()):
+            return
         def inputs_context_verify():
             self.tabs.setCurrentIndex(1)
             row = inputs.view.selectedIndexes()[0].row()

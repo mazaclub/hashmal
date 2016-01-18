@@ -1,7 +1,12 @@
+from io import BytesIO
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+
 import bitcoin
 from bitcoin.core import CBlockHeader, CBlock, x, b2x, lx, b2lx
+from bitcoin.core.serialize import VarIntSerializer
+
 from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
 from hashmal_lib.gui_utils import Separator
@@ -17,8 +22,8 @@ def deserialize_block_or_header(raw):
     Returns:
         Two-tuple of (block, block_header)
     """
-    raw = x(raw)
     try:
+        raw = x(raw)
         if len(raw) == BlockHeader.header_length():
             block_header = BlockHeader.deserialize(raw)
             return (None, block_header)
@@ -54,7 +59,8 @@ class BlockAnalyzer(BaseDock):
         self.raw_block_invalid.setProperty('hasError', True)
         self.raw_block_invalid.hide()
         self.block_widget = BlockWidget()
-        self.block_widget.header_widget.view.selectionModel().selectionChanged.connect(self.select_block_field)
+        self.block_widget.header_widget.view.selectionModel().selectionChanged.connect(self.on_header_selection)
+        self.block_widget.txs_widget.view.selectionModel().selectionChanged.connect(self.on_tx_selection)
         self.raw_block_edit = QPlainTextEdit()
         self.raw_block_edit.setWhatsThis('Enter a serialized raw block or block header here. If you have a raw block or header stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically.')
         self.raw_block_edit.textChanged.connect(self.check_raw_block)
@@ -101,22 +107,40 @@ class BlockAnalyzer(BaseDock):
 
         menu.exec_(self.block_widget.txs_widget.view.viewport().mapToGlobal(position))
 
-    def select_block_field(self, selected, deselected):
-        if len(self.raw_block_edit.toPlainText()) < BlockHeader.header_length() * 2:
-            return
-        if not len(selected.indexes()):
+    def select_block_text(self, start, length):
+        """Select an area of the raw block textedit."""
+        cursor = QTextCursor(self.raw_block_edit.document())
+        cursor.setPosition(start)
+        cursor.setPosition(start + length, QTextCursor.KeepAnchor)
+        self.raw_block_edit.setTextCursor(cursor)
+
+    def on_header_selection(self, selected, deselected):
+        if not self.header or not len(selected.indexes()):
             return
         index = selected.indexes()[0]
         row = index.row()
         header = [i[2] * 2 for i in self.header.fields]
 
         start = sum(header[0:row])
-        length = header[row]
+        self.select_block_text(start, header[row])
 
-        cursor = QTextCursor(self.raw_block_edit.document())
-        cursor.setPosition(start)
-        cursor.setPosition(start + length, QTextCursor.KeepAnchor)
-        self.raw_block_edit.setTextCursor(cursor)
+    def on_tx_selection(self, selected, deselected):
+        if not self.block or not len(selected.indexes()):
+            return
+        index = selected.indexes()[0]
+        row = index.row()
+
+        def tx_len(i):
+            return len(self.block.vtx[i].serialize()) * 2
+
+        start = BlockHeader.header_length() * 2 + sum(tx_len(i) for i in range(row))
+        # Account for VarInt.
+        _buf = BytesIO()
+        VarIntSerializer.stream_serialize(len(self.block.vtx), _buf)
+        start += len(_buf.getvalue()) * 2
+
+        length = len(self.block.vtx[row].serialize()) * 2
+        self.select_block_text(start, length)
 
     def on_option_changed(self, key):
         if key == 'chainparams':

@@ -221,6 +221,7 @@ class Variables(BaseDock):
         self.view.setWhatsThis('This table displays the variables you have defined.')
         self.view.setModel(self.proxy_model)
         self.view.setSortingEnabled(True)
+        self.view.sortByColumn(0, QtCore.Qt.AscendingOrder)
         self.view.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
         self.view.horizontalHeader().setHighlightSections(False)
         self.view.verticalHeader().setDefaultSectionSize(22)

@@ -97,7 +97,6 @@ class ScriptTemplateItem(Item):
                 return None
         for i in known_templates:
             if is_template_script(data, i):
-                print('matched template %s' % i.name)
                 return cls(data, i)
 
     def __init__(self, value, template=''):
@@ -143,6 +142,7 @@ class TemplateWidget(QWidget):
             label = QLabel(''.join([var_name.capitalize(), ':']))
             var_input = QLineEdit()
             var_input.setFont(monospace_font)
+            var_input.setToolTip('Value for template variable "%s"' % var_name)
             form.addRow(label, var_input)
             self.variable_widgets[var_name] = var_input
         scroller.setLayout(form)

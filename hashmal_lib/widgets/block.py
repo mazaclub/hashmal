@@ -54,6 +54,7 @@ class BlockHeaderModel(QAbstractTableModel):
         self.beginResetModel()
         self.header = BlockHeader.from_header(header)
 
+        self.vertical_header = []
         field_names = [i[0] for i in self.header.fields]
         for i, field in enumerate(self.header.fields):
             self.setHeaderData(i, Qt.Vertical, field[0])
@@ -131,6 +132,7 @@ class BlockTxsWidget(QWidget):
         txids = [b2lx(i.GetHash()) for i in block.vtx]
         items = map(lambda x: QStandardItem(x), txids)
         for item in items:
+            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             self.model.appendRow(item)
 
 class BlockWidget(QWidget):

@@ -138,6 +138,8 @@ class TemplateWidget(QWidget):
     def create_layout(self):
         form = QFormLayout()
         scroller = QScrollArea()
+        self.clear_button = QPushButton('Clear')
+        self.clear_button.clicked.connect(self.clear_fields)
         for var_name in self.template.variables.keys():
             label = QLabel(''.join([var_name.capitalize(), ':']))
             var_input = QLineEdit()
@@ -145,6 +147,7 @@ class TemplateWidget(QWidget):
             var_input.setToolTip('Value for template variable "%s"' % var_name)
             form.addRow(label, var_input)
             self.variable_widgets[var_name] = var_input
+        form.addRow(floated_buttons([self.clear_button], left=True))
         scroller.setLayout(form)
         while self.layout().count() > 0:
             self.layout().takeAt(0)
@@ -163,9 +166,15 @@ class TemplateWidget(QWidget):
             v.clear()
 
     def set_template(self, template):
+        var_values = [(key, self.variable_widgets[key].text()) for key in self.variable_widgets.keys()]
         self.template = template
         self.variable_widgets = {}
         self.create_layout()
+        # Fill in fields with names matching the old template's fields.
+        for name, value in var_values:
+            w = self.variable_widgets.get(name)
+            if w:
+                w.setText(value)
 
 # Standard output scripts by default.
 known_templates = [

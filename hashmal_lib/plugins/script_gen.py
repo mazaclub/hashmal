@@ -7,7 +7,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from base import BaseDock, Plugin, Category, augmenter
-from item_types import Item
+from item_types import Item, ItemAction
 from hashmal_lib.core import Script
 from hashmal_lib.core.utils import is_hex, push_script, format_hex_string
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
@@ -199,6 +199,10 @@ class ScriptGenerator(BaseDock):
     def item_types(self, *args):
         return ScriptTemplateItem
 
+    @augmenter
+    def item_actions(self, *args):
+        return ItemAction(self.tool_name, 'Script Matching Template', 'Edit', self.set_completed_item)
+
     def create_layout(self):
         # ComboBox for selecting which template to use.
         self.template_combo = QComboBox()
@@ -249,6 +253,15 @@ class ScriptGenerator(BaseDock):
                 template = i
         self.template_widget.set_template(template)
         self.script_output.setPlainText(template.text)
+
+    def set_completed_item(self, item):
+        """Deserialize a completed template."""
+        idx = known_templates.index(item.template)
+        self.template_combo.setCurrentIndex(idx)
+        for k, v in item.variables.items():
+            self.template_widget.variable_widgets[k].setText(v)
+        self.generate()
+        self.needsFocus.emit()
 
     def generate(self):
         new_script = self.template_widget.get_script()

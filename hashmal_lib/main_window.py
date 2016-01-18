@@ -139,24 +139,36 @@ class HashmalMain(QMainWindow):
         if self.qt_settings.value('saveLayoutOnExit', defaultValue=QtCore.QVariant(False)).toBool():
             self.qt_settings.setValue('toolLayout/default', self.saveState())
 
-        self.close_script()
-        event.accept()
+        if self.close_script():
+            event.accept()
+        else:
+            event.ignore()
 
     def close_script(self):
         # Confirm discarding changes if an unsaved file is open.
-        if (str(self.script_editor.toPlainText())
-            and not self.changes_saved):
-            result = QMessageBox.question(self, 'Save Changes',
-                        'Do you want to save your changes to ' + self.filename + ' before closing?',
-                        QMessageBox.Yes | QMessageBox.No)
-            if result == QMessageBox.Yes:
+        if str(self.script_editor.toPlainText()) and not self.changes_saved:
+            msgbox = QMessageBox(self)
+            msgbox.setWindowTitle('Hashmal - Save Changes')
+            text = 'Do you want to save this script before closing?'
+            if self.filename:
+                text = 'Do you want to save your changes to ' + self.filename + ' before closing?'
+            msgbox.setText(text)
+            msgbox.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+            msgbox.setDefaultButton(QMessageBox.Save)
+            msgbox.setIcon(QMessageBox.Question)
+            result = msgbox.exec_()
+            if result == QMessageBox.Save:
                 self.save_script()
+            elif result == QMessageBox.Cancel:
+                return False
         self.filename = ''
         self.changes_saved = True
         self.script_editor.clear()
+        return True
 
     def new_script(self, filename=''):
-        self.close_script()
+        if not self.close_script():
+            return
         if not filename:
             base_name = ''.join(['Untitled-', str(time.time()), '.coinscript'])
             filename = os.path.expanduser(base_name)
@@ -190,9 +202,8 @@ class HashmalMain(QMainWindow):
         filename = str(QFileDialog.getOpenFileName(self, 'Open script', '.', filter=script_file_filter))
         if not filename:
             return
-        self.close_script()
-
-        self.load_script(filename)
+        if self.close_script():
+            self.load_script(filename)
 
     def load_script(self, filename):
         if os.path.exists(filename):
@@ -231,7 +242,7 @@ class HashmalMain(QMainWindow):
         toolbar = QToolBar('Toolbar')
         toolbar.setObjectName('Toolbar')
 
-        whats_this_button = QPushButton('?')
+        whats_this_button = QPushButton('&?')
         whats_this_button.setMaximumWidth(20)
         whats_this_button.setWhatsThis('This button activates What\'s This? mode.\n\nIn What\'s This? mode, you can click something you are not familiar with and a description of it will be shown if one exists.')
         whats_this_button.clicked.connect(lambda: QWhatsThis.enterWhatsThisMode())

@@ -334,22 +334,24 @@ class OutputsTree(QWidget):
         data = self.model.data(idx)
         QApplication.clipboard().setText(data.toString())
 
-    def customContextMenu(self, pos):
-        if len(self.view.selectedIndexes()) == 0:
-            return
+    def context_menu(self):
         menu = QMenu()
         copy = menu.addMenu('Copy')
         copy.addAction('Amount', self.copy_amount)
         copy.addAction('Output Script', self.copy_script)
         copy.addAction('Output Script (Hex)', self.copy_script_hex)
-
         def copy_serialized():
             row = self.view.selectedIndexes()[0].row()
             out = self.model.tx.vout[row]
             data = b2x(out.serialize())
             QApplication.clipboard().setText(data)
         copy.addAction('Serialized Output', copy_serialized)
+        return menu
 
+    def customContextMenu(self, pos):
+        if len(self.view.selectedIndexes()) == 0:
+            return
+        menu = self.context_menu()
         menu.exec_(self.view.viewport().mapToGlobal(pos))
 
     def add_output(self, o):

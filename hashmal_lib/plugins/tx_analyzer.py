@@ -111,6 +111,8 @@ class TxAnalyzer(BaseDock):
         self.tx_widget = TxWidget()
         self.tx_widget.inputs_tree.view.customContextMenuRequested.disconnect(self.tx_widget.inputs_tree.customContextMenu)
         self.tx_widget.inputs_tree.view.customContextMenuRequested.connect(self.inputs_context_menu)
+        self.tx_widget.outputs_tree.view.customContextMenuRequested.disconnect(self.tx_widget.outputs_tree.customContextMenu)
+        self.tx_widget.outputs_tree.view.customContextMenuRequested.connect(self.outputs_context_menu)
 
         form.addRow(self.tx_widget)
 
@@ -163,19 +165,28 @@ class TxAnalyzer(BaseDock):
 
     def inputs_context_menu(self, position):
         inputs = self.tx_widget.inputs_tree
-        if not len(inputs.view.selectedIndexes()):
+        if not len(inputs.view.selectedIndexes()) or not self.tx:
             return
+
         def inputs_context_verify():
             self.tabs.setCurrentIndex(1)
             row = inputs.view.selectedIndexes()[0].row()
             self.do_verify_input(self.tx, row)
 
-        menu = QMenu()
-        if self.tx:
-            menu = inputs.context_menu()
-            menu.addAction('Verify script', inputs_context_verify)
+        menu = inputs.context_menu()
+        menu.addAction('Verify script', inputs_context_verify)
+        self.handler.add_plugin_actions(self, menu, str(inputs.model.data(inputs.view.selectedIndexes()[2]).toString()))
 
         menu.exec_(inputs.view.viewport().mapToGlobal(position))
+
+    def outputs_context_menu(self, position):
+        outputs = self.tx_widget.outputs_tree
+        if not len(outputs.view.selectedIndexes()) or not self.tx:
+            return
+
+        menu = outputs.context_menu()
+        self.handler.add_plugin_actions(self, menu, str(outputs.model.data(outputs.view.selectedIndexes()[1]).toString()))
+        menu.exec_(outputs.view.viewport().mapToGlobal(position))
 
     def clear(self):
         self.result_edit.clear()

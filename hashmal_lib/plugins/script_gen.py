@@ -66,6 +66,7 @@ def is_template_script(script, template):
     iterator = script.human_iter()
     text = template.text.split()
     index = 0
+    used_variables = []
     while 1:
         try:
             s = next(iterator)
@@ -75,6 +76,8 @@ def is_template_script(script, template):
                 var_type = template.variables[txt[1:-1]]
                 if not is_valid_variable_value(s, var_type):
                     return False
+                else:
+                    used_variables.append(txt[1:-1])
             elif s != txt:
                 return False
             index += 1
@@ -84,6 +87,9 @@ def is_template_script(script, template):
             return False
             break
 
+    # Fail if there are not values for all expected variables.
+    if not all(i in used_variables for i in template.variables.keys()):
+        return False
     return True
 
 class ScriptTemplateItem(Item):

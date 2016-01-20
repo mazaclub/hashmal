@@ -67,6 +67,9 @@ class BlockAnalyzer(BaseDock):
         self.raw_block_edit.setTabChangesFocus(True)
         self.setFocusProxy(self.raw_block_edit)
 
+        self.raw_block_edit.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.raw_block_edit.customContextMenuRequested.connect(self.raw_block_context_menu)
+
         self.block_widget.txs_widget.view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.block_widget.txs_widget.view.customContextMenuRequested.connect(self.txs_context_menu)
         
@@ -77,6 +80,11 @@ class BlockAnalyzer(BaseDock):
         form.addRow(Separator())
         form.addRow(self.block_widget)
         return form
+
+    def raw_block_context_menu(self, pos):
+        menu = self.raw_block_edit.createStandardContextMenu()
+        self.handler.add_plugin_actions(self, menu, str(self.raw_block_edit.toPlainText()))
+        menu.exec_(self.raw_block_edit.viewport().mapToGlobal(pos))
 
     def check_raw_block(self):
         txt = str(self.raw_block_edit.toPlainText())

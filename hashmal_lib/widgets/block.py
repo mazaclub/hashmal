@@ -45,6 +45,8 @@ class BlockHeaderModel(QAbstractTableModel):
         data = getattr(self.header, field[0])
         if field[1] == 'bytes':
             data = b2lx(data)
+        else:
+            data = str(data)
         return data
 
     def set_header(self, header):

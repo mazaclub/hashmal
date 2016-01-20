@@ -55,6 +55,8 @@ class InputsModel(QAbstractTableModel):
             data = b2lx(tx_input.prevout.hash)
         elif col == 1:
             data = tx_input.prevout.n
+            if role == Qt.DisplayRole:
+                data = str(data)
         elif col == 2:
             if role == RawRole:
                 data = Script(tx_input.scriptSig).get_hex()
@@ -62,6 +64,8 @@ class InputsModel(QAbstractTableModel):
                 data = Script(tx_input.scriptSig).get_human()
         elif col == 3:
             data = tx_input.nSequence
+            if role == Qt.DisplayRole:
+                data = str(data)
 
         return QVariant(data)
 

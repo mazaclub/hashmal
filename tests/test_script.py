@@ -91,3 +91,18 @@ class ParsingTest(unittest.TestCase):
             result, _ = transform_human(text)
             self.assertEqual(expected, result)
 
+    def test_string_literal_transform_and_instantiate_script(self):
+        str_tests = (
+            ('"a"',         '"a"',              '0161'),
+            ('2 "2"',       '0x02 "2"',         '01020132'),
+            ('"1 2"',       '"1 2"',            '03312032'),
+            ('0 "1 2"',     '0x00 "1 2"',       '010003312032'),
+            ('0 "1 2" 3',   '0x00 "1 2" 0x03',  '0100033120320103'),
+            ('"2 3 4"',     '"2 3 4"',          '053220332034'),
+            ('1 "2 3 4" 5', '0x01 "2 3 4" 0x05','01010532203320340105'),
+        )
+        for text, expected, expected_hex in str_tests:
+            txt, _ = transform_human(text)
+            self.assertEqual(expected, txt)
+            s = Script.from_human(txt)
+            self.assertEqual(expected_hex, s.get_hex())

@@ -1,5 +1,7 @@
 import pyparsing
 from pyparsing import Word, QuotedString, OneOrMore, Combine
+import shlex
+
 import bitcoin
 from bitcoin.base58 import CBase58Data
 from bitcoin.core.script import CScript
@@ -16,7 +18,10 @@ class Script(CScript):
     @classmethod
     def from_human(cls, data):
         hex_str = []
-        d = data.split()
+        try:
+            d = shlex.split(data, posix=False)
+        except Exception:
+            d = data.split()
         while 1:
             if len(d) == 0:
                 break
@@ -182,11 +187,19 @@ def transform_human(text, variables=None):
         context_tips.append( (start, end, value, match_type) )
 
     # Now we do the actual transformation.
-
-    s = text
-    s = var_name.transformString(s)
-    s = implicit_op.transformString(s)
-    s = implicit_hex.transformString(s)
-    s = explicit_hex.transformString(s)
-    return s, context_tips
+    strings = []
+    try:
+        words = shlex.split(text, posix=False)
+    except Exception:
+        words = text.split()
+    for s in words:
+        # Do not transform strings if they are string literals.
+        is_literal = True if pyparsing.Optional(str_literal).parseString(s) else False
+        if not is_literal:
+            s = var_name.transformString(s)
+            s = implicit_op.transformString(s)
+            s = implicit_hex.transformString(s)
+            s = explicit_hex.transformString(s)
+        strings.append(s)
+    return ' '.join(strings), context_tips
 

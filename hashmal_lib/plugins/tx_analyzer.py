@@ -174,7 +174,8 @@ class TxAnalyzer(BaseDock):
             self.do_verify_input(self.tx, row)
 
         menu = inputs.context_menu()
-        menu.addAction('Verify script', inputs_context_verify)
+        if not self.tx.is_coinbase():
+            menu.addAction('Verify script', inputs_context_verify)
         self.handler.add_plugin_actions(self, menu, str(inputs.model.data(inputs.view.selectedIndexes()[2]).toString()))
 
         menu.exec_(inputs.view.viewport().mapToGlobal(position))

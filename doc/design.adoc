@@ -1,0 +1,27 @@
+= Design
+
+Hashmal is designed with modularity in mind. To this end, a plugin system is used. Even Hashmal's core functionality is implemented via plugins.
+Because of this, there are a few plugins that cannot be disabled. These aren't "plugins" in the usual sense of the word. They are core
+parts of Hashmal that use the plugin infrastructure to operate.
+
+== Plugin Interoperability
+
+In developing Hashmal, an important design goal is to make it easy for plugins to work. Plugins should be able not only to
+be used, but to contribute to the overall usefulness of Hashmal. This is accomplished in part via "Item Types" - which is a plugin itself.
+That plugin makes it possible for a user to, for example, right-click a raw transaction stored in the "Variables" plugin, and be
+presented with an option to deserialize the transaction with the "Transaction Analyzer" plugin.
+
+Another way that plugins can contribute to the overall experience is through "augmenters." Augmenters allow plugins to augment one another.
+Via augmenters, a new plugin called "Foo" can advertise that it can perform a unique action on transactions. Then, if a raw transaction in
+the Variables plugin is right-clicked, that option will be shown in the context menu. The "Item Types" plugin depends on augmenters to extend
+its functionality.
+
+== Cryptocurrency Classes
+
+Many of Hashmal's plugins involve transaction scripts, transactions, and/or blocks. To ensure that all plugins can work with these
+types of data, classes that model their data are provided. https://github.com/petertodd/python-bitcoinlib[python-bitcoinlib] provides the base
+that many of these classes inherit.
+
+Rather than using the classes provided by python-bitcoinlib directly, we subclass them. In doing so, we can support transactions, etc. that
+do not adhere to Bitcoin's protocol. As a result, we can work with transactions and blocks for multiple blockchains. For example, blockchains
+that are Peercoin descendants expect a `timestamp` field in serialized transactions.

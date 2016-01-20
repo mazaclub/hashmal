@@ -296,6 +296,7 @@ class HashmalMain(QMainWindow):
         self.addAction(move_right_dock)
 
     def move_one_dock(self, reverse=False):
+        """Move focus to the next or previous dock."""
         w = get_active_dock()
         if not w: return
         docks = filter(lambda dock: dock.isVisible(), self.dock_orders[self.dockWidgetArea(w)])
@@ -310,6 +311,7 @@ class HashmalMain(QMainWindow):
             docks[index + 1].needsFocus.emit()
 
     def tabifyDockWidget(self, bottom, top):
+        """Overloaded method for purposes of remembering dock positions."""
         docks = self.dock_orders[self.dockWidgetArea(bottom)]
         area = self.dockWidgetArea(bottom)
         if len(docks) == 0:
@@ -357,6 +359,7 @@ class HashmalMain(QMainWindow):
             docks[0].needsFocus.emit()
 
 def get_active_dock():
+    """Get the dock widget that currently has focus."""
     w = QApplication.focusWidget()
     while w and w.__class__:
         if issubclass(w.__class__, BaseDock):

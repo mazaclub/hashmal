@@ -168,6 +168,7 @@ class PluginHandler(QWidget):
         dock.setFocus()
 
     def set_dock_signals(self, dock, do_connect):
+        """Connect or disconnect Qt signals to/from a dock."""
         if do_connect:
             dock.needsFocus.connect(partial(self.bring_to_front, dock))
             dock.statusMessage.connect(self.gui.show_status_message)

@@ -64,6 +64,7 @@ class BlockAnalyzer(BaseDock):
         self.raw_block_edit = QPlainTextEdit()
         self.raw_block_edit.setWhatsThis('Enter a serialized raw block or block header here. If you have a raw block or header stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically.')
         self.raw_block_edit.textChanged.connect(self.check_raw_block)
+        self.raw_block_edit.setTabChangesFocus(True)
         self.setFocusProxy(self.raw_block_edit)
 
         self.block_widget.txs_widget.view.setContextMenuPolicy(Qt.CustomContextMenu)

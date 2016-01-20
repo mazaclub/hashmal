@@ -1,7 +1,7 @@
 import struct
 
 import bitcoin
-from bitcoin.core import CMutableTransaction, CTxIn, CTxOut, b2x, b2lx
+from bitcoin.core import CMutableTransaction, CMutableTxIn, CMutableTxOut, CTxIn, CTxOut, b2x, b2lx
 from bitcoin.core.serialize import ser_read, BytesSerializer, VectorSerializer
 
 transaction_fields = [
@@ -57,9 +57,9 @@ class Transaction(CMutableTransaction):
             if fmt not in ['inputs', 'outputs', 'bytes']:
                 setattr(self, attr, struct.unpack(fmt, ser_read(f, num_bytes))[0])
             elif fmt == 'inputs':
-                setattr(self, attr, VectorSerializer.stream_deserialize(CTxIn, f))
+                setattr(self, attr, VectorSerializer.stream_deserialize(CMutableTxIn, f))
             elif fmt == 'outputs':
-                setattr(self, attr, VectorSerializer.stream_deserialize(CTxOut, f))
+                setattr(self, attr, VectorSerializer.stream_deserialize(CMutableTxOut, f))
             elif fmt == 'bytes':
                 setattr(self, attr, BytesSerializer.stream_deserialize(f))
         return self
@@ -69,9 +69,9 @@ class Transaction(CMutableTransaction):
             if fmt not in ['inputs', 'outputs', 'bytes']:
                 f.write(struct.pack(fmt, getattr(self, attr)))
             elif fmt == 'inputs':
-                VectorSerializer.stream_serialize(CTxIn, self.vin, f)
+                VectorSerializer.stream_serialize(CMutableTxIn, self.vin, f)
             elif fmt == 'outputs':
-                VectorSerializer.stream_serialize(CTxOut, self.vout, f)
+                VectorSerializer.stream_serialize(CMutableTxOut, self.vout, f)
             elif fmt == 'bytes':
                 BytesSerializer.stream_serialize(getattr(self, attr), f)
 

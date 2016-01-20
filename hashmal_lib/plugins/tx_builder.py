@@ -1,11 +1,16 @@
 import bitcoin
-from bitcoin.core import COutPoint, CTxIn, CTxOut, x, lx, CMutableOutPoint, CMutableTxIn, CMutableTxOut
+from bitcoin.core import COutPoint, CTxIn, CTxOut, x, lx, b2x, b2lx, CMutableOutPoint, CMutableTxIn, CMutableTxOut
+from bitcoin.core.script import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, SignatureHash
+from bitcoin.core.scripteval import VerifyScript, SCRIPT_VERIFY_P2SH
+from bitcoin.wallet import CBitcoinSecret
 
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
+from PyQt4.QtCore import QAbstractTableModel, QModelIndex, Qt
 
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction, chainparams
+from hashmal_lib.core.utils import format_hex_string
 from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.widgets.script import ScriptEditor
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font, OutputAmountEdit
@@ -42,6 +47,7 @@ class TxBuilder(BaseDock):
         tabs.addTab(self.create_inputs_tab(), '&Inputs')
         tabs.addTab(self.create_outputs_tab(), '&Outputs')
         tabs.addTab(self.create_review_tab(), '&Review')
+        tabs.addTab(self.create_sign_tab(), 'Sig&n')
         self.setFocusProxy(self.tabs)
 
         self.tx_field_widgets = []
@@ -50,7 +56,7 @@ class TxBuilder(BaseDock):
 
         # Build the tx if the Review tab is selected.
         def maybe_build(i):
-            if str(tabs.tabText(i)) == '&Review':
+            if str(tabs.tabText(i)) == '&Review' or str(tabs.tabText(i)) == 'Sig&n':
                 self.build_transaction()
         tabs.currentChanged.connect(maybe_build)
 
@@ -193,6 +199,10 @@ class TxBuilder(BaseDock):
         w.setLayout(self.tx_fields_layout)
         return w
 
+    def create_sign_tab(self):
+        self.sighash_widget = SigHashWidget(self)
+        return self.sighash_widget
+
     def deserialize_item(self, item):
         self.deserialize_raw(item.raw())
 
@@ -223,6 +233,7 @@ class TxBuilder(BaseDock):
 
     def build_transaction(self):
         self.tx_widget.clear()
+        self.sighash_widget.clear()
         self.tx = tx = Transaction()
         tx.nVersion = self.version_edit.get_amount()
         tx.vin = self.inputs_tree.get_inputs()
@@ -241,6 +252,7 @@ class TxBuilder(BaseDock):
         self.raw_tx.setText(bitcoin.core.b2x(tx.serialize()))
 
         self.tx_widget.set_tx(tx)
+        self.sighash_widget.set_tx(tx)
 
     def on_option_changed(self, key):
         if key in ['chainparams']:
@@ -393,4 +405,263 @@ class OutputsEditor(BaseEditor):
         form.addRow('Output script: ', self.script)
         form.addRow(floated_buttons([delete_button, submit_button]))
         self.setLayout(form)
+
+
+# Widgets for signing transactions.
+
+sighash_types = {
+    'SIGHASH_ALL': SIGHASH_ALL,
+    'SIGHASH_NONE': SIGHASH_NONE,
+    'SIGHASH_SINGLE': SIGHASH_SINGLE,
+    'SIGHASH_ANYONECANPAY': SIGHASH_ANYONECANPAY,
+}
+sighash_types_by_value = dict((v, k) for k, v in sighash_types.items())
+
+def sig_hash_explanation(hash_type, anyone_can_pay):
+    """Return a description of a hash type.
+
+    Explanations taken from https://bitcoin.org/en/developer-guide#signature-hash-types.
+    """
+    if anyone_can_pay:
+        hash_type = hash_type | SIGHASH_ANYONECANPAY
+
+    explanations = {
+        SIGHASH_ALL: 'Signs all the inputs and outputs, protecting everything except the signature scripts against modification.',
+        SIGHASH_NONE: 'Signs all of the inputs but none of the outputs, allowing anyone to change where the satoshis are going unless other signatures using other signature hash flags protect the outputs.',
+        SIGHASH_SINGLE: 'The only output signed is the one corresponding to this input (the output with the same output index number as this input), ensuring nobody can change your part of the transaction but allowing other signers to change their part of the transaction. The corresponding output must exist or the value "1" will be signed, breaking the security scheme. This input, as well as other inputs, are included in the signature. The sequence numbers of other inputs are not included in the signature, and can be updated.',
+        SIGHASH_ALL | SIGHASH_ANYONECANPAY: 'Signs all of the outputs but only this one input, and it also allows anyone to add or remove other inputs, so anyone can contribute additional satoshis but they cannot change how many satoshis are sent nor where they go.',
+        SIGHASH_NONE | SIGHASH_ANYONECANPAY: 'Signs only this one input and allows anyone to add or remove other inputs or outputs, so anyone who gets a copy of this input can spend it however they\'d like.',
+        SIGHASH_SINGLE | SIGHASH_ANYONECANPAY: 'Signs this one input and its corresponding output. Allows anyone to add or remove other inputs.',
+    }
+    return explanations.get(hash_type)
+
+def sig_hash_name(hash_type, anyone_can_pay):
+    """Return the name of a sighash type."""
+    s = sighash_types_by_value[hash_type]
+    if anyone_can_pay:
+        s = ' | '.join([s, 'SIGHASH_ANYONECANPAY'])
+    return s
+
+class SigHashModel(QAbstractTableModel):
+    """Models a transaction's signature hash."""
+    SigHashName = 5
+    SigHashExplanation = 6
+    def __init__(self, parent=None):
+        super(SigHashModel, self).__init__(parent)
+        self.clear()
+
+    def clear(self):
+        self.beginResetModel()
+        self.utxo_script = None
+        self.tx = None
+        self.inIdx = 0
+        self.sighash_type = SIGHASH_ALL
+        self.anyone_can_pay = False
+        self.endResetModel()
+
+    def rowCount(self, parent=QModelIndex()):
+        return 1
+
+    def columnCount(self, parent=QModelIndex()):
+        return 7
+
+    def data(self, index, role = Qt.DisplayRole):
+        if not index.isValid():
+            return None
+
+        if role not in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole]:
+            return None
+
+        data = None
+        c = index.column()
+        if c == 0:
+            if self.utxo_script:
+                data = self.utxo_script.get_human()
+        elif c == 1:
+            if self.tx:
+                data = b2x(self.tx.serialize())
+        elif c == 2:
+            data = self.inIdx
+        elif c == 3:
+            data = sighash_types_by_value[self.sighash_type]
+        elif c == 4:
+            if role == Qt.CheckStateRole:
+                data = Qt.Checked if self.anyone_can_pay else Qt.Unchecked
+            else:
+                data = self.anyone_can_pay
+        elif c == self.SigHashName:
+            data = sig_hash_name(self.sighash_type, self.anyone_can_pay)
+        elif c == self.SigHashExplanation:
+            data = sig_hash_explanation(self.sighash_type, self.anyone_can_pay)
+
+        return data
+
+    def setData(self, index, value, role = Qt.EditRole):
+        if not index.isValid():
+            return False
+        c = index.column()
+
+        if c == 0:
+            try:
+                self.utxo_script = Script.from_human(str(value.toString()))
+            except Exception:
+                return False
+            self.dataChanged.emit(self.index(index.row(), c), self.index(index.row(), c))
+        elif c == 1:
+            try:
+                self.tx = Transaction.deserialize(x(str(value.toString())))
+            except Exception:
+                return False
+            self.dataChanged.emit(self.index(index.row(), c), self.index(index.row(), c))
+        elif c == 2:
+            tmpIdx, ok = value.toInt()
+            if not ok:
+                return False
+            self.inIdx = tmpIdx
+            self.dataChanged.emit(self.index(index.row(), c), self.index(index.row(), c))
+        elif c == 3:
+            val = str(value.toString())
+            sighash_type = sighash_types.get(val)
+            if not sighash_type:
+                return False
+            self.sighash_type = sighash_type
+            self.dataChanged.emit(self.index(index.row(), c), self.index(index.row(), self.SigHashExplanation))
+        elif c == 4:
+            self.anyone_can_pay = value.toBool()
+            self.dataChanged.emit(self.index(index.row(), c), self.index(index.row(), self.SigHashExplanation))
+
+        return True
+
+    def flags(self, index):
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+    def set_tx(self, tx):
+        self.tx = tx
+
+    def get_fields(self):
+        """Returns the fields necessary to sign the transaction."""
+        hash_type = self.sighash_type
+        if self.anyone_can_pay:
+            hash_type = hash_type | SIGHASH_ANYONECANPAY
+        return (self.utxo_script, self.tx, self.inIdx, hash_type)
+
+class SigHashWidget(QWidget):
+    """Model and view of a transaction's signature hash."""
+    def __init__(self, dock, parent=None):
+        super(SigHashWidget, self).__init__(parent)
+        self.dock = dock
+        self.model = SigHashModel()
+
+        self.mapper = QDataWidgetMapper()
+        self.mapper.setModel(self.model)
+
+        self.utxo_script = ScriptEditor(self.dock.handler.gui)
+        self.utxo_script.setToolTip('Script from the unspent output')
+        self.utxo_script.setWhatsThis('Enter the output script from the unspent output you are spending here.')
+        self.utxo_script.setFixedHeight(42)
+        self.inIdx = QSpinBox()
+        self.inIdx.setRange(0, 0)
+        self.inIdx.setToolTip('Input to sign')
+        self.inIdx.setWhatsThis('This specifies the input that will be signed.')
+        self.sighash_type = QComboBox()
+        self.sighash_type.setToolTip('Signature hash type')
+        self.sighash_type.setWhatsThis('Use this to specify the signature hash flag you want to use. The flags have different effects and are explained in the box to the right.')
+        self.sighash_type.addItems(['SIGHASH_ALL', 'SIGHASH_NONE', 'SIGHASH_SINGLE'])
+        self.anyone_can_pay = QCheckBox('SIGHASH_ANYONECANPAY')
+        self.anyone_can_pay.setWhatsThis('Use this to add the ANYONECANPAY flag to your signature hash type. Its effect is explained in the box to the right.')
+        self.sighash_name = QLineEdit()
+        self.sighash_name.setToolTip('Signature hash name')
+        self.sighash_name.setWhatsThis('The full name of your current signature hash type is shown here.')
+        self.sighash_explanation = QTextEdit()
+        self.sighash_explanation.setToolTip('Signature hash explanation')
+        self.sighash_explanation.setWhatsThis('A description of your current signature hash type is shown here.')
+        for i in [self.sighash_name, self.sighash_explanation]:
+            i.setReadOnly(True)
+
+        self.mapper.addMapping(self.utxo_script, 0, 'humanText')
+        self.mapper.addMapping(self.inIdx, 2)
+        self.mapper.addMapping(self.sighash_type, 3)
+        self.mapper.addMapping(self.anyone_can_pay, 4)
+        self.mapper.addMapping(self.sighash_name, SigHashModel.SigHashName)
+        self.mapper.addMapping(self.sighash_explanation, SigHashModel.SigHashExplanation)
+
+        self.privkey_edit = QLineEdit()
+        self.privkey_edit.setWhatsThis('Use this to enter a private key with which to sign the transaction.')
+        self.privkey_edit.setPlaceholderText('Enter a private key')
+        self.sign_button = QPushButton('Sign')
+        self.sign_button.setToolTip('Sign transaction')
+        self.sign_button.setWhatsThis('Clicking this button will attempt to sign the transaction with your private key.')
+        self.sign_button.clicked.connect(self.sign_transaction)
+        signing_form = QFormLayout()
+        privkey_hbox = QHBoxLayout()
+        privkey_hbox.addWidget(self.privkey_edit, stretch=1)
+        privkey_hbox.addWidget(self.sign_button)
+        signing_form.addRow('Private Key:', privkey_hbox)
+
+        tx_form = QFormLayout()
+        tx_form.addRow('Unspent Output Script:', self.utxo_script)
+        tx_form.addRow('Input To Sign:', self.inIdx)
+
+        sighash_controls = QFormLayout()
+        sighash_controls.addRow('SigHash flag:', self.sighash_type)
+        sighash_controls.addRow(self.anyone_can_pay)
+        sighash_info = QVBoxLayout()
+        sighash_info.addWidget(self.sighash_name)
+        sighash_info.addWidget(self.sighash_explanation)
+        sighash_layout = QHBoxLayout()
+        sighash_layout.addLayout(sighash_controls)
+        sighash_layout.addLayout(sighash_info)
+
+        vbox = QVBoxLayout()
+        vbox.addLayout(signing_form)
+        vbox.addWidget(Separator())
+        vbox.addLayout(tx_form)
+        vbox.addWidget(Separator())
+        vbox.addLayout(sighash_layout)
+        self.setLayout(vbox)
+
+        self.mapper.toFirst()
+
+    def set_tx(self, tx):
+        self.inIdx.setRange(0, len(tx.vin) - 1)
+        self.model.set_tx(tx)
+        self.mapper.toFirst()
+
+    def clear(self):
+        self.model.clear()
+
+    def sign_transaction(self):
+        """Sign the transaction."""
+        script, txTo, inIdx, hash_type = self.model.get_fields()
+        if inIdx >= len(txTo.vin):
+            self.dock.status_message('Nonexistent input specified for signing.', error=True)
+            return
+        sig_hash = SignatureHash(script, txTo, inIdx, hash_type)
+
+        privkey = self.get_private_key()
+        if not privkey:
+            self.dock.status_message('Could not parse private key.', error=True)
+            return
+        sig = privkey.sign(sig_hash)
+        hash_type_hex = format_hex_string(hex(hash_type), with_prefix=False).decode('hex')
+        sig = sig + hash_type_hex
+        txTo.vin[inIdx].scriptSig = Script([sig, privkey.pub])
+        self.dock.deserialize_raw(b2x(txTo.serialize()))
+        self.dock.status_message('Successfully signed tx')
+
+        # Try verify
+        try:
+            VerifyScript(txTo.vin[inIdx].scriptSig, script, txTo, inIdx, (SCRIPT_VERIFY_P2SH,))
+        except Exception as e:
+            self.dock.status_message(str(e), error=True)
+
+    def get_private_key(self):
+        """Attempt to parse the private key that was input."""
+        txt = str(self.privkey_edit.text())
+        privkey = None
+        if len(txt) == 64:
+            privkey = CBitcoinSecret.from_secret_bytes(x(txt))
+
+        return privkey
+
 

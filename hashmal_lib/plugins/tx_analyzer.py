@@ -53,11 +53,13 @@ class InputStatusTable(QWidget):
         self.model.setRowCount(0)
 
 class TxAnalyzer(BaseDock):
-
     tool_name = 'Transaction Analyzer'
     description = 'Deserializes transactions and verifies their inputs.'
     is_large = True
     category = Category.Tx
+
+    TAB_DESERIALIZE = 0
+    TAB_VERIFY = 1
 
     def __init__(self, handler):
         super(TxAnalyzer, self).__init__(handler)
@@ -93,8 +95,8 @@ class TxAnalyzer(BaseDock):
         tabs.addTab(self.create_deserialize_tab(), 'Deserialize')
         tabs.addTab(self.create_verify_tab(), 'Verify')
 
-        tabs.setTabToolTip(0, 'View the transaction in human-readable form')
-        tabs.setTabToolTip(1, 'Download previous transactions and verify inputs')
+        tabs.setTabToolTip(self.TAB_DESERIALIZE, 'View the transaction in human-readable form')
+        tabs.setTabToolTip(self.TAB_VERIFY, 'Download previous transactions and verify inputs')
 
         form.addRow('Raw Tx:', self.raw_tx_edit)
         form.addRow(self.raw_tx_invalid)
@@ -169,7 +171,7 @@ class TxAnalyzer(BaseDock):
             return
 
         def inputs_context_verify():
-            self.tabs.setCurrentIndex(1)
+            self.tabs.setCurrentIndex(self.TAB_VERIFY)
             row = inputs.view.selectedIndexes()[0].row()
             self.do_verify_input(self.tx, row)
 
@@ -244,6 +246,10 @@ class TxAnalyzer(BaseDock):
         self.status_message('Deserialized transaction {}'.format(bitcoin.core.b2lx(self.tx.GetHash())))
 
     def do_verify_input(self, tx, in_idx):
+        if tx.is_coinbase():
+            self.result_edit.setText('Error: Cannot verify coinbase transactions.')
+            self.status_message('Attempted to verify coinbase transaction.', error=True)
+            return False
         raw_prev_tx = None
         tx_in = tx.vin[in_idx]
         txid = b2lx(tx_in.prevout.hash)
@@ -268,10 +274,11 @@ class TxAnalyzer(BaseDock):
 
         return True
 
-    def do_verify_inputs(self, txt):
-        self.needsFocus.emit()
-        self.raw_tx_edit.setPlainText(txt)
-        tx = Transaction.deserialize(txt.decode('hex'))
+    def do_verify_inputs(self, tx):
+        if tx.is_coinbase():
+            self.result_edit.setText('Error: Cannot verify coinbase transactions.')
+            self.status_message('Attempted to verify coinbase transaction.', error=True)
+            return False
         failed_inputs = []
         self.result_edit.setText('Verifying...')
         for i in range(len(tx.vin)):
@@ -289,26 +296,20 @@ class TxAnalyzer(BaseDock):
         return ret_val
 
     def verify_input(self):
-        tx = None
-        try:
-            txt = str(self.raw_tx_edit.toPlainText())
-            tx = Transaction.deserialize(txt.decode('hex'))
-        except Exception:
-            self.status_message('Could not deserialize transaction.', True)
-            return
         in_idx = self.inputs_box.value()
-        if in_idx >= len(tx.vin):
+        if in_idx >= len(self.tx.vin):
             self.status_message('Input {} does not exist.'.format(in_idx), True)
             return
 
-        self.do_verify_input(tx, in_idx)
+        self.do_verify_input(self.tx, in_idx)
 
     def verify_inputs(self):
-        txt = str(self.raw_tx_edit.toPlainText())
-        self.do_verify_inputs(txt)
+        self.do_verify_inputs(self.tx)
 
     def verify_item_inputs(self, item):
-        self.do_verify_inputs(item.raw())
+        self.deserialize_item(item)
+        self.verify_inputs()
+        self.tabs.setCurrentIndex(self.TAB_VERIFY)
 
     def refresh_data(self):
         if self.tx:

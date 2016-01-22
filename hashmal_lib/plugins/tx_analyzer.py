@@ -9,48 +9,92 @@ from item_types import ItemAction
 from hashmal_lib.gui_utils import monospace_font, floated_buttons, Separator
 from hashmal_lib.widgets.tx import TxWidget
 from hashmal_lib.core.script import Script
-from hashmal_lib.core import Transaction
+from hashmal_lib.core.transaction import Transaction, sig_hash_name, sig_hash_explanation
 
 def make_plugin():
     return Plugin(TxAnalyzer)
 
-class InputStatusTable(QWidget):
-    def __init__(self):
-        super(InputStatusTable, self).__init__()
-        self.tx = None
+class InputsStatusModel(QAbstractTableModel):
+    def __init__(self, parent=None):
+        super(InputsStatusModel, self).__init__(parent)
+        self.inputs = []
 
-        self.model = model = QStandardItemModel()
-        model.setColumnCount(1)
-        model.setRowCount(0)
-        model.setHorizontalHeaderLabels(['Input Status'])
-        self.view = view = QTableView()
-        view.setModel(model)
-        view.horizontalHeader().setResizeMode(0, QHeaderView.Stretch)
-        view.horizontalHeader().setHighlightSections(False)
-        view.verticalHeader().setHighlightSections(False)
+    def columnCount(self, parent=QModelIndex()):
+        return 3
 
-        vbox = QVBoxLayout()
-        vbox.setContentsMargins(0, 0, 0, 0)
-        vbox.addWidget(view)
-        self.setLayout(vbox)
+    def rowCount(self, parent=QModelIndex()):
+        return len(self.inputs)
+
+    def headerData(self, section, orientation, role = Qt.DisplayRole):
+        if orientation != Qt.Horizontal:
+            return None
+
+        data = None
+
+        if section == 0:
+            if role == Qt.DisplayRole:
+                data = 'Input'
+            elif role == Qt.ToolTipRole:
+                data = 'Input index'
+        elif section == 1:
+            if role == Qt.DisplayRole:
+                data = 'Status'
+            elif role == Qt.ToolTipRole:
+                data = 'Verification status'
+        elif section == 2:
+            if role == Qt.DisplayRole:
+                data = 'SigHash Type'
+            elif role == Qt.ToolTipRole:
+                data = 'Signature hash type'
+
+        return data
+
+    def data(self, index, role = Qt.DisplayRole):
+        if not index.isValid():
+            return None
+
+        verified, hash_type = self.inputs[index.row()]
+        c = index.column()
+        data = None
+        if c == 0:
+            if role in [Qt.DisplayRole, Qt.EditRole]:
+                data = str(index.row())
+        elif c == 1:
+            if role in [Qt.DisplayRole, Qt.ToolTipRole]:
+                data = 'Verified' if verified else 'Unverified'
+            elif role == Qt.EditRole:
+                data = verified
+        elif c == 2:
+            if role in [Qt.DisplayRole, Qt.ToolTipRole]:
+                data = sig_hash_name(hash_type)
+            elif role == Qt.EditRole:
+                data = hash_type
+
+        return data
 
     def set_tx(self, tx):
-        if not tx:
-            self.clear()
-            return
-        self.model.setRowCount(len(tx.vin))
-        for i in range(len(tx.vin)):
-            self.model.setHeaderData(i, Qt.Vertical, str(i))
-            item = QStandardItem('Unverified')
-            self.model.setItem(i, 0, item)
-
-    def set_verified(self, idx, verified):
-        verified = 'Verified' if verified else 'Unverified'
-        item = QStandardItem(verified)
-        self.model.setItem(idx, 0, item)
+        self.beginResetModel()
+        self.inputs = []
+        for i in tx.vin:
+            hash_type = 0
+            try:
+                s = Script(i.scriptSig).get_human().split()[-2]
+                # Loose sanity check to ensure the data is long enough.
+                if len(s) >= 120:
+                    hash_type = int(s[-2:], 16)
+            except Exception:
+                pass
+            self.inputs.append([False, hash_type])
+        self.endResetModel()
 
     def clear(self):
-        self.model.setRowCount(0)
+        self.beginResetModel()
+        self.inputs = []
+        self.endResetModel()
+
+    def set_verified(self, idx, verified):
+        self.inputs[idx][0] = verified
+        self.dataChanged.emit(self.index(idx, 1), self.index(idx, 1))
 
 class TxAnalyzer(BaseDock):
     tool_name = 'Transaction Analyzer'
@@ -144,7 +188,14 @@ class TxAnalyzer(BaseDock):
         self.result_edit.setWhatsThis('The result of verifying an input is shown here.')
         self.result_edit.setReadOnly(True)
 
-        self.inputs_table = InputStatusTable()
+        self.inputs_table_model = InputsStatusModel()
+        self.inputs_table = QTableView()
+        self.inputs_table.setModel(self.inputs_table_model)
+        self.inputs_table.horizontalHeader().setResizeMode(0, QHeaderView.ResizeToContents)
+        self.inputs_table.horizontalHeader().setResizeMode(2, QHeaderView.Stretch)
+        self.inputs_table.verticalHeader().setVisible(False)
+        for i in [self.inputs_table.horizontalHeader(), self.inputs_table.verticalHeader()]:
+            i.setHighlightSections(False)
         self.inputs_table.setToolTip('Verification results')
         self.inputs_table.setWhatsThis('This table displays which inputs you have verified for the transaction being analyzed.')
 
@@ -194,7 +245,7 @@ class TxAnalyzer(BaseDock):
     def clear(self):
         self.result_edit.clear()
         self.tx_widget.clear()
-        self.inputs_table.clear()
+        self.inputs_table_model.clear()
 
     def check_raw_tx(self):
         txt = str(self.raw_tx_edit.toPlainText())
@@ -242,7 +293,7 @@ class TxAnalyzer(BaseDock):
     def deserialize(self):
         self.clear()
         self.tx_widget.set_tx(self.tx)
-        self.inputs_table.set_tx(self.tx)
+        self.inputs_table_model.set_tx(self.tx)
         self.status_message('Deserialized transaction {}'.format(bitcoin.core.b2lx(self.tx.GetHash())))
 
     def do_verify_input(self, tx, in_idx):
@@ -265,10 +316,10 @@ class TxAnalyzer(BaseDock):
             prev_tx = Transaction.deserialize(raw_prev_tx.decode('hex'))
             result = bitcoin.core.scripteval.VerifyScript(tx_in.scriptSig, prev_tx.vout[prev_out_n].scriptPubKey, tx, in_idx)
             self.result_edit.setText('Successfully verified input {}'.format(in_idx))
-            self.inputs_table.set_verified(in_idx, True)
+            self.inputs_table_model.set_verified(in_idx, True)
         except Exception as e:
             self.result_edit.setText(str(e))
-            self.inputs_table.set_verified(in_idx, False)
+            self.inputs_table_model.set_verified(in_idx, False)
             self.status_message(str(e), True)
             return False
 

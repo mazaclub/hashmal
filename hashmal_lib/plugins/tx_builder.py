@@ -1,6 +1,6 @@
 import bitcoin
 from bitcoin.core import COutPoint, CTxIn, CTxOut, x, lx, b2x, b2lx, CMutableOutPoint, CMutableTxIn, CMutableTxOut
-from bitcoin.core.script import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, SignatureHash
+from bitcoin.core.script import SIGHASH_ALL, SIGHASH_ANYONECANPAY, SignatureHash
 from bitcoin.core.scripteval import VerifyScript, SCRIPT_VERIFY_P2SH
 from bitcoin.wallet import CBitcoinSecret
 
@@ -9,7 +9,8 @@ from PyQt4 import QtCore
 from PyQt4.QtCore import QAbstractTableModel, QModelIndex, Qt
 
 from hashmal_lib.core.script import Script
-from hashmal_lib.core import Transaction, chainparams
+from hashmal_lib.core import chainparams
+from hashmal_lib.core.transaction import Transaction, sig_hash_name, sig_hash_explanation, sighash_types, sighash_types_by_value
 from hashmal_lib.core.utils import format_hex_string
 from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.widgets.script import ScriptEditor
@@ -409,39 +410,6 @@ class OutputsEditor(BaseEditor):
 
 # Widgets for signing transactions.
 
-sighash_types = {
-    'SIGHASH_ALL': SIGHASH_ALL,
-    'SIGHASH_NONE': SIGHASH_NONE,
-    'SIGHASH_SINGLE': SIGHASH_SINGLE,
-    'SIGHASH_ANYONECANPAY': SIGHASH_ANYONECANPAY,
-}
-sighash_types_by_value = dict((v, k) for k, v in sighash_types.items())
-
-def sig_hash_explanation(hash_type, anyone_can_pay):
-    """Return a description of a hash type.
-
-    Explanations taken from https://bitcoin.org/en/developer-guide#signature-hash-types.
-    """
-    if anyone_can_pay:
-        hash_type = hash_type | SIGHASH_ANYONECANPAY
-
-    explanations = {
-        SIGHASH_ALL: 'Signs all the inputs and outputs, protecting everything except the signature scripts against modification.',
-        SIGHASH_NONE: 'Signs all of the inputs but none of the outputs, allowing anyone to change where the satoshis are going unless other signatures using other signature hash flags protect the outputs.',
-        SIGHASH_SINGLE: 'The only output signed is the one corresponding to this input (the output with the same output index number as this input), ensuring nobody can change your part of the transaction but allowing other signers to change their part of the transaction. The corresponding output must exist or the value "1" will be signed, breaking the security scheme. This input, as well as other inputs, are included in the signature. The sequence numbers of other inputs are not included in the signature, and can be updated.',
-        SIGHASH_ALL | SIGHASH_ANYONECANPAY: 'Signs all of the outputs but only this one input, and it also allows anyone to add or remove other inputs, so anyone can contribute additional satoshis but they cannot change how many satoshis are sent nor where they go.',
-        SIGHASH_NONE | SIGHASH_ANYONECANPAY: 'Signs only this one input and allows anyone to add or remove other inputs or outputs, so anyone who gets a copy of this input can spend it however they\'d like.',
-        SIGHASH_SINGLE | SIGHASH_ANYONECANPAY: 'Signs this one input and its corresponding output. Allows anyone to add or remove other inputs.',
-    }
-    return explanations.get(hash_type)
-
-def sig_hash_name(hash_type, anyone_can_pay):
-    """Return the name of a sighash type."""
-    s = sighash_types_by_value[hash_type]
-    if anyone_can_pay:
-        s = ' | '.join([s, 'SIGHASH_ANYONECANPAY'])
-    return s
-
 class SigHashModel(QAbstractTableModel):
     """Models a transaction's signature hash."""
     SigHashName = 5
@@ -490,9 +458,9 @@ class SigHashModel(QAbstractTableModel):
             else:
                 data = self.anyone_can_pay
         elif c == self.SigHashName:
-            data = sig_hash_name(self.sighash_type, self.anyone_can_pay)
+            data = sig_hash_name(self.sighash_type | SIGHASH_ANYONECANPAY if self.anyone_can_pay else self.sighash_type)
         elif c == self.SigHashExplanation:
-            data = sig_hash_explanation(self.sighash_type, self.anyone_can_pay)
+            data = sig_hash_explanation(self.sighash_type | SIGHASH_ANYONECANPAY if self.anyone_can_pay else self.sighash_type)
 
         return data
 

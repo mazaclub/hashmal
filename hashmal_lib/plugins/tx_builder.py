@@ -6,7 +6,7 @@ from bitcoin.wallet import CBitcoinSecret
 
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
-from PyQt4.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PyQt4.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
 
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import chainparams
@@ -14,7 +14,7 @@ from hashmal_lib.core.transaction import Transaction, sig_hash_name, sig_hash_ex
 from hashmal_lib.core.utils import format_hex_string
 from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.widgets.script import ScriptEditor
-from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font, OutputAmountEdit
+from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font, OutputAmountEdit, RawRole
 from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
 
@@ -488,11 +488,17 @@ class SigHashModel(QAbstractTableModel):
             self.inIdx = tmpIdx
             self.dataChanged.emit(self.index(index.row(), c), self.index(index.row(), c))
         elif c == 3:
-            val = str(value.toString())
-            sighash_type = sighash_types.get(val)
-            if not sighash_type:
-                return False
-            self.sighash_type = sighash_type
+            if role == Qt.EditRole:
+                val = str(value.toString())
+                sighash_type = sighash_types.get(val)
+                if not sighash_type:
+                    return False
+                self.sighash_type = sighash_type
+            elif role == RawRole:
+                tmpType, ok = value.toInt()
+                if not ok:
+                    return False
+                self.sighash_type = tmpType
             self.dataChanged.emit(self.index(index.row(), c), self.index(index.row(), self.SigHashExplanation))
         elif c == 4:
             self.anyone_can_pay = value.toBool()
@@ -504,7 +510,7 @@ class SigHashModel(QAbstractTableModel):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def set_tx(self, tx):
-        self.tx = tx
+        self.setData(self.index(0, 1), QVariant(b2x(tx.serialize())))
 
     def get_fields(self):
         """Returns the fields necessary to sign the transaction."""
@@ -512,6 +518,26 @@ class SigHashModel(QAbstractTableModel):
         if self.anyone_can_pay:
             hash_type = hash_type | SIGHASH_ANYONECANPAY
         return (self.utxo_script, self.tx, self.inIdx, hash_type)
+
+    def set_fields(self, script=None, txTo=None, inIdx=None, hashType=None):
+        """Populate model.
+
+        Args:
+            script (str): Human-readable script.
+            txTo (Transaction): Transaction.
+            inIdx (int): Input index.
+            hashType (int): SigHash type.
+
+        """
+        if script is not None:
+            self.setData(self.index(0, 0), QVariant(script))
+        if txTo is not None:
+            self.setData(self.index(0, 1), QVariant(b2x(txTo.serialize())))
+        if inIdx is not None:
+            self.setData(self.index(0, 2), QVariant(inIdx))
+        if hashType is not None:
+            self.setData(self.index(0, 3), QVariant(hashType & 0x1f), RawRole)
+            self.setData(self.index(0, 4), QVariant(hashType & SIGHASH_ANYONECANPAY))
 
 class SigHashWidget(QWidget):
     """Model and view of a transaction's signature hash."""
@@ -564,7 +590,12 @@ class SigHashWidget(QWidget):
         privkey_hbox = QHBoxLayout()
         privkey_hbox.addWidget(self.privkey_edit, stretch=1)
         privkey_hbox.addWidget(self.sign_button)
+        self.result_edit = QLineEdit()
+        self.result_edit.setReadOnly(True)
+        self.result_edit.setPlaceholderText('Result of signing')
+        self.result_edit.setWhatsThis('The result of signing the transaction will be shown here.')
         signing_form.addRow('Private Key:', privkey_hbox)
+        signing_form.addRow('Result:', self.result_edit)
 
         tx_form = QFormLayout()
         tx_form.addRow('Unspent Output Script:', self.utxo_script)
@@ -596,32 +627,48 @@ class SigHashWidget(QWidget):
         self.mapper.toFirst()
 
     def clear(self):
+        self.result_edit.clear()
+        self.result_edit.setProperty('hasError', False)
+        self.style().polish(self.result_edit)
         self.model.clear()
+
+    def set_result_message(self, text, error=False):
+        self.result_edit.setText(text)
+        self.result_edit.setProperty('hasError', error)
+        self.style().polish(self.result_edit)
+        self.dock.status_message(text, error=error)
 
     def sign_transaction(self):
         """Sign the transaction."""
         script, txTo, inIdx, hash_type = self.model.get_fields()
         if inIdx >= len(txTo.vin):
-            self.dock.status_message('Nonexistent input specified for signing.', error=True)
+            self.set_result_message('Nonexistent input specified for signing.', error=True)
+            return
+        if not script:
+            self.set_result_message('Invalid output script.', error=True)
+            return
+        privkey = self.get_private_key()
+        if not privkey:
+            self.set_result_message('Could not parse private key.', error=True)
             return
         sig_hash = SignatureHash(script, txTo, inIdx, hash_type)
 
-        privkey = self.get_private_key()
-        if not privkey:
-            self.dock.status_message('Could not parse private key.', error=True)
-            return
         sig = privkey.sign(sig_hash)
         hash_type_hex = format_hex_string(hex(hash_type), with_prefix=False).decode('hex')
         sig = sig + hash_type_hex
         txTo.vin[inIdx].scriptSig = Script([sig, privkey.pub])
-        self.dock.deserialize_raw(b2x(txTo.serialize()))
-        self.dock.status_message('Successfully signed tx')
 
         # Try verify
         try:
             VerifyScript(txTo.vin[inIdx].scriptSig, script, txTo, inIdx, (SCRIPT_VERIFY_P2SH,))
         except Exception as e:
-            self.dock.status_message(str(e), error=True)
+            self.set_result_message('Error when verifying: %s' % str(e), error=True)
+            return
+
+        self.dock.deserialize_raw(b2x(txTo.serialize()))
+        # Deserializing a tx clears the model, so re-populate.
+        self.model.set_fields(script=script.get_human(), inIdx=inIdx, hashType=hash_type)
+        self.set_result_message('Successfully set scriptSig for input %d (SigHash type: %s).' % (inIdx, sig_hash_name(hash_type)))
 
     def get_private_key(self):
         """Attempt to parse the private key that was input."""

@@ -58,7 +58,7 @@ class ScriptExecution(object):
                 self.error = e
                 break
 
-        if self.steps and self.steps[-1].stack:
+        if self.steps and self.steps[-1].stack and not self.error:
             if verifying:
                 self.script_verified = True
             top_value = _CastToBool(self.steps[-1].stack[-1])

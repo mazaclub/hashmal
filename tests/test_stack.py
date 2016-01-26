@@ -1,6 +1,7 @@
 import unittest
 
 import bitcoin
+from bitcoin.core import CMutableTxIn, CMutableTxOut, CMutableOutPoint
 from bitcoin.core.scripteval import EvalScript
 
 from hashmal_lib.core.script import Script, transform_human
@@ -69,4 +70,77 @@ class StackTest(unittest.TestCase):
         invalid_tx_script = Script.from_human('OP_HASH160 0x0febbed40483661de6958d957412f82deed8e2f7 OP_EQUAL')
         _ = execution.evaluate(invalid_tx_script, txTo=tx, inIdx=0)
         self.assertFalse(execution.script_passed)
-        self.assertTrue(execution.script_verified)
+        self.assertFalse(execution.script_verified)
+
+    def test_valid_flow_control(self):
+        valid_tests = (
+            ('1 1', 'IF IF 1 ELSE 0 ENDIF ENDIF'),
+            ('1 0', 'IF IF 1 ELSE 0 ENDIF ENDIF'),
+            ('1 1', 'IF IF 1 ELSE 0 ENDIF ELSE IF 0 ELSE 1 ENDIF ENDIF'),
+            ('0 0', 'IF IF 1 ELSE 0 ENDIF ELSE IF 0 ELSE 1 ENDIF ENDIF'),
+            ('1 0', 'NOTIF IF 1 ELSE 0 ENDIF ENDIF'),
+            ('1 1', 'NOTIF IF 1 ELSE 0 ENDIF ENDIF'),
+            ('1 0', 'NOTIF IF 1 ELSE 0 ENDIF ELSE IF 0 ELSE 1 ENDIF ENDIF'),
+            ('0 1', 'NOTIF IF 1 ELSE 0 ENDIF ELSE IF 0 ELSE 1 ENDIF ENDIF'),
+        )
+        valid_scripts = []
+        for script_sig, script_pubkey in valid_tests:
+            script_sig, _ = transform_human(script_sig)
+            script_pubkey, _ = transform_human(script_pubkey)
+            script_sig = Script.from_human(script_sig)
+            script_pubkey = Script.from_human(script_pubkey)
+            valid_scripts.append((script_sig, script_pubkey))
+
+        execution = ScriptExecution()
+
+        for script_sig, script_pubkey in valid_scripts:
+            tx = build_spending_tx(script_sig, build_crediting_tx(script_pubkey))
+            _ = execution.evaluate(script_pubkey, txTo=tx, inIdx=0)
+            self.assertTrue(execution.script_passed)
+            self.assertTrue(execution.script_verified)
+
+    def test_invalid_flow_control(self):
+        invalid_tests = (
+            ('0 1', 'IF IF 1 ELSE 0 ENDIF ENDIF'),
+            ('0 0', 'IF IF 1 ELSE 0 ENDIF ENDIF'),
+            ('1 0', 'IF IF 1 ELSE 0 ENDIF ELSE IF 0 ELSE 1 ENDIF ENDIF'),
+            ('0 1', 'IF IF 1 ELSE 0 ENDIF ELSE IF 0 ELSE 1 ENDIF ENDIF'),
+            ('0 0', 'NOTIF IF 1 ELSE 0 ENDIF ENDIF'),
+            ('0 1', 'NOTIF IF 1 ELSE 0 ENDIF ENDIF'),
+            ('1 1', 'NOTIF IF 1 ELSE 0 ENDIF ELSE IF 0 ELSE 1 ENDIF ENDIF'),
+            ('0 0', 'NOTIF IF 1 ELSE 0 ENDIF ELSE IF 0 ELSE 1 ENDIF ENDIF'),
+        )
+        invalid_scripts = []
+        for script_sig, script_pubkey in invalid_tests:
+            script_sig, _ = transform_human(script_sig)
+            script_pubkey, _ = transform_human(script_pubkey)
+            script_sig = Script.from_human(script_sig)
+            script_pubkey = Script.from_human(script_pubkey)
+            invalid_scripts.append((script_sig, script_pubkey))
+
+        execution = ScriptExecution()
+
+        for script_sig, script_pubkey in invalid_scripts:
+            tx = build_spending_tx(script_sig, build_crediting_tx(script_pubkey))
+            _ = execution.evaluate(script_pubkey, txTo=tx, inIdx=0)
+            self.assertFalse(execution.script_passed)
+            self.assertFalse(execution.script_verified)
+
+
+def build_spending_tx(script_sig, credit_tx):
+    tx = Transaction(version=1, locktime=0)
+    txin = CMutableTxIn(CMutableOutPoint(credit_tx.GetHash(), 0), script_sig)
+    tx.vin = [txin]
+    txout = CMutableTxOut(0, Script())
+    tx.vout = [txout]
+    return tx
+
+def build_crediting_tx(script_pubkey):
+    tx = Transaction(version=1, locktime=0)
+    txin = CMutableTxIn()
+    txin.scriptSig = Script.from_human('0x00 0x00')
+    tx.vin = [txin]
+    txout = CMutableTxOut(0, script_pubkey)
+    tx.vout = [txout]
+    return tx
+

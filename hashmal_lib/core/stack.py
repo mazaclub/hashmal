@@ -221,6 +221,7 @@ class Stack(object):
                 elif sop == OP_1NEGATE or ((sop >= OP_1) and (sop <= OP_16)):
                     v = sop - (OP_1 - 1)
                     stack.append(bitcoin.core._bignum.bn2vch(v))
+                    last = '%s was pushed to the stack.' % e(stack[-1])
 
                 elif sop in _ISA_BINOP:
                     last = _BinOp(sop, stack, err_raiser)
@@ -344,6 +345,9 @@ class Stack(object):
                     if len(vfExec) == 0:
                         err_raiser(EvalScriptError, 'ELSE found without prior IF')
                     vfExec[-1] = not vfExec[-1]
+                    last = 'Skipped ELSE statement.'
+                    if vfExec[-1]:
+                        last = 'Entered ELSE statement.'
 
                 elif sop == OP_ENDIF:
                     last = 'End of IF statement.'
@@ -456,6 +460,12 @@ class Stack(object):
 
                 elif sop == OP_RIPEMD160:
                     check_args(1)
+
+                    h = hashlib.new('ripemd160')
+                    tmp = stack.pop()
+                    h.update(tmp)
+                    stack.append(h.digest())
+                    last = '%s (RIPEMD160 of %s) was pushed to the stack.' % e(stack[-1], tmp)
 
                 elif sop == OP_ROT:
                     check_args(3)

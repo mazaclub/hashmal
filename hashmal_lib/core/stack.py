@@ -542,7 +542,7 @@ class Stack(object):
                 else:
                     err_raiser(EvalScriptError, 'unsupported opcode 0x%x' % sop)
 
-            yield (stack, sop, last)
+                yield (stack, sop, last)
 
             # size limits
             if len(stack) + len(altstack) > MAX_STACK_ITEMS:

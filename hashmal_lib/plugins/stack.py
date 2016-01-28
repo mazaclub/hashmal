@@ -5,7 +5,7 @@ from PyQt4.QtCore import *
 
 from hashmal_lib.core import Transaction, Script
 from hashmal_lib.core.stack import Stack, ScriptExecution, ExecutionData
-from hashmal_lib.gui_utils import monospace_font, floated_buttons, AmountEdit
+from hashmal_lib.gui_utils import monospace_font, floated_buttons, AmountEdit, HBox, ReadOnlyCheckBox
 from hashmal_lib.widgets import ScriptExecutionWidget
 from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
@@ -65,6 +65,8 @@ class StackEval(BaseDock):
     def reset(self):
         self.tx_script.clear()
         self.execution_widget.clear()
+        for i in [self.script_passed, self.script_verified]:
+            i.setChecked(False)
 
     def create_layout(self):
         vbox = QVBoxLayout()
@@ -115,6 +117,16 @@ class StackEval(BaseDock):
 
         controls_hbox = floated_buttons([self.prev_button, self.next_button], left=True)
         vbox.addLayout(controls_hbox)
+
+        self.script_passed = ReadOnlyCheckBox('Passed')
+        self.script_passed.setToolTip('Whether the script passed')
+        self.script_passed.setWhatsThis('This box is checked if the script finished with a nonzero top stack value.')
+        self.script_verified = ReadOnlyCheckBox('Verified')
+        self.script_verified.setToolTip('Whether the script was verified with an input script')
+        self.script_verified.setWhatsThis('This box is checked if the script was verified with a transaction\'s input script.')
+        pass_hbox = HBox(QLabel('Script: '), self.script_passed, self.script_verified)
+        pass_hbox.addStretch(1)
+        vbox.addLayout(pass_hbox)
 
         w = QWidget()
         w.setLayout(vbox)
@@ -211,4 +223,6 @@ class StackEval(BaseDock):
         if not self.block_height_edit.property('hasError').toBool() and not self.block_time_edit.property('hasError').toBool():
             exec_data = ExecutionData(self.block_height_edit.get_amount(), self.block_time_edit.get_amount())
         self.execution_widget.evaluate(scr, self.tx, self.inIdx, execution_data=exec_data)
+        self.script_passed.setChecked(True if self.execution_widget.execution.script_passed else False)
+        self.script_verified.setChecked(self.execution_widget.execution.script_verified)
 

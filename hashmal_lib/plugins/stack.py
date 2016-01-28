@@ -92,17 +92,19 @@ class StackEval(BaseDock):
         self.tx_script.setFont(monospace_font)
         self.tx_script.setTabChangesFocus(True)
 
-        vbox = QVBoxLayout()
-        vbox.addWidget(QLabel('Script:'))
-        vbox.addWidget(self.tx_script)
-        vbox.addWidget(self.execution_widget, stretch=1)
-
         self.clear_button = QPushButton('Clear')
         self.clear_button.setToolTip('Clear the current script.')
         self.clear_button.clicked.connect(self.reset)
         self.do_button = QPushButton('&Evaluate')
         self.do_button.setToolTip('Evaluate the entire script.')
         self.do_button.clicked.connect(self.do_evaluate)
+        btn_hbox = floated_buttons([self.clear_button, self.do_button], left=True)
+
+        vbox = QVBoxLayout()
+        vbox.addWidget(QLabel('Script:'))
+        vbox.addWidget(self.tx_script)
+        vbox.addLayout(btn_hbox)
+        vbox.addWidget(self.execution_widget, stretch=1)
 
         self.next_button = QPushButton('Next')
         self.next_button.setToolTip('Step forward in script execution.')
@@ -111,8 +113,8 @@ class StackEval(BaseDock):
         self.prev_button.setToolTip('Step backward in script execution.')
         self.prev_button.clicked.connect(self.execution_widget.select_prev)
 
-        btn_hbox = floated_buttons([self.clear_button, self.do_button, self.prev_button, self.next_button], left=True)
-        vbox.addLayout(btn_hbox)
+        controls_hbox = floated_buttons([self.prev_button, self.next_button], left=True)
+        vbox.addLayout(controls_hbox)
 
         w = QWidget()
         w.setLayout(vbox)

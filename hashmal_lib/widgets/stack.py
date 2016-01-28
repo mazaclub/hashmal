@@ -284,14 +284,17 @@ class ScriptExecutionWidget(QWidget):
         last_item = self.model.index(self.model.rootItem.childCount() - 1, 0)
         self.view.selectionModel().select(last_item, QItemSelectionModel.SelectCurrent | QItemSelectionModel.Rows)
 
+    def select_index(self, index):
+        is_root = not index.parent().isValid()
+        self.change_labels(is_root)
+        self.mapper.setRootIndex(index.parent())
+        self.mapper.setCurrentIndex(index.row())
+
     def on_selection_changed(self, selected, deselected):
         try:
             idx = selected.indexes()[0]
-            is_root = not idx.parent().isValid()
-            self.change_labels(is_root)
-            self.mapper.setRootIndex(idx.parent())
-            self.mapper.setCurrentIndex(idx.row())
-        except Exception as e:
+            self.select_index(idx)
+        except Exception:
             self.mapper.setCurrentIndex(0)
 
     def change_labels(self, is_root):
@@ -315,7 +318,7 @@ class ScriptExecutionWidget(QWidget):
             if not next_index.isValid():
                 return
             self.view.selectionModel().select(next_index, QItemSelectionModel.SelectCurrent | QItemSelectionModel.Rows)
-            self.on_selection_changed(next_index, None)
+            self.select_index(next_index)
 
     def select_prev(self):
         """Select the previous execution step or stack item."""
@@ -329,7 +332,7 @@ class ScriptExecutionWidget(QWidget):
             if not prev_index.isValid():
                 return
             self.view.selectionModel().select(prev_index, QItemSelectionModel.SelectCurrent | QItemSelectionModel.Rows)
-            self.on_selection_changed(prev_index, None)
+            self.select_index(prev_index)
 
     def clear(self):
         self.model.clear()

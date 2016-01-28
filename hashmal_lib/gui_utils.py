@@ -1,6 +1,7 @@
 import decimal
 from decimal import Decimal
 
+from PyQt4 import QtGui
 from PyQt4.QtGui import QFont, QHBoxLayout, QFrame, QLineEdit
 from PyQt4 import QtCore
 
@@ -200,6 +201,47 @@ class AmountEdit(QLineEdit):
             self.setProperty('hasError', False)
         finally:
             self.style().polish(self)
+
+
+# http://stackoverflow.com/questions/11472284/how-to-set-a-read-only-checkbox-in-pyside-pyqt
+class ReadOnlyCheckBox(QtGui.QCheckBox):
+    def __init__( self, *args ):
+        super(ReadOnlyCheckBox, self).__init__(*args) # will fail if passing **kwargs
+        self._readOnly = True
+
+    def isReadOnly( self ):
+        return self._readOnly
+
+    def mousePressEvent( self, event ):
+        if ( self.isReadOnly() ):
+            event.accept()
+        else:
+            super(ReadOnlyCheckBox, self).mousePressEvent(event)
+
+    def mouseMoveEvent( self, event ):
+        if ( self.isReadOnly() ):
+            event.accept()
+        else:
+            super(ReadOnlyCheckBox, self).mouseMoveEvent(event)
+
+    def mouseReleaseEvent( self, event ):
+        if ( self.isReadOnly() ):
+            event.accept()
+        else:
+            super(ReadOnlyCheckBox, self).mouseReleaseEvent(event)
+
+    def keyPressEvent( self, event ):
+        if ( self.isReadOnly() ):
+            event.accept()
+        else:
+            super(ReadOnlyCheckBox, self).keyPressEvent(event)
+
+    @QtCore.pyqtSlot(bool)
+    def setReadOnly( self, state ):
+        self._readOnly = state
+
+    readOnly = QtCore.pyqtProperty(bool, isReadOnly, setReadOnly)
+
 
 hashmal_entry_points = {
     'hashmal.plugin': [

@@ -140,6 +140,15 @@ def transform_human(text, variables=None):
             new_tok = format_hex_string(t)
             toks[i] = new_tok
         return toks
+    def decimal_to_formatted_hex(s, loc, toks=None):
+        """Convert decimal to hex."""
+        if toks is None:
+            return
+        for i, t in enumerate(toks):
+            token = hex(int(t))
+            new_tok = format_hex_string(token)
+            toks[i] = new_tok
+        return toks
     # ^ parseActions for pyparsing end here.
     str_literal = QuotedString('"')
     var_name = Combine(Word('$') + Word(pyparsing.alphas))
@@ -161,9 +170,9 @@ def transform_human(text, variables=None):
 
     # Hex, implicit (e.g. 'a') and explicit (e.g. '0x0a')
     explicit_hex = Combine(Word('0x') + Word(pyparsing.hexnums) + pyparsing.WordEnd())
-    implicit_hex = Combine(pyparsing.WordStart() + OneOrMore(Word(pyparsing.hexnums)) + pyparsing.WordEnd())
+    decimal_number = Combine(pyparsing.WordStart() + OneOrMore(Word(pyparsing.nums)) + pyparsing.WordEnd())
     explicit_hex.setParseAction(hex_to_formatted_hex)
-    implicit_hex.setParseAction(hex_to_formatted_hex)
+    decimal_number.setParseAction(decimal_to_formatted_hex)
 
     # Opcodes, implicit (e.g. 'ADD') and explicit (e.g. 'OP_ADD')
     explicit_op = pyparsing.oneOf(op_names_explicit)
@@ -175,7 +184,7 @@ def transform_human(text, variables=None):
                                   explicit_op('Opcode') |
                                   implicit_op('Opcode') |
                                   explicit_hex('Hex') |
-                                  implicit_hex('Hex'))
+                                  decimal_number('Decimal'))
     matches = [(i[0].asDict(), i[1], i[2]) for i in contexts.scanString(text)]
     context_tips = []
     for i in matches:
@@ -198,7 +207,7 @@ def transform_human(text, variables=None):
         if not is_literal:
             s = var_name.transformString(s)
             s = implicit_op.transformString(s)
-            s = implicit_hex.transformString(s)
+            s = decimal_number.transformString(s)
             s = explicit_hex.transformString(s)
         strings.append(s)
     return ' '.join(strings), context_tips

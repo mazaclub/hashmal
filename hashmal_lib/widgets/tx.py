@@ -10,7 +10,7 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 from PyQt4.QtCore import *
 
-from hashmal_lib.gui_utils import Amount, monospace_font, HBox, floated_buttons, RawRole
+from hashmal_lib.gui_utils import Amount, monospace_font, HBox, floated_buttons, RawRole, ReadOnlyCheckBox
 from hashmal_lib.core import chainparams
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction
@@ -461,12 +461,10 @@ class TxProperties(QWidget):
         self.tx_size.setLayout(tx_size)
         self.tx_size.setToolTip('Size (in bytes) of the serialized tx')
 
-        self.is_final = QCheckBox('Is Final')
+        self.is_final = ReadOnlyCheckBox('Is Final')
         self.is_final.setToolTip('True if all inputs have a Sequence of 0xffffffff')
-        self.is_coinbase = QCheckBox('Is Coinbase')
+        self.is_coinbase = ReadOnlyCheckBox('Is Coinbase')
         self.is_coinbase.setToolTip('True if the tx generates new coins via mining')
-        for i in [self.is_final, self.is_coinbase]:
-            i.setEnabled(False)
         hbox = floated_buttons([self.tx_size, self.is_final, self.is_coinbase], left=True)
         hbox.setContentsMargins(16, 0, 0, 0)
         self.setLayout(hbox)

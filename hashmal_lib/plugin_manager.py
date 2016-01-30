@@ -153,6 +153,122 @@ class PluginsModel(QAbstractTableModel):
                 self.favorite_plugins = new_favorites
                 self.dataChanged.emit(QModelIndex(), QModelIndex())
 
+class FavoritesModel(QAbstractTableModel):
+    """Models favorite plugins."""
+    def __init__(self, gui, parent=None):
+        super(FavoritesModel, self).__init__(parent)
+        self.plugin_handler = gui.plugin_handler
+        self.config = gui.config
+        self.config.optionChanged.connect(self.on_option_changed)
+        self.favorite_plugins = self.config.get_option('favorite_plugins', [])
+
+    def rowCount(self, parent = QModelIndex()):
+        return len(self.favorite_plugins)
+
+    def columnCount(self, parent = QModelIndex()):
+        return 1
+
+    def headerData(self, section, orientation, role = Qt.DisplayRole):
+        data = None
+        if orientation == Qt.Horizontal and section == 0:
+            if role in [Qt.DisplayRole, Qt.ToolTipRole]:
+                data = 'Favorite Plugins'
+        else:
+            if section < len(self.favorite_plugins):
+                if role == Qt.DisplayRole:
+                    data = '+'.join(['Alt', str(section + 1)])
+                elif role == Qt.ToolTipRole:
+                    data = 'Plugin shortcut'
+
+        return data
+
+    def data(self, index, role = Qt.DisplayRole):
+        if not index.isValid() or index.row() >= len(self.favorite_plugins):
+            return None
+        data = None
+        plugin_name = self.favorite_plugins[index.row()]
+        if role in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole]:
+            data = plugin_name
+
+        return data
+
+    def setData(self, index, value, role = Qt.EditRole):
+        if not index.isValid():
+            return False
+        if index.column() != 0:
+            return False
+        plugin_name = str(value.toString())
+        if plugin_name in self.favorite_plugins:
+            return self.move_plugin_name(plugin_name, index.row())
+        return False
+
+    def move_plugin_name(self, plugin_name, row):
+        # Make sure plugin exists.
+        if not self.plugin_handler.get_plugin(plugin_name):
+            return False
+        # If we're replacing an item, remove it.
+        try:
+            old_row = self.favorite_plugins.index(plugin_name)
+            self.favorite_plugins.pop(old_row)
+        except ValueError:
+            pass
+        self.favorite_plugins.insert(row, plugin_name)
+        self.config.set_option('favorite_plugins', self.favorite_plugins)
+        return True
+
+    def remove_plugin(self, plugin_name):
+        if plugin_name in self.favorite_plugins:
+            self.favorite_plugins.remove(plugin_name)
+            self.config.set_option('favorite_plugins', self.favorite_plugins)
+            return True
+        return False
+
+    def supportedDropActions(self):
+        return Qt.MoveAction
+
+    def flags(self, index):
+        flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        if not index.isValid():
+            return flags | Qt.ItemIsDropEnabled
+        return flags | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled
+
+    def mimeTypes(self):
+        return ['text/plain']
+
+    def mimeData(self, indexes):
+        mime_data = QMimeData()
+        text = self.data(indexes[0])
+        mime_data.setText(text)
+        return mime_data
+
+    def dropMimeData(self, data, action, row, column, parent):
+        r = self.rowCount()
+        c = 0
+        if parent.isValid():
+            r = parent.row()
+            c = parent.column()
+        if action != Qt.MoveAction:
+            return False
+        if c != 0:
+            return False
+
+        if not data.hasText():
+            return False
+
+        text = str(data.text())
+        if r >= 0:
+            idx = self.index(r, c)
+            self.setData(idx, QVariant(text))
+            return True
+        return False
+
+    def on_option_changed(self, key):
+        if key == 'favorite_plugins':
+            new_favorites = self.config.get_option('favorite_plugins', [])
+            self.beginResetModel()
+            self.favorite_plugins = new_favorites
+            self.endResetModel()
+
 class PluginDetails(QWidget):
     """Widget with details and controls for a plugin."""
 
@@ -219,8 +335,32 @@ class PluginManager(QDialog):
         return QSize(500, 400)
 
     def create_layout(self):
-        vbox = QVBoxLayout()
+        plugins_page = self.create_plugins_page()
+        favorites_page = self.create_favorites_page()
+        self.pages = [plugins_page, favorites_page]
+        self.stacked_widget = QStackedWidget()
+        for i in self.pages:
+            self.stacked_widget.addWidget(i)
 
+        self.selector = QComboBox()
+        self.selector.addItems(['Plugins', 'Favorites'])
+        self.selector.currentIndexChanged.connect(self.stacked_widget.setCurrentIndex)
+        selector_hbox = QHBoxLayout()
+        selector_hbox.setContentsMargins(0, 0, 0, 0)
+        selector_hbox.addWidget(self.selector)
+        selector_hbox.addStretch(1)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.addRow('View: ', selector_hbox)
+        vbox = QVBoxLayout()
+        vbox.addLayout(form)
+        vbox.addWidget(self.stacked_widget)
+        self.setLayout(vbox)
+
+        self.view.selectRow(0)
+
+    def create_plugins_page(self):
         self.model = PluginsModel(self.gui)
         self.proxy_model = QSortFilterProxyModel()
         self.proxy_model.setSourceModel(self.model)
@@ -261,14 +401,50 @@ class PluginManager(QDialog):
         is_local = QLabel('Hashmal is being run locally.\n\nInstall Hashmal to use third-party plugins.\n')
         is_local.setVisible(__builtin__.use_local_modules)
 
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(is_local)
         vbox.addLayout(filter_box)
         vbox.addWidget(self.view)
         vbox.addWidget(Separator())
         vbox.addWidget(self.plugin_details)
-        self.setLayout(vbox)
+        w = QWidget()
+        w.setLayout(vbox)
+        return w
 
-        self.view.selectRow(0)
+    def create_favorites_page(self):
+        self.favorites_model = FavoritesModel(self.gui)
+        self.favorites_view = view = QTableView()
+        view.setModel(self.favorites_model)
+        view.horizontalHeader().setResizeMode(0, QHeaderView.Stretch)
+        view.setAlternatingRowColors(True)
+        for i in [view.horizontalHeader(), view.verticalHeader()]:
+            i.setHighlightSections(False)
+        view.setSelectionMode(QAbstractItemView.SingleSelection)
+        view.setDragEnabled(True)
+        view.setAcceptDrops(True)
+        view.setDropIndicatorShown(True)
+        view.setContextMenuPolicy(Qt.CustomContextMenu)
+        view.customContextMenuRequested.connect(self.favorites_view_context_menu)
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.addWidget(self.favorites_view)
+        w = QWidget()
+        w.setLayout(vbox)
+        return w
+
+    def favorites_view_context_menu(self, pos):
+        menu = QMenu()
+        indexes = self.favorites_view.selectedIndexes()
+        if not len(indexes):
+            return
+        idx = indexes[0]
+        def remove_highlighted_plugin():
+            plugin_name = self.favorites_model.data(idx)
+            self.favorites_model.remove_plugin(plugin_name)
+        menu.addAction('Remove', remove_highlighted_plugin)
+
+        menu.exec_(self.favorites_view.viewport().mapToGlobal(pos))
 
     def update_details_area(self, selected, deselected):
         """Update the plugin details area when selection changes."""

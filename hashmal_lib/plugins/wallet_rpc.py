@@ -190,16 +190,14 @@ class WalletRPC(BaseDock):
             raise Exception('Unsupported data type "%s"' % data_type)
 
 
-        result = None
-        try:
-            result, err = self.do_rpc(method_name, params, async=False)
-            if err:
-                return err
-            # Truncate block to header
-            if data_type == 'raw_header':
-                result = result[:160]
-        except Exception as e:
-            result = str(e)
+        result, err = self.do_rpc(method_name, params, async=False)
+        if err:
+            if 'Connection refused' in err:
+                raise Exception('RPC connection refused.')
+            raise Exception(err)
+        # Truncate block to header
+        if data_type == 'raw_header':
+            result = result[:160]
         return result
 
     def call_rpc(self):

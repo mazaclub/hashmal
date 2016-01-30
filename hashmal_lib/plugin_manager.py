@@ -64,12 +64,16 @@ class PluginsModel(QAbstractTableModel):
             is_enabled = plugin.name in self.enabled_plugins
             if role in [Qt.DisplayRole]:
                 data = 'Yes' if is_enabled else 'No'
+            elif role == Qt.CheckStateRole:
+                data = Qt.Checked if is_enabled else Qt.Unchecked
             elif role == Qt.EditRole:
                 data = is_enabled
         elif col == 3:
             is_favorite = plugin.name in self.favorite_plugins
             if role in [Qt.DisplayRole]:
                 data = 'Yes' if is_favorite else 'No'
+            elif role == Qt.CheckStateRole:
+                data = Qt.Checked if is_favorite else Qt.Unchecked
             elif role == Qt.EditRole:
                 data = is_favorite
         elif col == 4:

@@ -67,6 +67,8 @@ class StackEval(BaseDock):
         self.execution_widget.clear()
         for i in [self.script_passed, self.script_verified]:
             i.setChecked(False)
+            i.setProperty('hasSuccess', False)
+            self.style().polish(i)
 
     def create_layout(self):
         vbox = QVBoxLayout()
@@ -223,6 +225,11 @@ class StackEval(BaseDock):
         if not self.block_height_edit.property('hasError').toBool() and not self.block_time_edit.property('hasError').toBool():
             exec_data = ExecutionData(self.block_height_edit.get_amount(), self.block_time_edit.get_amount())
         self.execution_widget.evaluate(scr, self.tx, self.inIdx, execution_data=exec_data)
-        self.script_passed.setChecked(True if self.execution_widget.execution.script_passed else False)
-        self.script_verified.setChecked(self.execution_widget.execution.script_verified)
+        passed = True if self.execution_widget.execution.script_passed else False
+        verified = self.execution_widget.execution.script_verified
+        self.script_passed.setChecked(passed)
+        self.script_verified.setChecked(verified)
+        for widget in [self.script_passed, self.script_verified]:
+            widget.setProperty('hasSuccess', widget.isChecked())
+            self.style().polish(widget)
 

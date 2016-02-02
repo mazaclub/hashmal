@@ -153,6 +153,24 @@ class PluginsModel(QAbstractTableModel):
                 self.favorite_plugins = new_favorites
                 self.dataChanged.emit(QModelIndex(), QModelIndex())
 
+class PluginsProxyModel(QSortFilterProxyModel):
+    def __init__(self, parent=None):
+        super(PluginsProxyModel, self).__init__(parent)
+        self.name_filter = QRegExp()
+
+    def set_name_filter(self, regexp):
+        self.name_filter = regexp
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        if self.name_filter:
+            idx = self.sourceModel().index(source_row, 0, source_parent)
+            name = str(self.sourceModel().data(idx).toString())
+            if self.name_filter.indexIn(name) == -1:
+                return False
+        return True
+
+
 class FavoritesModel(QAbstractTableModel):
     """Models favorite plugins."""
     def __init__(self, gui, parent=None):
@@ -362,7 +380,7 @@ class PluginManager(QDialog):
 
     def create_plugins_page(self):
         self.model = PluginsModel(self.gui)
-        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model = PluginsProxyModel()
         self.proxy_model.setSourceModel(self.model)
 
         self.view = QTableView()
@@ -390,7 +408,7 @@ class PluginManager(QDialog):
         filter_edit = QLineEdit()
         def filter_view():
             regexp = QRegExp(str(filter_edit.text()), Qt.CaseInsensitive)
-            self.proxy_model.setFilterRegExp(regexp)
+            self.proxy_model.set_name_filter(regexp)
         filter_edit.textChanged.connect(filter_view)
         filter_label = QLabel('&Find:')
         filter_label.setBuddy(filter_edit)

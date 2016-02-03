@@ -41,12 +41,20 @@ item_types = []
 # List of ItemAction instances.
 item_actions = []
 
-def instantiate_item(data):
-    """Attempt to instantiate an item with the value of data."""
+def instantiate_item(data, allow_multiple=False):
+    """Attempt to instantiate an item with the value of data.
+
+    If allow_multiple is True, a list of compatible items
+    will be returned.
+    """
+    items = []
     for i in item_types:
         instance = i.coerce_item(data)
         if instance is not None:
-            return instance
+            if not allow_multiple:
+                return instance
+            items.append(instance)
+    return items
 
 def get_actions(name):
     """Get actions for an item type.

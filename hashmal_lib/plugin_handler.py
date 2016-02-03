@@ -202,29 +202,39 @@ class PluginHandler(QWidget):
 
         """
 
-        items = self.get_plugin('Item Types')
-        item = items.instantiate_item(data)
-        if not item:
+        items_plugin = self.get_plugin('Item Types')
+        items = items_plugin.instantiate_item(data, allow_multiple=True)
+        if not items:
             return
 
-        for label, func in item.actions:
-            menu.addAction(label, func)
+        menu_has_separator = False
+        # Add the item's own actions.
+        for item in items:
+            for label, func in item.actions:
+                menu.addAction(label, func)
 
-        actions = items.get_item_actions(item.name)
-        if not actions:
-            return
-
-        menu.addSeparator()
-        # Add a menu for relevant plugins in sorted order.
-        for plugin_name in sorted(actions.keys()):
-            if plugin_name == instance.tool_name:
+        # Add actions for other plugins.
+        for item in items:
+            # Get actions for other plugins.
+            actions = items_plugin.get_item_actions(item.name)
+            if not actions:
                 continue
-            plugin_menu = menu.addMenu(plugin_name)
 
-            # Add the plugin's actions.
-            plugin_actions = actions[plugin_name]
-            for label, func in plugin_actions:
-                plugin_menu.addAction(label, partial(func, item))
+            # Separator between the item's own actions and plugin actions.
+            if not menu_has_separator:
+                menu.addSeparator()
+                menu_has_separator = True
+
+            # Add a menu for relevant plugins in sorted order.
+            for plugin_name in sorted(actions.keys()):
+                if plugin_name == instance.tool_name:
+                    continue
+                plugin_menu = menu.addMenu(plugin_name)
+
+                # Add the plugin's actions to its menu.
+                plugin_actions = actions[plugin_name]
+                for label, func in plugin_actions:
+                    plugin_menu.addAction(label, partial(func, item))
 
     def do_augment_hook(self, class_name, hook_name, data, callback=None):
         """Consult plugins that can augment hook_name."""

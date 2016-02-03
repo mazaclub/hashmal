@@ -64,6 +64,9 @@ class StackEval(BaseDock):
 
     def reset(self):
         self.tx_script.clear()
+        self.clear_execution()
+
+    def clear_execution(self):
         self.execution_widget.clear()
         for i in [self.script_passed, self.script_verified]:
             i.setChecked(False)
@@ -220,7 +223,12 @@ class StackEval(BaseDock):
         self.inIdx = idx
 
     def do_evaluate(self):
-        scr = Script(str(self.tx_script.toPlainText()).decode('hex'))
+        self.clear_execution()
+        try:
+            scr = Script(str(self.tx_script.toPlainText()).decode('hex'))
+        except Exception as e:
+            self.status_message('Error decoding script: %s' % str(e), error=True)
+            return
         exec_data = None
         if not self.block_height_edit.property('hasError').toBool() and not self.block_time_edit.property('hasError').toBool():
             exec_data = ExecutionData(self.block_height_edit.get_amount(), self.block_time_edit.get_amount())

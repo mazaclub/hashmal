@@ -130,7 +130,7 @@ class SettingsDialog(QDialog):
         self.config = main_window.config
         self.qt_settings = main_window.qt_settings
         self.layout_changer = LayoutChanger(self.gui)
-        if not self.qt_settings.contains('/'.join(['toolLayout', 'default'])):
+        if not self.qt_settings.contains('toolLayout/default/state'):
             self.layout_changer.save_layout()
 
         self.setup_layout()

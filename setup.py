@@ -31,5 +31,6 @@ setup(
         'hashmal_lib.plugins',
         'hashmal_lib.widgets'
     ],
-    entry_points = hashmal_entry_points
+    entry_points = hashmal_entry_points,
+    test_suite = 'hashmal_lib.tests'
 )

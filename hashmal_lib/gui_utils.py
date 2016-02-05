@@ -265,15 +265,3 @@ required_plugins = ['Item Types', 'Stack Evaluator', 'Variables']
 default_plugins = ['Blockchain', 'Item Types', 'Script Generator', 'Stack Evaluator', 'Transaction Analyzer',
                    'Transaction Builder', 'Variables', 'Wallet RPC']
 
-
-hashmal_style = '''
-
-QStatusBar[hasError=true], QLineEdit[hasError=true],
-QLabel[hasError=true], QTextEdit[hasError=true], QPlainTextEdit[hasError=true] {
-  background: rgba(255, 0, 0, 25%);
-}
-
-QCheckBox[hasSuccess=true] {
-  background: rgba(0, 255, 0, 25%);
-}
-'''

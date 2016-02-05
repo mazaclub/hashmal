@@ -11,10 +11,11 @@ from plugin_handler import PluginHandler
 from settings_dialog import SettingsDialog, ChainparamsComboBox, LayoutChanger
 from widgets.script import ScriptEditor
 from help_widgets import QuickTips
-from gui_utils import script_file_filter, hashmal_style, floated_buttons, monospace_font
+from gui_utils import script_file_filter, floated_buttons, monospace_font
 from plugin_manager import PluginManager
 from plugins import BaseDock
 from downloader import DownloadController
+from style import hashmal_style
 
 known_script_formats = ['Human', 'Hex']
 
@@ -26,7 +27,7 @@ class HashmalMain(QMainWindow):
     def __init__(self, app):
         super(HashmalMain, self).__init__()
         self.app = app
-        self.app.setStyleSheet(hashmal_style)
+        self.app.setStyleSheet(hashmal_style())
         self.changes_saved = True
         # {Qt.DockWidgetArea: [dock0, dock1, ...], ...}
         self.dock_orders = defaultdict(list)

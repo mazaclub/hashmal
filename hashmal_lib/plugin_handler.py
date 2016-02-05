@@ -310,9 +310,7 @@ class PluginHandler(QWidget):
         """Evaluate the script being edited with the Stack Evaluator tool."""
         script_hex = self.gui.script_editor.get_data('Hex')
         if not script_hex: return
-        self.bring_to_front(self.get_plugin('Stack Evaluator').ui)
-        self.get_plugin('Stack Evaluator').ui.tx_script.setPlainText(script_hex)
-        self.get_plugin('Stack Evaluator').ui.do_evaluate()
+        self.get_plugin('Stack Evaluator').ui.evaluate_script(script_hex)
 
     def do_default_layout(self):
         last_small = last_large = None

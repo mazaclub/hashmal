@@ -222,6 +222,12 @@ class StackEval(BaseDock):
     def set_input_index(self, idx):
         self.inIdx = idx
 
+    def evaluate_script(self, s):
+        """Called by Plugin Handler to evaluate the current script."""
+        self.needsFocus.emit()
+        self.tx_script.setPlainText(s)
+        self.do_button.animateClick()
+
     def do_evaluate(self):
         self.clear_execution()
         try:

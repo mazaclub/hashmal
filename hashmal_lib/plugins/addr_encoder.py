@@ -158,7 +158,7 @@ class AddrEncoder(BaseDock):
     def decode_item(self, item):
         self.needsFocus.emit()
         self.address_line.setText(str(item))
-        self.decode_address()
+        self.decode_button.animateClick()
 
     def encode_address(self):
         hash160 = str(self.hash_line.text())
@@ -182,7 +182,7 @@ class AddrEncoder(BaseDock):
     def encode_hash160(self, hash160):
         self.needsFocus.emit()
         self.hash_line.setText(hash160)
-        self.encode_address()
+        self.encode_button.animateClick()
 
     def encode_item(self, item):
         self.encode_hash160(item.raw())

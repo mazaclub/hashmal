@@ -103,12 +103,14 @@ class BlockAnalyzer(BaseDock):
     def deserialize_item(self, item):
         self.needsFocus.emit()
         self.raw_block_edit.setPlainText(item.raw())
-        self.check_raw_block()
 
     def txs_context_menu(self, position):
+        try:
+            selected = self.block_widget.txs_widget.view.selectedIndexes()[0]
+        except IndexError:
+            return
         menu = QMenu()
         if self.block:
-            selected = self.block_widget.txs_widget.view.selectedIndexes()[0]
             r = selected.row()
             tx = self.block.vtx[r]
             raw_tx = b2x(tx.serialize())

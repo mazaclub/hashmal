@@ -121,8 +121,6 @@ class TxAnalyzer(BaseDock):
         self.tx = None
 
     def create_layout(self):
-        form = QFormLayout()
-
         self.raw_tx_edit = QPlainTextEdit()
         self.raw_tx_edit.setWhatsThis('Enter a serialized transaction here. If you have a raw transaction stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically.')
         self.raw_tx_edit.setTabChangesFocus(True)
@@ -142,28 +140,27 @@ class TxAnalyzer(BaseDock):
         tabs.setTabToolTip(self.TAB_DESERIALIZE, 'View the transaction in human-readable form')
         tabs.setTabToolTip(self.TAB_VERIFY, 'Download previous transactions and verify inputs')
 
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 2)
         form.addRow('Raw Tx:', self.raw_tx_edit)
-        form.addRow(self.raw_tx_invalid)
-        form.addRow(tabs)
-        return form
+        vbox = QVBoxLayout()
+        vbox.addLayout(form)
+        vbox.addWidget(self.raw_tx_invalid)
+        vbox.addWidget(tabs)
+        return vbox
 
     def create_deserialize_tab(self):
-        form = QFormLayout()
-
-        self.deserialize_button = QPushButton('Deserialize')
-        self.deserialize_button.clicked.connect(self.deserialize)
-        btn_hbox = floated_buttons([self.deserialize_button])
-
         self.tx_widget = TxWidget()
         self.tx_widget.inputs_tree.view.customContextMenuRequested.disconnect(self.tx_widget.inputs_tree.customContextMenu)
         self.tx_widget.inputs_tree.view.customContextMenuRequested.connect(self.inputs_context_menu)
         self.tx_widget.outputs_tree.view.customContextMenuRequested.disconnect(self.tx_widget.outputs_tree.customContextMenu)
         self.tx_widget.outputs_tree.view.customContextMenuRequested.connect(self.outputs_context_menu)
 
-        form.addRow(self.tx_widget)
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.tx_widget)
 
         w = QWidget()
-        w.setLayout(form)
+        w.setLayout(vbox)
         return w
 
     def create_verify_tab(self):
@@ -263,7 +260,6 @@ class TxAnalyzer(BaseDock):
             valid = False
 
         self.tx = tx
-        self.deserialize_button.setEnabled(valid)
         self.inputs_box.setEnabled(valid)
         self.verify_button.setEnabled(valid)
         self.verify_all_button.setEnabled(valid)
@@ -281,14 +277,12 @@ class TxAnalyzer(BaseDock):
     def deserialize_raw(self, txt):
         """Deserialize a raw transaction."""
         self.needsFocus.emit()
+        self.tabs.setCurrentIndex(self.TAB_DESERIALIZE)
         self.raw_tx_edit.setPlainText(txt)
-        self.deserialize()
 
     def deserialize_item(self, item):
         """Deserialize a Transaction item."""
-        self.needsFocus.emit()
-        self.raw_tx_edit.setPlainText(item.raw())
-        self.deserialize()
+        self.deserialize_raw(item.raw())
 
     def deserialize(self):
         self.clear()
@@ -359,8 +353,8 @@ class TxAnalyzer(BaseDock):
 
     def verify_item_inputs(self, item):
         self.deserialize_item(item)
-        self.verify_inputs()
         self.tabs.setCurrentIndex(self.TAB_VERIFY)
+        self.verify_all_button.animateClick()
 
     def refresh_data(self):
         if self.tx:

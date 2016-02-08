@@ -94,6 +94,18 @@ class ScriptGenTest(unittest.TestCase):
             script_out = script_gen.template_to_script(template, template_vars)
             self.assertEqual('OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG', script_out)
 
+    def test_create_p2pk_script(self):
+        template = self.templates['Pay-To-Public-Key']
+
+        templates_vars = [
+                {'recipient': '0x03569988948d05ddf970d610bc52f0d47fb21ec307a35d3cbeba6d11accfcd3c6a'},
+                {'recipient': '03569988948d05ddf970d610bc52f0d47fb21ec307a35d3cbeba6d11accfcd3c6a'}
+        ]
+
+        for template_vars in templates_vars:
+            script_out = script_gen.template_to_script(template, template_vars)
+            self.assertEqual('0x03569988948d05ddf970d610bc52f0d47fb21ec307a35d3cbeba6d11accfcd3c6a OP_CHECKSIG', script_out)
+
     def test_op_return_script(self):
         template = self.templates['Null Output']
         template_vars = {'text': 'testing'}
@@ -111,3 +123,6 @@ class ScriptGenTest(unittest.TestCase):
 
         scr = Script.from_human('OP_DUP OP_HASH160 0x00000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG')
         self.assertFalse(script_gen.is_template_script(scr, template))
+
+        scr = Script.from_human('0x03569988948d05ddf970d610bc52f0d47fb21ec307a35d3cbeba6d11accfcd3c6a OP_CHECKSIG')
+        self.assertTrue(script_gen.is_template_script(scr, self.templates['Pay-To-Public-Key']))

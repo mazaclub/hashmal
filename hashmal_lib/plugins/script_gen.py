@@ -2,6 +2,7 @@ from collections import namedtuple
 
 import bitcoin
 from bitcoin.base58 import CBase58Data
+from bitcoin.core.key import CPubKey
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -24,6 +25,7 @@ Attributes:
     variables (dict): Variable names and types.
         Variable types can be any of the following:
             - 'address': Base58 address.
+            - 'pubkey': Public key.
 
 """
 
@@ -37,11 +39,19 @@ def template_to_script(template, variables):
                 h160 = CBase58Data(v).to_bytes()
             except Exception:
                 # Check if value is a hash160.
-                if is_hex(v) and (len(v) == 42 if v.startswith('0x') else len(v) == 40):
-                    h160 = v[2:].decode('hex') if v.startswith('0x') else v.decode('hex')
+                if is_hex(v) and len(format_hex_string(v, with_prefix=False)) == 40:
+                    h160 = format_hex_string(v, with_prefix=False).decode('hex')
                 else:
                     return 'Error: Could not decode <{}> address.'.format(k)
             _vars[k] = ''.join(['0x', h160.encode('hex')])
+        elif var_type == 'pubkey':
+            if not is_hex(v):
+                return 'Error: Pubkey must be hex.'
+            key_hex = format_hex_string(v, with_prefix=False)
+            pub = CPubKey(key_hex.decode('hex'))
+            if not pub.is_fullyvalid:
+                return 'Error: Pubkey is invalid.'
+            _vars[k] = ''.join(['0x', key_hex])
         elif var_type == 'text':
             _vars[k] = ''.join(['0x', v.encode('hex')])
         else:
@@ -55,10 +65,17 @@ def template_to_script(template, variables):
 
 def is_valid_variable_value(value, variable_type):
     """Returns whether value is valid."""
-    if variable_type == 'address':
-        v = format_hex_string(value, with_prefix=False)
-        if len(v) == 40:
-            return True
+    try:
+        if variable_type == 'address':
+            v = format_hex_string(value, with_prefix=False)
+            if len(v) == 40:
+                return True
+        elif variable_type == 'pubkey':
+            v = format_hex_string(value, with_prefix=False)
+            pub = CPubKey(v.decode('hex'))
+            return pub.is_fullyvalid
+    except Exception:
+        pass
     return False
 
 def is_template_script(script, template):
@@ -192,6 +209,10 @@ known_templates = [
     ScriptTemplate('Pay-To-Script-Hash Output',
         'OP_HASH160 <recipient> OP_EQUAL',
         {'recipient': 'address'}),
+    # P2PK
+    ScriptTemplate('Pay-To-Public-Key',
+        '<recipient> OP_CHECKSIG',
+        {'recipient': 'pubkey'}),
     # OP_RETURN
     ScriptTemplate('Null Output',
         'OP_RETURN <text>',

@@ -43,6 +43,65 @@ class RPCProfile(object):
                     self.host,
                     self.port)
 
+class RPCProfileModel(QAbstractTableModel):
+    def __init__(self, parent=None):
+        super(RPCProfileModel, self).__init__(parent)
+        self.profile = None
+
+    def clear(self):
+        self.set_profile(None)
+
+    def set_profile(self, profile):
+        self.beginResetModel()
+        self.profile = profile
+        self.endResetModel()
+
+    def rowCount(self, parent=QModelIndex()):
+        return 1
+
+    def columnCount(self, parent=QModelIndex()):
+        return 4
+
+    def data(self, index, role = Qt.DisplayRole):
+        if not index.isValid() or not self.profile:
+            return None
+
+        data = None
+        c = index.column()
+        if c == 0:
+            if role in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole]:
+                data = self.profile.user
+        elif c == 1:
+            if role in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole]:
+                data = self.profile.password
+        elif c == 2:
+            if role in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole]:
+                data = self.profile.host
+        elif c == 3:
+            if role in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole]:
+                data = self.profile.port
+
+        return data
+
+    def setData(self, index, value, role = Qt.EditRole):
+        if not index.isValid() or not self.profile:
+            return False
+
+        c = index.column()
+        val = str(value.toString()) if type(value) is QVariant else value
+        if c == 0:
+            self.profile.user = val
+            return True
+        elif c == 1:
+            self.profile.password = val
+            return True
+        elif c == 2:
+            self.profile.host = val
+            return True
+        elif c == 3:
+            self.profile.port = val
+            return True
+        return False
 
 class RPCDownloader(Downloader):
     finished = pyqtSignal(str, str, str, name='finished')
@@ -95,8 +154,64 @@ class WalletRPC(BaseDock):
         super(WalletRPC, self).__init__(*args)
         self.augment('rpc_methods', None, callback=self.on_methods_augmented)
 
+    def set_profile(self, profile):
+        self.profile = profile
+        self.profile_model.set_profile(self.profile)
+        self.mapper.toFirst()
+
+    def load_profile(self, name):
+        profiles = self.options().get('profiles', {})
+        if not profiles.get(name):
+            self.status_message('Cannot load nonexistent profile "%s".' % name, error=True)
+            return
+        profile = RPCProfile(profiles.get(name, {}))
+        self.set_profile(profile)
+        self.status_message('Loaded RPC profile "%s".' % name)
+
+    def save_profile(self, name):
+        options = self.options()
+        profiles = options.get('profiles', {})
+        profiles[name] = self.profile.as_dict()
+        options['profiles'] = profiles
+        self.save_options(options)
+        self.load_profile_names()
+        self.status_message('Saved RPC profile "%s".' % name)
+
+    def delete_profile(self, name):
+        if name == 'default':
+            self.status_message('Cannot delete default profile.', error=True)
+            return
+        options = self.options()
+        profiles = options.get('profiles', {})
+        if profiles.get(name):
+            del profiles[name]
+            options['profiles'] = profiles
+            self.save_options(options)
+            self.name_combo.setCurrentIndex(self.profile_names.index('default'))
+            self.load_profile_names()
+            self.status_message('Deleted RPC profile "%s".' % name)
+        else:
+            self.status_message('Cannot delete nonexistent profile "%s".', error=True)
+
+    def load_profile_names(self):
+        profiles = self.options().get('profiles', {})
+        self.profile_names = profiles.keys()
+        current_profile = str(self.name_combo.currentText())
+        self.name_combo.clear()
+        self.name_combo.addItems(self.profile_names)
+        # Setting the current index also has the effect of re-loading the selected profile.
+        self.name_combo.setCurrentIndex(self.profile_names.index(current_profile))
+
     def init_data(self):
-        self.profile = RPCProfile(self.options())
+        profiles = self.options().get('profiles', {})
+        self.profile = RPCProfile(profiles.get('default', {}))
+        self.profile_names = profiles.keys()
+        # Save default profile if no profiles exist.
+        if not self.profile_names:
+            self.profile_names = ['default']
+            options = self.options()
+            options['profiles'] = {'default': self.profile.as_dict()}
+            self.save_options(options)
 
     def create_layout(self):
         vbox = QVBoxLayout()
@@ -110,7 +225,26 @@ class WalletRPC(BaseDock):
 
     def create_settings_tab(self):
         form = QFormLayout()
+        self.profile_model = RPCProfileModel()
+        self.profile_model.set_profile(self.profile)
 
+        # Profiles
+        self.name_combo = QComboBox()
+        self.name_combo.addItems(self.profile_names)
+        self.name_combo.setEditable(True)
+        self.name_combo.setCurrentIndex(self.profile_names.index('default'))
+
+        self.save_button = QPushButton('Save')
+        self.save_button.clicked.connect(lambda: self.save_profile(str(self.name_combo.currentText())))
+        self.delete_button = QPushButton('Delete')
+        self.delete_button.clicked.connect(lambda: self.delete_profile(str(self.name_combo.currentText())))
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.name_combo, stretch=1)
+        for i in [self.save_button, self.delete_button]:
+            hbox.addWidget(i)
+        form.addRow(hbox)
+
+        # Profile variables
         self.user_edit = QLineEdit()
         self.user_edit.setText(self.profile.user)
         self.pass_edit = QLineEdit()
@@ -121,18 +255,22 @@ class WalletRPC(BaseDock):
         self.port_edit.setRange(0, 65535)
         self.port_edit.setValue(int(self.profile.port))
 
-        for i in [self.user_edit, self.pass_edit, self.host_edit]:
-            i.textChanged.connect(self.update_profile)
-        self.port_edit.valueChanged.connect(self.update_profile)
-
-        save_profile_button = QPushButton('Save')
-        save_profile_button.clicked.connect(self.save_rpc_options)
+        self.mapper = QDataWidgetMapper()
+        self.mapper.setModel(self.profile_model)
+        self.mapper.setSubmitPolicy(QDataWidgetMapper.AutoSubmit)
+        self.mapper.addMapping(self.user_edit, 0)
+        self.mapper.addMapping(self.pass_edit, 1)
+        self.mapper.addMapping(self.host_edit, 2)
+        self.mapper.addMapping(self.port_edit, 3)
 
         form.addRow('RPC Username:', self.user_edit)
         form.addRow('RPC Password:', self.pass_edit)
         form.addRow('RPC Host:', self.host_edit)
         form.addRow('RPC Port:', self.port_edit)
-        form.addRow(floated_buttons([save_profile_button]))
+
+        self.mapper.toFirst()
+        self.load_profile_names()
+        self.name_combo.currentIndexChanged.connect(lambda: self.load_profile(str(self.name_combo.currentText())))
 
         w = QWidget()
         w.setLayout(form)
@@ -265,17 +403,6 @@ class WalletRPC(BaseDock):
             self.handler.add_plugin_actions(self, menu, txt)
 
         menu.exec_(self.result_edit.mapToGlobal(position))
-
-    def update_profile(self):
-        self.profile.user = str(self.user_edit.text())
-        self.profile.password = str(self.pass_edit.text())
-        self.profile.host = str(self.host_edit.text())
-        self.profile.port = self.port_edit.value()
-
-    def save_rpc_options(self):
-        options = self.profile.as_dict()
-        self.save_options(options)
-        self.status_message('Saved RPC options.')
 
     def on_methods_augmented(self, data):
         if type(data) is type(''):

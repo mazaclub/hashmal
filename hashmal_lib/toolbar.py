@@ -36,8 +36,7 @@ class LayoutSelector(QWidget):
         self.layout_changer = layout_changer = LayoutChanger(self.gui)
         layout_changer.setWhatsThis('Use this to load or save layouts. Layouts allow you to quickly access the tools you need for a given purpose.')
         layout_changer.layout_combo.setMinimumWidth(120)
-        layout_changer.delete_button.setVisible(False)
-        for i in [layout_changer.load_button, layout_changer.save_button]:
+        for i in [layout_changer.load_button, layout_changer.save_button, layout_changer.delete_button]:
             i.setMaximumWidth(50)
             i.setMaximumHeight(23)
         layout_form = QFormLayout()

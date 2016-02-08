@@ -61,6 +61,7 @@ class LayoutChanger(QWidget):
         # QComboBox for loading/deleting/saving a layout.
         self.layout_combo = layout_combo = QComboBox()
         layout_combo.addItems(self.layout_names)
+        layout_combo.setEditable(True)
         # Load layout
         self.load_button = load_button = QPushButton('Load')
         load_button.setToolTip('Load the selected layout')
@@ -93,6 +94,9 @@ class LayoutChanger(QWidget):
 
     def load_layout(self, name='default'):
         key = '/'.join(['toolLayout', name])
+        if not self.qt_settings.contains(key + '/state'):
+            self.gui.show_status_message('Cannot load nonexistent layout "{}".'.format(name), error=True)
+            return
         LayoutChanger.current_layout = name
         pos = self.gui.pos()
         self.gui.restoreState(self.qt_settings.value(key + '/state').toByteArray())
@@ -103,6 +107,9 @@ class LayoutChanger(QWidget):
 
     def delete_layout(self, name):
         key = '/'.join(['toolLayout', name])
+        if not self.qt_settings.contains(key + '/state'):
+            self.gui.show_status_message('Cannot delete nonexistent layout "{}".'.format(name), error=True)
+            return
         if LayoutChanger.current_layout == name:
             LayoutChanger.current_layout = 'default'
         self.qt_settings.remove(key)
@@ -162,26 +169,11 @@ class SettingsDialog(QDialog):
 
     def create_qt_tab(self):
         self.layout_changer.layout().setStretch(0, 1)
-        self.layout_changer.save_button.setVisible(False)
-        # QLineEdit for saving a layout
-        layout_name_edit = QLineEdit()
-        layout_name_edit.setText('default')
-        # Save layout button
-        save_button = QPushButton('Save')
-        save_button.clicked.connect(lambda: self.layout_changer.save_layout(str(layout_name_edit.text())))
-
         form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.WrapAllRows)
         form.setVerticalSpacing(10)
 
         form.addRow('Layout:', self.layout_changer)
-
-        hbox = QHBoxLayout()
-        hbox.setSpacing(10)
-        hbox.addWidget(layout_name_edit, stretch=1)
-        hbox.addWidget(save_button)
-
-        form.addRow('Save current layout as:', hbox)
 
         save_on_quit = QCheckBox('Save the current layout as default when quitting Hashmal.')
         save_on_quit.setChecked(self.qt_settings.value('saveLayoutOnExit', defaultValue=QVariant(False)).toBool())

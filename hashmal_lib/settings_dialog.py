@@ -135,6 +135,7 @@ class SettingsDialog(QDialog):
 
         self.setup_layout()
         self.setWindowTitle('Settings')
+        self.config.optionChanged.connect(self.on_option_changed)
 
     def sizeHint(self):
         return QSize(375, 270)
@@ -251,12 +252,13 @@ class SettingsDialog(QDialog):
     def create_general_tab(self):
         form = QFormLayout()
 
-        amnt_format = QComboBox()
+        self.amnt_format = amnt_format = QComboBox()
         amnt_format.addItems(Amount.known_formats())
         current_format = self.config.get_option('amount_format', 'satoshis')
         try:
             amnt_format.setCurrentIndex(Amount.known_formats().index(current_format))
-        except Exception:
+        except ValueError:
+            self.gui.show_status_message('Invalid amount format value: "%s"' % current_format, error=True)
             amnt_format.setCurrentIndex(0)
         def set_amount_format():
             new_format = str(amnt_format.currentText())
@@ -265,7 +267,7 @@ class SettingsDialog(QDialog):
         amnt_format.setToolTip('Format that transaction amounts are shown in')
 
 
-        data_retriever = QComboBox()
+        self.data_retriever = data_retriever = QComboBox()
         retrievers = self.gui.plugin_handler.get_data_retrievers()
         retriever_names = [i.name for i in retrievers]
         data_retriever.addItems(retriever_names)
@@ -275,6 +277,7 @@ class SettingsDialog(QDialog):
             idx = retriever_names.index(current_data_retriever)
             data_retriever.setCurrentIndex(idx)
         except ValueError:
+            self.gui.show_status_message('Invalid data retriever value: "%s"' % current_data_retriever, error=True)
             idx = retriever_names.index('Blockchain')
             data_retriever.setCurrentIndex(idx)
 
@@ -325,6 +328,30 @@ class SettingsDialog(QDialog):
         self.format_list.clear()
         for name, _, _, _ in chainparams.get_tx_fields():
             self.format_list.addItem(name)
+
+    def on_option_changed(self, key):
+        if key not in ['amount_format', 'data_retriever']:
+            return
+
+        if key == 'amount_format':
+            new_value = self.config.get_option('amount_format', 'satoshis')
+            try:
+                self.amnt_format.setCurrentIndex(Amount.known_formats().index(new_value))
+            except ValueError:
+                self.gui.show_status_message('Invalid amount format chosen: "%s"' % new_value, error=True)
+                self.amnt_format.setCurrentIndex(0)
+        elif key == 'data_retriever':
+            new_value = self.config.get_option('data_retriever', 'Blockchain')
+            retrievers = self.gui.plugin_handler.get_data_retrievers()
+            retriever_names = [i.name for i in retrievers]
+            try:
+                idx = retriever_names.index(new_value)
+                self.data_retriever.setCurrentIndex(idx)
+            except ValueError:
+                self.gui.show_status_message('Invalid data retriever chosen: "%s"' % new_value, error=True)
+                idx = retriever_names.index('Blockchain')
+                self.data_retriever.setCurrentIndex(idx)
+
 
 class ColorButton(QPushButton):
     """Represents a color visually."""

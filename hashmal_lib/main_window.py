@@ -65,6 +65,8 @@ class HashmalMain(QMainWindow):
             font.fromString(script_font)
         self.script_editor.setFont(font)
 
+        self.settings_dialog = SettingsDialog(self)
+
         self.create_menubar()
         self.create_toolbar()
         self.create_actions()
@@ -99,7 +101,7 @@ class HashmalMain(QMainWindow):
 
         # Settings and tool toggling
         tools_menu = menubar.addMenu('&Tools')
-        tools_menu.addAction('&Settings', lambda: SettingsDialog(self).exec_())
+        tools_menu.addAction('&Settings', self.show_settings_dialog)
         tools_menu.addAction('&Plugin Manager', lambda: PluginManager(self).exec_())
         tools_menu.addSeparator()
         self.plugin_handler.create_menu(tools_menu)
@@ -109,6 +111,9 @@ class HashmalMain(QMainWindow):
         help_menu.addAction('&Quick Tips', self.do_quick_tips)
 
         self.setMenuBar(menubar)
+
+    def show_settings_dialog(self):
+        self.settings_dialog.show()
 
     def show_status_message(self, msg, error=False):
         self.statusBar().showMessage(msg, 3000)

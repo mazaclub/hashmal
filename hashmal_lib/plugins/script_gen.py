@@ -261,17 +261,19 @@ class ScriptGenerator(BaseDock):
 
         self.generate_button = QPushButton('Generate')
         self.generate_button.clicked.connect(self.generate)
+        self.generate_button.setToolTip('Generate script')
+        self.generate_button.setWhatsThis('Clicking this button will generate a script based on the chosen template.')
 
         vbox = QVBoxLayout()
         vbox.addWidget(QLabel('Select a template:'))
         vbox.addWidget(self.template_combo)
         vbox.addWidget(self.template_widget)
 
-        vbox.addWidget(QLabel('Generated script:'))
-        vbox.addWidget(self.script_output)
-
         btn_hbox = floated_buttons([self.generate_button])
         vbox.addLayout(btn_hbox)
+
+        vbox.addWidget(QLabel('Generated script:'))
+        vbox.addWidget(self.script_output)
 
         return vbox
 

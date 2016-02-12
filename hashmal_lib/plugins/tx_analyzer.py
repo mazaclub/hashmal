@@ -128,6 +128,7 @@ class TxAnalyzer(BaseDock):
         self.raw_tx_edit.setContextMenuPolicy(Qt.CustomContextMenu)
         self.raw_tx_edit.customContextMenuRequested.connect(self.context_menu)
         self.raw_tx_edit.textChanged.connect(self.check_raw_tx)
+        self.handler.substitute_variables(self.raw_tx_edit)
         self.setFocusProxy(self.raw_tx_edit)
 
         self.raw_tx_invalid = QLabel('Cannot parse transaction.')
@@ -248,9 +249,6 @@ class TxAnalyzer(BaseDock):
         txt = str(self.raw_tx_edit.toPlainText())
         # Variable substitution
         if txt.startswith('$'):
-            var_value = self.handler.get_plugin('Variables').ui.get_key(txt[1:])
-            if var_value:
-                self.raw_tx_edit.setPlainText(var_value)
             return
         tx = None
         valid = True

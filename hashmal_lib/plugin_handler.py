@@ -353,6 +353,22 @@ class PluginHandler(QWidget):
             is_enabled = plugin.name in enabled_plugins
             self.set_plugin_enabled(plugin.name, is_enabled)
 
+    def substitute_variables(self, widget):
+        """Substitute variable names when entered in a widget."""
+        getter, setter = 'text', 'setText'
+        if isinstance(widget, QPlainTextEdit):
+            getter, setter = 'toPlainText', 'setPlainText'
+
+        def on_text_changed():
+            txt = str(getattr(widget, getter)())
+            if txt.startswith('$'):
+                var_value = self.get_plugin('Variables').ui.get_key(txt[1:])
+                if var_value:
+                    # Substitute variable value.
+                    getattr(widget, setter)(var_value)
+
+        widget.textChanged.connect(on_text_changed)
+
     def on_option_changed(self, key):
         if key == 'enabled_plugins':
             self.update_enabled_plugins()

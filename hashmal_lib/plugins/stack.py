@@ -145,6 +145,7 @@ class StackEval(BaseDock):
         self.tx_edit.setWhatsThis('Enter a serialized transaction here. If you have a raw transaction stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically.')
         self.tx_edit.setFont(monospace_font)
         self.tx_edit.textChanged.connect(self.set_tx)
+        self.handler.substitute_variables(self.tx_edit)
         self.tx_edit.setTabChangesFocus(True)
         # Input with scriptSig to include
         self.input_idx = QSpinBox()
@@ -204,9 +205,6 @@ class StackEval(BaseDock):
         txt = str(self.tx_edit.toPlainText())
         # Variable substition
         if txt.startswith('$'):
-            var_value = self.handler.get_plugin('Variables').ui.get_key(txt[1:])
-            if var_value:
-                self.tx_edit.setPlainText(var_value)
                 return
         try:
             assert txt

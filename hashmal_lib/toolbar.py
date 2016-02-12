@@ -26,6 +26,10 @@ class ToolBar(QToolBar):
 
         self.layout_selector = LayoutSelector(self)
         self.addWidget(self.layout_selector)
+        self.addSeparator()
+
+        self.favorites_selector = FavoritesSelector(self)
+        self.addWidget(self.favorites_selector)
 
 class LayoutSelector(QWidget):
     """Selector for window layouts."""
@@ -59,3 +63,46 @@ class ParamsSelector(QWidget):
         self.setLayout(params_form)
         self.setToolTip('Change chainparams preset')
 
+class FavoritesSelector(QWidget):
+    """Selector for favorite plugins."""
+    def __init__(self, toolbar, parent=None):
+        super(FavoritesSelector, self).__init__(parent)
+        self.gui = toolbar.gui
+        self.config = toolbar.config
+        self.favorites = []
+
+        self.combo = QComboBox()
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.addRow('Favorites:', self.combo)
+        self.setLayout(form)
+        self.setToolTip('Activate favorite plugins')
+        self.setWhatsThis('Use this to quickly access your favorite plugins.')
+
+        self.refresh_favorites()
+        self.config.optionChanged.connect(self.on_option_changed)
+        self.combo.currentIndexChanged.connect(self.on_index_changed)
+
+    def refresh_favorites(self):
+        self.favorites = self.config.get_option('favorite_plugins', [])
+        self.combo.clear()
+        self.combo.addItem('Select...')
+        self.combo.addItems(self.favorites)
+
+        # Disable or enable combobox.
+        enabled = len(self.favorites) > 0
+        self.combo.setEnabled(enabled)
+
+    def on_index_changed(self):
+        idx = self.combo.currentIndex()
+        if idx < 1:
+            return
+        name = str(self.combo.currentText())
+        plugin = self.gui.plugin_handler.get_plugin(name)
+        if plugin and plugin.has_gui:
+            self.gui.plugin_handler.bring_to_front(plugin.ui)
+        self.combo.setCurrentIndex(0)
+
+    def on_option_changed(self, key):
+        if key == 'favorite_plugins':
+            self.refresh_favorites()

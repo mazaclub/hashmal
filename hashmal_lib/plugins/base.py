@@ -182,18 +182,6 @@ class BaseDock(BasePluginUI, QDockWidget):
         """Log an error message."""
         self.logMessage.emit(self.tool_name, msg, logging.ERROR)
 
-    def status_message(self, msg, error=False):
-        """Show a message on the status bar.
-
-        Args:
-            msg (str): Message to be displayed.
-            error (bool): Whether to display msg as an error.
-        """
-        if error:
-            self.error(msg)
-        else:
-            self.info(msg)
-
     def visibility_toggled(self):
         """Called when toggleViewAction() is triggered so this dock can get focus."""
         if self.isVisible():

@@ -164,20 +164,20 @@ class AddrEncoder(BaseDock):
         hash160 = str(self.hash_line.text())
         if len(hash160) != 40:
             self.address_line.setText('Hash160 must be 40 characters.')
-            self.status_message('Hash160 must be 40 characters.', True)
+            self.error('Hash160 must be 40 characters.')
             return
         try:
             i = int(hash160, 16)
         except ValueError:
             self.address_line.setText('Hash160 must contain only hex characters.')
-            self.status_message('Hash160 must contain only hex characters.', True)
+            self.error('Hash160 must contain only hex characters.')
             return
 
         version = self.addr_version.value()
         hash160 = x(hash160)
         addr = encode_address(hash160, version)
         self.address_line.setText(str(addr))
-        self.status_message('Encoded address "%s".' % str(addr))
+        self.info('Encoded address "%s".' % str(addr))
 
     def encode_hash160(self, hash160):
         self.needsFocus.emit()

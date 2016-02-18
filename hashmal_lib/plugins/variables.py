@@ -347,7 +347,7 @@ class Variables(BaseDock):
         try:
             self.model.remove_key(key)
         except ValueError:
-            self.status_message('No variable named "{}"'.format(key), True)
+            self.error('No variable named "{}"'.format(key))
         self.dataChanged.emit()
 
     def key_for_value(self, value, strict=True):
@@ -371,7 +371,7 @@ class Variables(BaseDock):
     def save_variables(self):
         self.set_option('data', self.data)
         if not self.auto_save:
-            self.status_message('Saved variables to config file.')
+            self.info('Saved variables to config file.')
 
     def context_menu(self, position):
         menu = QMenu()
@@ -402,13 +402,13 @@ class Variables(BaseDock):
         k = str(self.new_var_key.text())
         v = str(self.new_var_value.text())
         if not self.is_valid_key(k):
-            self.status_message('Key names must be alphanumeric.', True)
+            self.error('Key names must be alphanumeric.')
             return
         if v == '':
-            self.status_message('Value must not be empty.', True)
+            self.error('Value must not be empty.')
             return
         self.set_key(k, v)
-        self.status_message('Set variable {} to {}'.format(k, v))
+        self.info('Set variable {} to {}'.format(k, v))
         self.new_var_key.clear()
         self.new_var_value.clear()
 

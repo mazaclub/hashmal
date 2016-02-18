@@ -231,7 +231,7 @@ class StackEval(BaseDock):
         try:
             scr = Script(str(self.tx_script.toPlainText()).decode('hex'))
         except Exception as e:
-            self.status_message('Error decoding script: %s' % str(e), error=True)
+            self.error('Error decoding script: %s' % str(e))
             return
         exec_data = None
         if not self.block_height_edit.property('hasError').toBool() and not self.block_time_edit.property('hasError').toBool():

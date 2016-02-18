@@ -162,11 +162,11 @@ class WalletRPC(BaseDock):
     def load_profile(self, name):
         profiles = self.options().get('profiles', {})
         if not profiles.get(name):
-            self.status_message('Cannot load nonexistent profile "%s".' % name, error=True)
+            self.error('Cannot load nonexistent profile "%s".' % name)
             return
         profile = RPCProfile(profiles.get(name, {}))
         self.set_profile(profile)
-        self.status_message('Loaded RPC profile "%s".' % name)
+        self.info('Loaded RPC profile "%s".' % name)
 
     def save_profile(self, name):
         options = self.options()
@@ -175,11 +175,11 @@ class WalletRPC(BaseDock):
         options['profiles'] = profiles
         self.save_options(options)
         self.load_profile_names()
-        self.status_message('Saved RPC profile "%s".' % name)
+        self.info('Saved RPC profile "%s".' % name)
 
     def delete_profile(self, name):
         if name == 'default':
-            self.status_message('Cannot delete default profile.', error=True)
+            self.error('Cannot delete default profile.')
             return
         options = self.options()
         profiles = options.get('profiles', {})
@@ -189,9 +189,9 @@ class WalletRPC(BaseDock):
             self.save_options(options)
             self.name_combo.setCurrentIndex(self.profile_names.index('default'))
             self.load_profile_names()
-            self.status_message('Deleted RPC profile "%s".' % name)
+            self.info('Deleted RPC profile "%s".' % name)
         else:
-            self.status_message('Cannot delete nonexistent profile "%s".', error=True)
+            self.error('Cannot delete nonexistent profile "%s".')
 
     def load_profile_names(self):
         profiles = self.options().get('profiles', {})

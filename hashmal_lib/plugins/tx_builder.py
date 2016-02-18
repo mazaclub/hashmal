@@ -636,7 +636,10 @@ class SigHashWidget(QWidget):
         self.result_edit.setText(text)
         self.result_edit.setProperty('hasError', error)
         self.style().polish(self.result_edit)
-        self.dock.status_message(text, error=error)
+        if error:
+            self.dock.error(text)
+        else:
+            self.dock.info(text)
 
     def sign_transaction(self):
         """Sign the transaction."""

@@ -1,5 +1,6 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+import logging
 
 from hashmal_lib.core import chainparams
 from gui_utils import floated_buttons, Amount, monospace_font, Separator
@@ -89,31 +90,31 @@ class LayoutChanger(QWidget):
         LayoutChanger.current_layout = name
         self.qt_settings.setValue(key + '/state', self.gui.saveState())
         self.qt_settings.setValue(key + '/geometry', self.gui.saveGeometry())
-        self.gui.show_status_message('Saved layout "{}".'.format(name))
+        self.info('Saved layout "%s".' % name)
         self.gui.layoutsChanged.emit()
 
     def load_layout(self, name='default'):
         key = '/'.join(['toolLayout', name])
         if not self.qt_settings.contains(key + '/state'):
-            self.gui.show_status_message('Cannot load nonexistent layout "{}".'.format(name), error=True)
+            self.error('Cannot load nonexistent layout "%s".' % name)
             return
         LayoutChanger.current_layout = name
         pos = self.gui.pos()
         self.gui.restoreState(self.qt_settings.value(key + '/state').toByteArray())
         self.gui.restoreGeometry(self.qt_settings.value(key + '/geometry').toByteArray())
         self.gui.move(pos)
-        self.gui.show_status_message('Loaded layout "{}".'.format(name))
+        self.info('Loaded layout "%s".' % name)
         self.gui.layoutsChanged.emit()
 
     def delete_layout(self, name):
         key = '/'.join(['toolLayout', name])
         if not self.qt_settings.contains(key + '/state'):
-            self.gui.show_status_message('Cannot delete nonexistent layout "{}".'.format(name), error=True)
+            self.error('Cannot delete nonexistent layout "%s".' % name)
             return
         if LayoutChanger.current_layout == name:
             LayoutChanger.current_layout = 'default'
         self.qt_settings.remove(key)
-        self.gui.show_status_message('Deleted layout "{}".'.format(name))
+        self.info('Deleted layout "%s".' % name)
         self.gui.layoutsChanged.emit()
 
     def refresh_layout_combobox(self):
@@ -124,6 +125,12 @@ class LayoutChanger(QWidget):
         self.layout_combo.clear()
         self.layout_combo.addItems(self.layout_names)
         self.layout_combo.setCurrentIndex(self.layout_names.indexOf(LayoutChanger.current_layout))
+
+    def info(self, msg):
+        self.gui.log_message('Layouts', msg, logging.INFO)
+
+    def error(self, msg):
+        self.gui.log_message('Layouts', msg, logging.ERROR)
 
 
 class SettingsDialog(QDialog):
@@ -143,6 +150,15 @@ class SettingsDialog(QDialog):
         self.setup_layout()
         self.setWindowTitle('Settings')
         self.config.optionChanged.connect(self.on_option_changed)
+
+    def info(self, msg):
+        self.gui.log_message('Settings', msg, logging.INFO)
+
+    def warning(self, msg):
+        self.gui.log_message('Settings', msg, logging.WARNING)
+
+    def error(self, msg):
+        self.gui.log_message('Settings', msg, logging.ERROR)
 
     def sizeHint(self):
         return QSize(375, 270)
@@ -250,8 +266,8 @@ class SettingsDialog(QDialog):
         try:
             amnt_format.setCurrentIndex(Amount.known_formats().index(current_format))
         except ValueError:
-            self.gui.show_status_message('Invalid amount format value: "%s"' % current_format, error=True)
             amnt_format.setCurrentIndex(0)
+            self.warning('Invalid amount format value: "%s". Defaulting to %s.' % (current_format, str(amnt_format.currentText())))
         def set_amount_format():
             new_format = str(amnt_format.currentText())
             self.config.set_option('amount_format', new_format)
@@ -269,7 +285,7 @@ class SettingsDialog(QDialog):
             idx = retriever_names.index(current_data_retriever)
             data_retriever.setCurrentIndex(idx)
         except ValueError:
-            self.gui.show_status_message('Invalid data retriever value: "%s"' % current_data_retriever, error=True)
+            self.warning('Invalid data retriever value: "%s". Defaulting to Blockchain.' % current_data_retriever)
             idx = retriever_names.index('Blockchain')
             data_retriever.setCurrentIndex(idx)
 
@@ -347,7 +363,7 @@ class SettingsDialog(QDialog):
             try:
                 self.amnt_format.setCurrentIndex(Amount.known_formats().index(new_value))
             except ValueError:
-                self.gui.show_status_message('Invalid amount format chosen: "%s"' % new_value, error=True)
+                self.error('Invalid amount format chosen: "%s".' % new_value)
                 self.amnt_format.setCurrentIndex(0)
         elif key == 'data_retriever':
             new_value = self.config.get_option('data_retriever', 'Blockchain')
@@ -357,7 +373,7 @@ class SettingsDialog(QDialog):
                 idx = retriever_names.index(new_value)
                 self.data_retriever.setCurrentIndex(idx)
             except ValueError:
-                self.gui.show_status_message('Invalid data retriever chosen: "%s"' % new_value, error=True)
+                self.error('Invalid data retriever chosen: "%s".' % new_value)
                 idx = retriever_names.index('Blockchain')
                 self.data_retriever.setCurrentIndex(idx)
 

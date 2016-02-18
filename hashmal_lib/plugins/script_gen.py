@@ -305,10 +305,10 @@ class ScriptGenerator(BaseDock):
         new_script = self.template_widget.get_script()
         self.script_output.setPlainText(new_script)
         if new_script.startswith('Error'):
-            self.status_message(new_script, True)
+            self.error(new_script)
         else:
             script_type = str(self.template_combo.currentText())
-            self.status_message('Generated %s script.' % script_type)
+            self.info('Generated %s script.' % script_type)
 
     def on_templates_augmented(self, arg):
         self.template_combo.clear()

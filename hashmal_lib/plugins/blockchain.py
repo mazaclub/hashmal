@@ -263,10 +263,10 @@ class Blockchain(BaseDock):
     def set_result(self, data_type, identifier, raw, error):
         """Set result of tx downloader thread."""
         if error:
-            self.status_message(error, True)
+            self.error(error)
             self.raw_edit.clear()
         elif not raw:
-            self.status_message('Unknown error. Failed to retrieve transaction.', True)
+            self.error('Unknown error. Failed to retrieve transaction.')
             self.raw_edit.clear()
         else:
             self.raw_edit.setText(raw)
@@ -276,7 +276,7 @@ class Blockchain(BaseDock):
             for k, v in known_data_types.items():
                 if v == data_type:
                     word = k
-            self.status_message('Downloaded %s %s.' % (word.lower(), identifier))
+            self.info('Downloaded %s %s.' % (word.lower(), identifier))
 
         self.download_button.setEnabled(True)
 

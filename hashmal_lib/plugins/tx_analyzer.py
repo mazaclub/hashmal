@@ -286,12 +286,12 @@ class TxAnalyzer(BaseDock):
         self.clear()
         self.tx_widget.set_tx(self.tx)
         self.inputs_table_model.set_tx(self.tx)
-        self.status_message('Deserialized transaction {}'.format(bitcoin.core.b2lx(self.tx.GetHash())))
+        self.info('Deserialized transaction %s' % bitcoin.core.b2lx(self.tx.GetHash()))
 
     def do_verify_input(self, tx, in_idx):
         if tx.is_coinbase():
             self.result_edit.setText('Error: Cannot verify coinbase transactions.')
-            self.status_message('Attempted to verify coinbase transaction.', error=True)
+            self.error('Attempted to verify coinbase transaction.')
             return False
         raw_prev_tx = None
         tx_in = tx.vin[in_idx]
@@ -301,7 +301,7 @@ class TxAnalyzer(BaseDock):
         try:
             raw_prev_tx = self.handler.download_blockchain_data('raw_transaction', txid)
         except Exception as e:
-            self.status_message(str(e), True)
+            self.error(str(e))
             return False
 
         try:
@@ -312,7 +312,7 @@ class TxAnalyzer(BaseDock):
         except Exception as e:
             self.result_edit.setText(str(e))
             self.inputs_table_model.set_verified(in_idx, False)
-            self.status_message(str(e), True)
+            self.error(str(e))
             return False
 
         return True
@@ -320,7 +320,7 @@ class TxAnalyzer(BaseDock):
     def do_verify_inputs(self, tx):
         if tx.is_coinbase():
             self.result_edit.setText('Error: Cannot verify coinbase transactions.')
-            self.status_message('Attempted to verify coinbase transaction.', error=True)
+            self.error('Attempted to verify coinbase transaction.')
             return False
         failed_inputs = []
         self.result_edit.setText('Verifying...')
@@ -341,7 +341,7 @@ class TxAnalyzer(BaseDock):
     def verify_input(self):
         in_idx = self.inputs_box.value()
         if in_idx >= len(self.tx.vin):
-            self.status_message('Input {} does not exist.'.format(in_idx), True)
+            self.error('Input {} does not exist.'.format(in_idx))
             return
 
         self.do_verify_input(self.tx, in_idx)

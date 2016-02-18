@@ -1,6 +1,5 @@
 from functools import wraps
 from collections import namedtuple
-import logging
 
 from PyQt4.QtGui import QDockWidget, QWidget, QVBoxLayout
 from PyQt4 import QtCore
@@ -118,6 +117,18 @@ class BasePluginUI(object):
         """
         return self.handler.do_augment_hook(self.__class__.__name__, target, data, callback)
 
+    def info(self, msg):
+        """Log an info message."""
+        self.handler.info(self.tool_name, msg)
+
+    def warning(self, msg):
+        """Log a warning message."""
+        self.handler.warning(self.tool_name, msg)
+
+    def error(self, msg):
+        """Log an error message."""
+        self.handler.error(self.tool_name, msg)
+
 class BaseDock(BasePluginUI, QDockWidget):
     """Base class for docks.
 
@@ -131,7 +142,6 @@ class BaseDock(BasePluginUI, QDockWidget):
     """
     needsFocus = QtCore.pyqtSignal()
     needsUpdate = QtCore.pyqtSignal()
-    logMessage = QtCore.pyqtSignal(str, str, int, name='logMessage')
 
     # If True, dock will be placed on the bottom by default.
     # Otherwise, dock will be placed on the right.
@@ -169,18 +179,6 @@ class BaseDock(BasePluginUI, QDockWidget):
     def refresh_data(self):
         """Synchronize. Called when needsUpdate is emitted."""
         pass
-
-    def info(self, msg):
-        """Log an info message."""
-        self.logMessage.emit(self.tool_name, msg, logging.INFO)
-
-    def warning(self, msg):
-        """Log a warning message."""
-        self.logMessage.emit(self.tool_name, msg, logging.WARNING)
-
-    def error(self, msg):
-        """Log an error message."""
-        self.logMessage.emit(self.tool_name, msg, logging.ERROR)
 
     def visibility_toggled(self):
         """Called when toggleViewAction() is triggered so this dock can get focus."""

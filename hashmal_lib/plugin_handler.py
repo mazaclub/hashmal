@@ -1,6 +1,7 @@
 from functools import partial
 from pkg_resources import iter_entry_points
 from collections import OrderedDict
+import logging
 import sys
 import __builtin__
 
@@ -74,6 +75,12 @@ class PluginHandler(QWidget):
             if plugin.name == plugin_name:
                 return plugin
         return None
+
+    def plugin_is_enabled(self, plugin_name):
+        plugin = self.get_plugin(plugin_name)
+        if plugin:
+            return plugin.ui.is_enabled
+        return False
 
     def create_menu(self, menu):
         """Add plugins to menu."""
@@ -171,11 +178,9 @@ class PluginHandler(QWidget):
         """Connect or disconnect Qt signals to/from a dock."""
         if do_connect:
             dock.needsFocus.connect(partial(self.bring_to_front, dock))
-            dock.logMessage.connect(self.gui.log_message)
         else:
             try:
                 dock.needsFocus.disconnect()
-                dock.logMessage.disconnect()
             except TypeError:
                 pass
 
@@ -374,4 +379,16 @@ class PluginHandler(QWidget):
             self.update_enabled_plugins()
         elif self.loaded_plugins and key == 'favorite_plugins':
             self.assign_dock_shortcuts()
+
+    def info(self, plugin_name, message):
+        if self.plugin_is_enabled(plugin_name):
+            self.gui.log_message(plugin_name, message, logging.INFO)
+
+    def warning(self, plugin_name, message):
+        if self.plugin_is_enabled(plugin_name):
+            self.gui.log_message(plugin_name, message, logging.WARNING)
+
+    def error(self, plugin_name, message):
+        if self.plugin_is_enabled(plugin_name):
+            self.gui.log_message(plugin_name, message, logging.ERROR)
 

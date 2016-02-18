@@ -318,6 +318,15 @@ class HashmalMain(QMainWindow):
         idx = docks.index(bottom)
         docks.insert(idx + 1, top)
 
+    def createPopupMenu(self):
+        menu = QMenu(self)
+        plugins_menu = menu.addMenu('All Plugins')
+        for p in sorted(self.plugin_handler.loaded_plugins, key = lambda x: x.name):
+            if not p.has_gui:
+                continue
+            plugins_menu.addAction(p.ui.toggleViewAction())
+        return menu
+
     def do_about(self):
         d = QDialog(self)
         vbox = QVBoxLayout()

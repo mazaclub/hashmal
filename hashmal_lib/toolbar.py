@@ -84,7 +84,7 @@ class FavoritesSelector(QWidget):
         self.combo.currentIndexChanged.connect(self.on_index_changed)
 
     def refresh_favorites(self):
-        self.favorites = self.config.get_option('favorite_plugins', [])
+        self.favorites = sorted(self.config.get_option('favorite_plugins', []))
         self.combo.clear()
         self.combo.addItem('Select...')
         self.combo.addItems(self.favorites)

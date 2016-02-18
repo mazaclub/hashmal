@@ -10,7 +10,7 @@ QLabel[hasError=true], QTextEdit[hasError=true], QPlainTextEdit[hasError=true] {
   background: rgba(255, 0, 0, 25%);
 }
 
-QCheckBox[hasSuccess=true] {
+QLineEdit[hasSuccess=true], QCheckBox[hasSuccess=true] {
   background: rgba(0, 255, 0, 25%);
 }
 """

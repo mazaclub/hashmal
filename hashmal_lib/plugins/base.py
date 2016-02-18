@@ -174,6 +174,10 @@ class BaseDock(BasePluginUI, QDockWidget):
         """Log an info message."""
         self.logMessage.emit(self.tool_name, msg, logging.INFO)
 
+    def warning(self, msg):
+        """Log a warning message."""
+        self.logMessage.emit(self.tool_name, msg, logging.WARNING)
+
     def error(self, msg):
         """Log an error message."""
         self.logMessage.emit(self.tool_name, msg, logging.ERROR)

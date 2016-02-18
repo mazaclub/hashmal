@@ -82,6 +82,10 @@ class LogModel(QAbstractTableModel):
             level, ok = sibling.data(Qt.EditRole).toInt()
             if not ok:
                 return
+            if level == logging.WARNING:
+                color = QColor(255, 255, 0)
+                color.setAlphaF(0.256)
+                return color
             if level == logging.ERROR:
                 color = QColor(255, 0, 0)
                 color.setAlphaF(0.25)

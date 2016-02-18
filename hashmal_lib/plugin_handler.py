@@ -171,11 +171,11 @@ class PluginHandler(QWidget):
         """Connect or disconnect Qt signals to/from a dock."""
         if do_connect:
             dock.needsFocus.connect(partial(self.bring_to_front, dock))
-            dock.statusMessage.connect(self.gui.show_status_message)
+            dock.logMessage.connect(self.gui.log_message)
         else:
             try:
                 dock.needsFocus.disconnect()
-                dock.statusMessage.disconnect()
+                dock.logMessage.disconnect()
             except TypeError:
                 pass
 

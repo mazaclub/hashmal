@@ -7,6 +7,7 @@ import addr_encoder
 import block_analyzer
 import blockchain
 import item_types
+import log
 import script_gen
 import stack
 import tx_analyzer

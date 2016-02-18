@@ -1,6 +1,7 @@
 from collections import defaultdict
 import os
 import time
+import logging
 
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
@@ -35,6 +36,8 @@ class HashmalMain(QMainWindow):
         self.setCorner(QtCore.Qt.BottomRightCorner, QtCore.Qt.RightDockWidgetArea)
 
         self.config = Config()
+        self.init_logger()
+        self.config.optionChanged.connect(self.on_option_changed)
 
         QtCore.QCoreApplication.setOrganizationName('mazaclub')
         QtCore.QCoreApplication.setApplicationName('hashmal')
@@ -84,6 +87,22 @@ class HashmalMain(QMainWindow):
     def sizeHint(self):
         return QtCore.QSize(800, 500)
 
+    def init_logger(self):
+        """Initialize logger."""
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(formatter)
+        logger = logging.getLogger()
+        logger.addHandler(handler)
+        self.change_log_level(self.config.get_option('log_level', 'INFO'))
+
+    def change_log_level(self, level_str):
+        level_str = level_str.upper()
+        if level_str not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+            level_str = 'INFO'
+        level = getattr(logging, level_str)
+        logging.getLogger().setLevel(level)
+
     def create_menubar(self):
         menubar = QMenuBar()
 
@@ -123,6 +142,14 @@ class HashmalMain(QMainWindow):
             self.statusBar().setProperty('hasError', False)
         self.style().polish(self.statusBar())
 
+    def log_message(self, plugin_name, msg, level):
+        message = '[%s] -> %s' % (plugin_name, msg)
+        logging.log(level, message)
+        self.show_status_message(message, True if level == logging.ERROR else False)
+        log_plugin = self.plugin_handler.get_plugin('Log')
+        if log_plugin:
+            log_plugin.ui.add_log_message(time.time(), level, plugin_name, msg)
+
     def change_status_bar(self, new_msg):
         # Unset hasError if an error is removed.
         if not new_msg and self.statusBar().property('hasError'):
@@ -147,6 +174,7 @@ class HashmalMain(QMainWindow):
             self.qt_settings.setValue('toolLayout/default', self.saveState())
 
         if self.close_script():
+            logging.shutdown()
             event.accept()
         else:
             event.ignore()
@@ -327,6 +355,10 @@ class HashmalMain(QMainWindow):
         w.toggleViewAction().trigger()
         if docks:
             docks[0].needsFocus.emit()
+
+    def on_option_changed(self, key):
+        if key == 'log_level':
+            self.change_log_level(self.config.get_option('log_level', 'INFO'))
 
 def get_active_dock():
     """Get the dock widget that currently has focus."""

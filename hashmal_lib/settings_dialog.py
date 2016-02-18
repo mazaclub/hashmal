@@ -279,8 +279,25 @@ class SettingsDialog(QDialog):
         data_retriever.currentIndexChanged.connect(set_retriever)
         data_retriever.setToolTip('Plugin used to download blockchain data')
 
+
+        self.log_level = QComboBox()
+        possible_levels = ['Debug', 'Info', 'Warning', 'Error', 'Critical']
+        self.log_level.addItems(possible_levels)
+        current_level = self.config.get_option('log_level', 'Info').capitalize()
+        if current_level not in possible_levels:
+            current_level = 'Info'
+        self.log_level.setCurrentIndex(possible_levels.index(current_level))
+        self.log_level.setToolTip('Minimum priority for a message to be logged')
+
+        def change_log_level():
+            level = str(self.log_level.currentText())
+            self.config.set_option('log_level', level)
+        self.log_level.currentIndexChanged.connect(change_log_level)
+
+
         form.addRow('Amount format:', amnt_format)
-        form.addRow('Data Retriever:', data_retriever)
+        form.addRow('Data retriever:', data_retriever)
+        form.addRow('Log level:', self.log_level)
 
         w = QWidget()
         w.setLayout(form)

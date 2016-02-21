@@ -56,6 +56,7 @@ class TransactionTest(unittest.TestCase):
         tx2 = Transaction.deserialize(ppc_raw_tx)
 
         self.assertNotEqual(tx.fields, tx2.fields)
+        self.assertEqual(1, len(tx2.fields) - len(tx.fields))
 
     def test_preset_chainparams(self):
         chainparams.set_to_preset('Bitcoin')
@@ -92,7 +93,7 @@ class TransactionTest(unittest.TestCase):
         chainparams.set_to_preset('Peercoin')
         self.assertRaises(AttributeError, getattr, tx, 'Timestamp')
         tx2 = Transaction.from_tx(tx)
-        self.assertIs(tx, tx2)
+        self.assertIsNot(tx, tx2)
         self.assertEqual(tx2.Timestamp, 0)
 
     def test_from_tx_with_ctransaction_argument(self):

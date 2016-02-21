@@ -118,14 +118,20 @@ class Transaction(CMutableTransaction):
         if not issubclass(tx.__class__, Transaction):
             return super(Transaction, cls).from_tx(tx)
         else:
-            # In case from_tx() is called after chainparams changes,
-            # ensure the other tx gets the new fields.
+
+            kwfields = {}
             for attr, _, _, default in transaction_fields:
-                try:
-                    getattr(tx, attr)
-                except AttributeError:
-                    setattr(tx, attr, default)
-            return tx
+                if attr in ['vin', 'vout']:
+                    continue
+                if hasattr(tx, attr):
+                    kwfields[attr] = getattr(tx, attr)
+
+
+            vin = [CMutableTxIn.from_txin(txin) for txin in tx.vin]
+            vout = [CMutableTxOut.from_txout(txout) for txout in tx.vout]
+            kwfields['vin'] = vin
+            kwfields['vout'] = vout
+            return cls(kwfields=kwfields)
 
     def as_hex(self):
         return b2x(self.serialize())

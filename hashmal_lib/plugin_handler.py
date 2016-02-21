@@ -380,6 +380,10 @@ class PluginHandler(QWidget):
         elif self.loaded_plugins and key == 'favorite_plugins':
             self.assign_dock_shortcuts()
 
+    def debug(self, plugin_name, message):
+        if self.plugin_is_enabled(plugin_name):
+            self.gui.log_message(plugin_name, message, logging.DEBUG)
+
     def info(self, plugin_name, message):
         if self.plugin_is_enabled(plugin_name):
             self.gui.log_message(plugin_name, message, logging.INFO)

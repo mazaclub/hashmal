@@ -117,6 +117,10 @@ class BasePluginUI(object):
         """
         return self.handler.do_augment_hook(self.__class__.__name__, target, data, callback)
 
+    def debug(self, msg):
+        """Log a debug message."""
+        self.handler.debug(self.tool_name, msg)
+
     def info(self, msg):
         """Log an info message."""
         self.handler.info(self.tool_name, msg)

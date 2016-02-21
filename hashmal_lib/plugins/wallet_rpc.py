@@ -166,7 +166,7 @@ class WalletRPC(BaseDock):
             return
         profile = RPCProfile(profiles.get(name, {}))
         self.set_profile(profile)
-        self.info('Loaded RPC profile "%s".' % name)
+        self.debug('Loaded RPC profile "%s".' % name)
 
     def save_profile(self, name):
         options = self.options()
@@ -175,7 +175,7 @@ class WalletRPC(BaseDock):
         options['profiles'] = profiles
         self.save_options(options)
         self.load_profile_names()
-        self.info('Saved RPC profile "%s".' % name)
+        self.debug('Saved RPC profile "%s".' % name)
 
     def delete_profile(self, name):
         if name == 'default':
@@ -189,7 +189,7 @@ class WalletRPC(BaseDock):
             self.save_options(options)
             self.name_combo.setCurrentIndex(self.profile_names.index('default'))
             self.load_profile_names()
-            self.info('Deleted RPC profile "%s".' % name)
+            self.debug('Deleted RPC profile "%s".' % name)
         else:
             self.error('Cannot delete nonexistent profile "%s".')
 

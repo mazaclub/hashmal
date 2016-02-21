@@ -408,7 +408,7 @@ class Variables(BaseDock):
             self.error('Value must not be empty.')
             return
         self.set_key(k, v)
-        self.info('Set variable {} to {}'.format(k, v))
+        self.debug('Set variable {} to {}'.format(k, v))
         self.new_var_key.clear()
         self.new_var_value.clear()
 

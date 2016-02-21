@@ -18,14 +18,12 @@ from hashmal_lib import config
 
 class InputsModel(QAbstractTableModel):
     """Model of a transaction's inputs."""
-    def __init__(self, tx=None, parent=None):
+    def __init__(self, parent=None):
         super(InputsModel, self).__init__(parent)
-        if tx is None:
-            tx = Transaction()
-        self.tx = tx
+        self.vin = []
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self.tx.vin)
+        return len(self.vin)
 
     def columnCount(self, parent=QModelIndex()):
         return 4
@@ -45,10 +43,10 @@ class InputsModel(QAbstractTableModel):
             return QVariant(None)
 
     def data(self, index, role = Qt.DisplayRole):
-        if not index.isValid() or not self.tx: return QVariant(None)
+        if not index.isValid() or not self.vin: return QVariant(None)
         if role not in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole, RawRole]:
             return None
-        tx_input = self.tx.vin[index.row()]
+        tx_input = self.vin[index.row()]
         col = index.column()
         data = None
         if col == 0:
@@ -70,8 +68,8 @@ class InputsModel(QAbstractTableModel):
         return QVariant(data)
 
     def setData(self, index, value, role = Qt.EditRole):
-        if not index.isValid() or not self.tx: return False
-        tx_input = self.tx.vin[index.row()]
+        if not index.isValid() or not self.vin: return False
+        tx_input = self.vin[index.row()]
         col = index.column()
         if col == 0:
             tx_input.prevout.hash = lx(str(value.toString()))
@@ -87,7 +85,9 @@ class InputsModel(QAbstractTableModel):
     def set_tx(self, tx):
         """Reset the model to reflect tx."""
         self.beginResetModel()
-        self.tx = Transaction.from_tx(tx)
+        self.vin = []
+        for i in tx.vin:
+            self.vin.append(CMutableTxIn.from_txin(i))
         self.endResetModel()
 
     def add_input(self, tx_input=None, input_index=None):
@@ -98,18 +98,18 @@ class InputsModel(QAbstractTableModel):
             tx_input = CMutableTxIn.from_txin(tx_input)
 
         if input_index is None:
-            input_index = len(self.tx.vin)
+            input_index = len(self.vin)
         self.beginInsertRows(QModelIndex(), input_index, input_index)
-        self.tx.vin.insert(input_index, tx_input)
+        self.vin.insert(input_index, tx_input)
         self.endInsertRows()
 
     def get_inputs(self):
-        return list(self.tx.vin)
+        return list(self.vin)
 
     def removeRows(self, row, count, parent=QModelIndex()):
         self.beginRemoveRows(QModelIndex(), row, row + count - 1)
         for i in range(row, row + count):
-            self.tx.vin.pop(row)
+            self.vin.pop(row)
         self.endRemoveRows()
         return True
 
@@ -192,15 +192,13 @@ class InputsTree(QWidget):
 
 class OutputsModel(QAbstractTableModel):
     """Model of a transaction's outputs."""
-    def __init__(self, tx=None, parent=None):
+    def __init__(self, parent=None):
         super(OutputsModel, self).__init__(parent)
-        if tx is None:
-            tx = Transaction()
-        self.tx = tx
+        self.vout = []
         self.amount_format = config.get_config().get_option('amount_format', 'coins')
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self.tx.vout)
+        return len(self.vout)
 
     def columnCount(self, parent=QModelIndex()):
         return 2
@@ -218,10 +216,10 @@ class OutputsModel(QAbstractTableModel):
             return QVariant(None)
 
     def data(self, index, role = Qt.DisplayRole):
-        if not index.isValid() or not self.tx: return QVariant(None)
+        if not index.isValid() or not self.vout: return QVariant(None)
         if role not in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole, RawRole]:
             return None
-        tx_out = self.tx.vout[index.row()]
+        tx_out = self.vout[index.row()]
         col = index.column()
         data = None
         if col == 0:
@@ -240,8 +238,8 @@ class OutputsModel(QAbstractTableModel):
         return QVariant(data)
 
     def setData(self, index, value, role = Qt.EditRole):
-        if not index.isValid() or not self.tx: return False
-        tx_out = self.tx.vout[index.row()]
+        if not index.isValid() or not self.vout: return False
+        tx_out = self.vout[index.row()]
         col = index.column()
         if col == 0:
             tx_out.nValue, _ = value.toULongLong()
@@ -253,7 +251,9 @@ class OutputsModel(QAbstractTableModel):
     def set_tx(self, tx):
         """Reset the model to reflect tx."""
         self.beginResetModel()
-        self.tx = Transaction.from_tx(tx)
+        self.vout = []
+        for o in tx.vout:
+            self.vout.append(CMutableTxOut.from_txout(o))
         self.endResetModel()
 
     def add_output(self, tx_out=None, output_index=None):
@@ -264,18 +264,18 @@ class OutputsModel(QAbstractTableModel):
             tx_out = CMutableTxOut.from_txout(tx_out)
 
         if output_index is None:
-            output_index = len(self.tx.vout)
+            output_index = len(self.vout)
         self.beginInsertRows(QModelIndex(), output_index, output_index)
-        self.tx.vout.insert(output_index, tx_out)
+        self.vout.insert(output_index, tx_out)
         self.endInsertRows()
 
     def get_outputs(self):
-        return list(self.tx.vout)
+        return list(self.vout)
 
     def removeRows(self, row, count, parent=QModelIndex()):
         self.beginRemoveRows(QModelIndex(), row, row + count - 1)
         for i in range(row, row + count):
-            self.tx.vout.pop(row)
+            self.vout.pop(row)
         self.endRemoveRows()
         return True
 

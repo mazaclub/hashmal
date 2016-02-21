@@ -586,10 +586,14 @@ class SigHashWidget(QWidget):
         self.sign_button.setToolTip('Sign transaction')
         self.sign_button.setWhatsThis('Clicking this button will attempt to sign the transaction with your private key.')
         self.sign_button.clicked.connect(self.sign_transaction)
+        self.verify_script = QCheckBox('Verify script')
+        self.verify_script.setToolTip('Verify input script')
+        self.verify_script.setWhatsThis('If this is checked, Hashmal will attempt to verify the completed script.')
         signing_form = QFormLayout()
         privkey_hbox = QHBoxLayout()
         privkey_hbox.addWidget(self.privkey_edit, stretch=1)
         privkey_hbox.addWidget(self.sign_button)
+        privkey_hbox.addWidget(self.verify_script)
         self.result_edit = QLineEdit()
         self.result_edit.setReadOnly(True)
         self.result_edit.setPlaceholderText('Result of signing')
@@ -654,19 +658,20 @@ class SigHashWidget(QWidget):
         if not privkey:
             self.set_result_message('Could not parse private key.', error=True)
             return
-        sig_hash = SignatureHash(script, txTo, inIdx, hash_type)
+        sig_hash = chainparams.signature_hash(script, txTo, inIdx, hash_type)
 
         sig = privkey.sign(sig_hash)
         hash_type_hex = format_hex_string(hex(hash_type), with_prefix=False).decode('hex')
         sig = sig + hash_type_hex
         txTo.vin[inIdx].scriptSig = Script([sig, privkey.pub])
 
-        # Try verify
-        try:
-            VerifyScript(txTo.vin[inIdx].scriptSig, script, txTo, inIdx, (SCRIPT_VERIFY_P2SH,))
-        except Exception as e:
-            self.set_result_message('Error when verifying: %s' % str(e), error=True)
-            return
+        if self.verify_script.isChecked():
+            # Try verify
+            try:
+                VerifyScript(txTo.vin[inIdx].scriptSig, script, txTo, inIdx, (SCRIPT_VERIFY_P2SH,))
+            except Exception as e:
+                self.set_result_message('Error when verifying: %s' % str(e), error=True)
+                return
 
         self.dock.deserialize_raw(b2x(txTo.serialize()))
         # Deserializing a tx clears the model, so re-populate.

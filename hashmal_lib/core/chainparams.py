@@ -1,8 +1,15 @@
 from collections import namedtuple
+import struct
+
+import bitcoin
+from bitcoin.core.script import (FindAndDelete, SIGHASH_ALL, SIGHASH_NONE,
+            SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, CScript, OP_CODESEPARATOR)
 
 import block
 import transaction
 import opcodes
+
+active_preset = None
 
 class ParamsPreset(object):
     """Chainparams preset.
@@ -37,6 +44,61 @@ class ParamsPreset(object):
 
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    @classmethod
+    def raw_signature_hash(cls, script, txTo, inIdx, hashtype):
+        HASH_ONE = b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+
+        if inIdx >= len(txTo.vin):
+            return (HASH_ONE, "inIdx %d out of range (%d)" % (inIdx, len(txTo.vin)))
+        txtmp = transaction.Transaction.from_tx(txTo)
+
+        for txin in txtmp.vin:
+            txin.scriptSig = b''
+        txtmp.vin[inIdx].scriptSig = FindAndDelete(script, CScript([OP_CODESEPARATOR]))
+
+        if (hashtype & 0x1f) == SIGHASH_NONE:
+            txtmp.vout = []
+
+            for i in range(len(txtmp.vin)):
+                if i != inIdx:
+                    txtmp.vin[i].nSequence = 0
+
+        elif (hashtype & 0x1f) == SIGHASH_SINGLE:
+            outIdx = inIdx
+            if outIdx >= len(txtmp.vout):
+                return (HASH_ONE, "outIdx %d out of range (%d)" % (outIdx, len(txtmp.vout)))
+
+            tmp = txtmp.vout[outIdx]
+            txtmp.vout = []
+            for i in range(outIdx):
+                txtmp.vout.append(bitcoin.core.CTxOut())
+            txtmp.vout.append(tmp)
+
+            for i in range(len(txtmp.vin)):
+                if i != inIdx:
+                    txtmp.vin[i].nSequence = 0
+
+        if hashtype & SIGHASH_ANYONECANPAY:
+            tmp = txtmp.vin[inIdx]
+            txtmp.vin = []
+            txtmp.vin.append(tmp)
+
+        s = txtmp.serialize()
+        s += struct.pack(b"<I", hashtype)
+
+        hash = bitcoin.core.Hash(s)
+
+        return (hash, None)
+
+    @classmethod
+    def signature_hash(cls, script, txTo, inIdx, hashtype):
+        (h, err) = cls.raw_signature_hash(script, txTo, inIdx, hashtype)
+        if err is not None:
+            raise ValueError(err)
+        return h
+
+
 
 _bitcoin_header_fields = [
     ('nVersion', b'<i', 4, 1),
@@ -143,9 +205,16 @@ def set_opcode_overrides(ops):
 
 def set_to_preset(name):
     """Reset chainparams to the preset name."""
+    global active_preset
     # Will throw an exception if name isn't a preset.
     params = presets[name]
+    active_preset = params
     set_tx_fields(params.tx_fields)
     set_block_header_fields(params.block_header_fields)
     set_block_fields(params.block_fields)
     set_opcode_overrides(params.opcode_overrides)
+
+def signature_hash(script, txTo, inIdx, hashtype):
+    if not active_preset:
+        raise Exception("No chainparams preset is active.")
+    return active_preset.signature_hash(script, txTo, inIdx, hashtype)

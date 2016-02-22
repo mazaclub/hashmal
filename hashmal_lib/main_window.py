@@ -44,7 +44,15 @@ class HashmalMain(QMainWindow):
         self.qt_settings = QtCore.QSettings()
 
         active_params = self.config.get_option('chainparams', 'Bitcoin')
-        chainparams.set_to_preset(active_params)
+        # True if chainparams needs to be set after plugins load.
+        needs_params_change = False
+        # An exception is thrown if the last-active chainparams preset
+        # only exists due to a plugin that defines it.
+        try:
+            chainparams.set_to_preset(active_params)
+        except KeyError:
+            chainparams.set_to_preset('Bitcoin')
+            needs_params_change = True
 
         self.download_controller = DownloadController()
 
@@ -53,6 +61,14 @@ class HashmalMain(QMainWindow):
         self.plugin_handler = PluginHandler(self)
         self.plugin_handler.load_plugins()
         self.plugin_handler.do_default_layout()
+
+        # Attempt to load chainparams preset again if necessary.
+        if needs_params_change:
+            try:
+                chainparams.set_to_preset(active_params)
+            except KeyError:
+                self.log_message('Core', 'Chainparams preset "%s" does not exist. Setting chainparams to Bitcoin.', logging.ERROR)
+                self.config.set_option('chainparams', 'Bitcoin')
 
         # Filename of script being edited.
         self.filename = ''

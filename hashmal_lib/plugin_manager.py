@@ -3,6 +3,7 @@ import __builtin__
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
+from hashmal_lib.plugins.base import Category
 from gui_utils import Separator, required_plugins, default_plugins
 
 class PluginsModel(QAbstractTableModel):
@@ -137,7 +138,10 @@ class PluginsModel(QAbstractTableModel):
     def plugin_for_index(self, index):
         if not index.isValid():
             return None
-        plugin = sorted(self.plugins, key=lambda i: i.name)[index.row()]
+        return self.plugin_for_row(index.row())
+
+    def plugin_for_row(self, row):
+        plugin = sorted(self.plugins, key=lambda i: i.name)[row]
         return plugin
 
     def on_option_changed(self, key):
@@ -157,12 +161,21 @@ class PluginsProxyModel(QSortFilterProxyModel):
     def __init__(self, parent=None):
         super(PluginsProxyModel, self).__init__(parent)
         self.name_filter = QRegExp()
+        self.hide_core_plugins = True
 
     def set_name_filter(self, regexp):
         self.name_filter = regexp
         self.invalidateFilter()
 
+    def set_hide_core_plugins(self, do_hide):
+        self.hide_core_plugins = do_hide
+        self.invalidateFilter()
+
     def filterAcceptsRow(self, source_row, source_parent):
+        if self.hide_core_plugins:
+            plugin = self.sourceModel().plugin_for_row(source_row)
+            if plugin.ui.category == Category.Core:
+                return False
         if self.name_filter:
             idx = self.sourceModel().index(source_row, 0, source_parent)
             name = str(self.sourceModel().data(idx).toString())
@@ -352,6 +365,17 @@ class PluginManager(QDialog):
     def sizeHint(self):
         return QSize(500, 400)
 
+    def options(self):
+        return self.config.get_option('Plugin Manager', {})
+
+    def option(self, key, default=None):
+        return self.options().get(key, default)
+
+    def set_option(self, key, value):
+        options = self.options()
+        options[key] = value
+        self.config.set_option('Plugin Manager', options)
+
     def create_layout(self):
         plugins_page = self.create_plugins_page()
         favorites_page = self.create_favorites_page()
@@ -382,6 +406,24 @@ class PluginManager(QDialog):
         self.model = PluginsModel(self.gui)
         self.proxy_model = PluginsProxyModel()
         self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.set_hide_core_plugins(self.option('hide_core_plugins', True))
+
+        # Options
+        options_group = QGroupBox('Options')
+        options_vbox = QVBoxLayout()
+
+        self.hide_core_plugins = QCheckBox('Hide Core plugins')
+        self.hide_core_plugins.setToolTip('A "core plugin" refers to required Hashmal functionality implemented as a plugin')
+        self.hide_core_plugins.setChecked(self.option('hide_core_plugins', True))
+        def set_hide_core_plugins():
+            do_hide = self.hide_core_plugins.isChecked()
+            self.set_option('hide_core_plugins', do_hide)
+            self.proxy_model.set_hide_core_plugins(do_hide)
+        self.hide_core_plugins.stateChanged.connect(set_hide_core_plugins)
+
+        options_vbox.addWidget(self.hide_core_plugins)
+        options_group.setLayout(options_vbox)
+
 
         self.view = QTableView()
         self.view.setModel(self.proxy_model)
@@ -422,8 +464,9 @@ class PluginManager(QDialog):
         vbox = QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(is_local)
+        vbox.addWidget(options_group)
         vbox.addLayout(filter_box)
-        vbox.addWidget(self.view)
+        vbox.addWidget(self.view, stretch=1)
         vbox.addWidget(Separator())
         vbox.addWidget(self.plugin_details)
         w = QWidget()

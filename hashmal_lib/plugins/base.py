@@ -13,6 +13,7 @@ class Category(object):
     Use one of the below class attributes for a dock's category attribute
     e.g. 'category = Category.Script'.
     """
+    Core = PluginCategory('Core', 'Core Hashmal functionality implemented as a plugin.')
     General = PluginCategory('General', 'General or uncategorized plugin.')
     Block = PluginCategory('Blocks', 'Plugin that involves blocks and/or block headers.')
     Data = PluginCategory('Data', 'Plugin that retrieves blockchain data.')

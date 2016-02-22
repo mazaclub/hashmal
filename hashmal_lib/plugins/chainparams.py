@@ -2,7 +2,7 @@
 from PyQt4 import QtCore
 
 from hashmal_lib.core import chainparams
-from base import Plugin, BasePluginUI
+from base import Plugin, BasePluginUI, Category
 
 def make_plugin():
     p = Plugin(ChainParams)
@@ -17,6 +17,7 @@ class ChainParams(BasePluginUI):
     """For augmentation purposes, we use this plugin to help with chainparams presets."""
     tool_name = 'Chainparams'
     description = 'Chainparams allows plugins to add chainparams presets for Hashmal to use.'
+    category = Category.Core
 
     def __init__(self, *args):
         super(ChainParams, self).__init__(*args)

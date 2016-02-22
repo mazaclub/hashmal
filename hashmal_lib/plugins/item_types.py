@@ -10,7 +10,7 @@ from PyQt4.QtCore import pyqtSignal, QObject
 from PyQt4.QtGui import QApplication
 
 from hashmal_lib.core import Transaction, BlockHeader, Block
-from base import Plugin, BasePluginUI
+from base import Plugin, BasePluginUI, Category
 
 class Item(object):
     """A value and metadata."""
@@ -191,6 +191,7 @@ class ItemsPlugin(BasePluginUI):
     """For augmentation purposes, we use a plugin to help with item types."""
     tool_name = 'Item Types'
     description = 'Helps handle data that is of a certain type.'
+    category = Category.Core
 
     def __init__(self, *args):
         super(ItemsPlugin, self).__init__(*args)

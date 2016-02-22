@@ -110,6 +110,9 @@ class PluginHandler(QWidget):
         tool_name = plugin_instance.ui_class.tool_name
         plugin_instance.name = tool_name if tool_name else name
         plugin_instance.instantiate_ui(self)
+        # Only required plugins can be Core plugins.
+        if plugin_instance.ui.category == Category.Core and tool_name not in required_plugins:
+            return
         # Don't load plugins with unknown category metadata.
         if plugin_instance.ui.category not in Category.categories():
             return

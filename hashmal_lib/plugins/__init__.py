@@ -6,6 +6,7 @@ from base import Plugin, Category
 import addr_encoder
 import block_analyzer
 import blockchain
+import chainparams
 import item_types
 import log
 import script_gen

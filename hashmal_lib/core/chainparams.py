@@ -162,6 +162,33 @@ presets_list = [
 
 presets = dict((i.name, i) for i in presets_list)
 
+def add_preset(preset):
+    global presets_list, presets
+    # Check the argument's type.
+    if not isinstance(preset, ParamsPreset):
+        raise Exception('Chainparams preset must be an instance of ParamsPreset (or a subclass).')
+    if preset.name in presets.keys() or preset in presets_list:
+        raise Exception('Chainparams preset "%s" already exists.' % preset.name)
+
+    presets_list.append(preset)
+    presets = dict((i.name, i) for i in presets_list)
+
+def remove_preset(preset):
+    global presets_list, presets, active_preset
+    if preset not in presets_list:
+        raise Exception('Chainparams preset "%s" does not exist.' % preset.name)
+    # Can't remove the Bitcoin preset.
+    if preset.name == 'Bitcoin':
+        raise Exception('Cannot remove the default chainparams preset (Bitcoin).')
+    # If we're removing the active preset, switch to Bitcoin.
+    if preset == active_preset:
+        set_to_preset('Bitcoin')
+
+    presets_list.remove(preset)
+    presets = dict((i.name, i) for i in presets_list)
+
+def get_presets():
+    return list(presets_list)
 
 def get_tx_fields():
     return transaction.transaction_fields

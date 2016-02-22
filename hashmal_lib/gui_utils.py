@@ -248,6 +248,7 @@ hashmal_entry_points = {
         'Address Encoder = hashmal_lib.plugins.addr_encoder:make_plugin',
         'Block Analyzer = hashmal_lib.plugins.block_analyzer:make_plugin',
         'Blockchain = hashmal_lib.plugins.blockchain:make_plugin',
+        'Chainparams = hashmal_lib.plugins.chainparams:make_plugin',
         'Item Types = hashmal_lib.plugins.item_types:make_plugin',
         'Log = hashmal_lib.plugins.log:make_plugin',
         'Script Generator = hashmal_lib.plugins.script_gen:make_plugin',
@@ -260,9 +261,9 @@ hashmal_entry_points = {
 }
 
 
-required_plugins = ['Item Types', 'Log', 'Stack Evaluator', 'Variables']
+required_plugins = ['Chainparams', 'Item Types', 'Log', 'Stack Evaluator', 'Variables']
 """These plugins are needed and cannot be disabled."""
 
-default_plugins = ['Blockchain', 'Item Types', 'Log', 'Script Generator', 'Stack Evaluator', 'Transaction Analyzer',
-                   'Transaction Builder', 'Variables', 'Wallet RPC']
+default_plugins = ['Blockchain', 'Chainparams', 'Item Types', 'Log', 'Script Generator', 'Stack Evaluator',
+                    'Transaction Analyzer', 'Transaction Builder', 'Variables', 'Wallet RPC']
 

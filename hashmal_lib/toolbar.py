@@ -54,7 +54,7 @@ class ParamsSelector(QWidget):
     def __init__(self, toolbar, parent=None):
         super(ParamsSelector, self).__init__(parent)
         self.config = toolbar.config
-        self.params_combo = params_combo = ChainparamsComboBox(self.config)
+        self.params_combo = params_combo = ChainparamsComboBox(toolbar.gui)
         params_combo.setWhatsThis('Use this to change the chainparams preset. Chainparams presets are described in the settings dialog.')
         params_combo.setMinimumWidth(120)
         params_form = QFormLayout()

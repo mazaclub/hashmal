@@ -11,19 +11,32 @@ class ChainparamsComboBox(QComboBox):
     Separated from SettingsDialog so it can be used elsewhere.
     """
     paramsChanged = pyqtSignal()
-    def __init__(self, config, parent=None):
+    def __init__(self, main_window, parent=None):
         super(ChainparamsComboBox, self).__init__(parent)
-        self.config = config
+        self.gui = main_window
+        self.config = self.gui.config
 
-        preset_names = [i.name for i in chainparams.presets_list]
+        preset_names = [i.name for i in chainparams.get_presets()]
         self.addItems(preset_names)
         self.set_index()
 
         self.currentIndexChanged.connect(self.change_params)
         self.config.optionChanged.connect(self.check_config)
+        # Connect to the Chainparams plugin's signal.
+        chainparams_plugin = self.gui.plugin_handler.get_plugin('Chainparams')
+        if not chainparams_plugin:
+            raise Exception('Chainparams plugin is not loaded.')
+        chainparams_plugin.ui.paramsPresetsChanged.connect(self.reload_presets)
+
+    def reload_presets(self):
+        """Reload the chainparams presets."""
+        self.clear()
+        preset_names = [i.name for i in chainparams.get_presets()]
+        self.addItems(preset_names)
+        self.set_index()
 
     def set_index(self):
-        preset_names = [i.name for i in chainparams.presets_list]
+        preset_names = [i.name for i in chainparams.get_presets()]
         active_params = self.config.get_option('chainparams', 'Bitcoin')
         # The config file might have changed to have a nonexistent preset.
         try:
@@ -37,7 +50,13 @@ class ChainparamsComboBox(QComboBox):
         self.set_index()
 
     def change_params(self):
+        # Don't do anything if this is called because we cleared the combobox.
+        if self.currentIndex() < 0:
+            return
         new_name = str(self.currentText())
+        # Don't do anything if nothing would really change.
+        if new_name == chainparams.active_preset.name and new_name == self.config.get_option('chainparams', ''):
+            return
         chainparams.set_to_preset(new_name)
         self.config.set_option('chainparams', new_name)
         self.paramsChanged.emit()
@@ -328,7 +347,7 @@ class SettingsDialog(QDialog):
         desc_label = QLabel(desc)
         desc_label.setWordWrap(True)
 
-        self.params_combo = ChainparamsComboBox(self.config)
+        self.params_combo = ChainparamsComboBox(self.gui)
 
         self.params_combo.paramsChanged.connect(self.change_chainparams)
 

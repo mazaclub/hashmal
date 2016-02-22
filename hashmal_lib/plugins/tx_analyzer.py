@@ -283,7 +283,6 @@ class TxAnalyzer(BaseDock):
         self.deserialize_raw(item.raw())
 
     def deserialize(self):
-        self.clear()
         self.tx_widget.set_tx(self.tx)
         self.inputs_table_model.set_tx(self.tx)
         self.info('Deserialized transaction %s' % bitcoin.core.b2lx(self.tx.GetHash()))
@@ -354,11 +353,7 @@ class TxAnalyzer(BaseDock):
         self.tabs.setCurrentIndex(self.TAB_VERIFY)
         self.verify_all_button.animateClick()
 
-    def refresh_data(self):
-        if self.tx:
-            self.deserialize()
-
     def on_option_changed(self, key):
         if key == 'chainparams':
-            self.raw_tx_edit.textChanged.emit()
+            self.check_raw_tx()
 

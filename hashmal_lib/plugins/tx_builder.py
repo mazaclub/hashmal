@@ -256,7 +256,7 @@ class TxBuilder(BaseDock):
         self.sighash_widget.set_tx(tx)
 
     def on_option_changed(self, key):
-        if key in ['chainparams']:
+        if key == 'chainparams':
             self.needsUpdate.emit()
 
     def adjust_tx_fields(self):

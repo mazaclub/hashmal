@@ -595,5 +595,4 @@ class TxWidget(QWidget):
                 w.hide()
                 l.hide()
 
-        self.clear()
 

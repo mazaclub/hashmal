@@ -3,7 +3,8 @@ import struct
 
 import bitcoin
 from bitcoin.core.script import (FindAndDelete, SIGHASH_ALL, SIGHASH_NONE,
-            SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, CScript, OP_CODESEPARATOR)
+            SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, CScript, OP_CODESEPARATOR,
+            OPCODE_NAMES, OPCODES_BY_NAME, DISABLED_OPCODES)
 
 import block
 import transaction
@@ -43,6 +44,9 @@ class ParamsPreset(object):
         self.block_fields = list(_bitcoin_block_fields)
         self.opcode_overrides = list(_bitcoin_opcode_overrides)
         self.script_engine_cls = stack.Stack
+        self.opcode_names = dict(OPCODE_NAMES)
+        self.opcodes_by_name = dict(OPCODES_BY_NAME)
+        self.disabled_opcodes = list(DISABLED_OPCODES)
 
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -232,6 +236,9 @@ def set_opcode_overrides(ops):
     """
     opcodes.set_overridden_opcodes(ops)
 
+def set_opcodes(op_names, ops_by_name, disabled_ops):
+    return opcodes.set_opcodes(op_names, ops_by_name, disabled_ops)
+
 def get_script_engine_class():
     return stack.get_script_engine()
 
@@ -249,6 +256,7 @@ def set_to_preset(name):
     set_block_fields(params.block_fields)
     set_opcode_overrides(params.opcode_overrides)
     set_script_engine_class(params.script_engine_cls)
+    set_opcodes(params.opcode_names, params.opcodes_by_name, params.disabled_opcodes)
 
 def signature_hash(script, txTo, inIdx, hashtype):
     if not active_preset:

@@ -36,6 +36,20 @@ def set_overridden_opcodes(ops):
         opcodes_by_name[name] = v
         overridden_opcodes[v] = func
 
+def set_opcodes(op_names, ops_by_name, disabled_ops):
+    """Set the known opcodes.
+
+    Args:
+        op_names (dict): Dict of {opcode_value: opcode_name}.
+        ops_by_name (dict): Dict of {opcode_name: opcode_value}.
+        disabled_ops (list): List of disabled opcodes.
+    """
+    global opcode_names, opcodes_by_name, disabled_opcodes
+    opcode_names = dict(op_names)
+    opcodes_by_name = dict(ops_by_name)
+    disabled_opcodes = list(disabled_ops)
+
+
 # Known opcode overrides
 
 def clams_checklocktimeverify(stack, txTo, inIdx, flags, execution_data, err_raiser):

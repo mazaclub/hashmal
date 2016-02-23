@@ -157,7 +157,7 @@ def transform_human(text, variables=None):
     # Here we populate the list of contextual tips.
 
     # Explicit opcode names
-    op_names = [str(i) for i in opcodes.opcode_names.keys()]
+    op_names = [str(i) for i in opcodes.opcodes_by_name.keys()]
     op_names_explicit = ' '.join(op_names)
     def is_small_int(op):
         """True if op is one of OP_1, OP_2, ...OP_16"""

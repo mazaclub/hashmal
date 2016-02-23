@@ -8,6 +8,7 @@ from bitcoin.core.script import (FindAndDelete, SIGHASH_ALL, SIGHASH_NONE,
 import block
 import transaction
 import opcodes
+import stack
 
 active_preset = None
 
@@ -41,6 +42,7 @@ class ParamsPreset(object):
         self.block_header_fields = list(_bitcoin_header_fields)
         self.block_fields = list(_bitcoin_block_fields)
         self.opcode_overrides = list(_bitcoin_opcode_overrides)
+        self.script_engine_cls = stack.Stack
 
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -230,6 +232,12 @@ def set_opcode_overrides(ops):
     """
     opcodes.set_overridden_opcodes(ops)
 
+def get_script_engine_class():
+    return stack.get_script_engine()
+
+def set_script_engine_class(cls):
+    return stack.set_script_engine(cls)
+
 def set_to_preset(name):
     """Reset chainparams to the preset name."""
     global active_preset
@@ -240,6 +248,7 @@ def set_to_preset(name):
     set_block_header_fields(params.block_header_fields)
     set_block_fields(params.block_fields)
     set_opcode_overrides(params.opcode_overrides)
+    set_script_engine_class(params.script_engine_cls)
 
 def signature_hash(script, txTo, inIdx, hashtype):
     if not active_preset:

@@ -23,8 +23,17 @@ ExecutionData = namedtuple('ExecutionData', ('block_height', 'block_time'))
 
 StackState = namedtuple('StackState', ('stack', 'last_op', 'log'))
 
+script_engine_class = None
+
+def get_script_engine():
+    return script_engine_class
+
+def set_script_engine(cls):
+    global script_engine_class
+    script_engine_class = cls
+
 class ScriptExecution(object):
-    def __init__(self, tx_script=None, txTo=None, inIdx=0, flags=None, execution_data=None):
+    def __init__(self):
         super(ScriptExecution, self).__init__()
         self.error = None
         self.steps = []
@@ -41,13 +50,9 @@ class ScriptExecution(object):
         self.script_passed = None
         self.script_verified = False
 
-        stack = Stack(tx_script, txTo, inIdx, flags, execution_data)
-        verifying = False
-        if stack.txTo:
-            iterator = stack.verify_step()
-            verifying = True
-        else:
-            iterator = stack.step()
+        stack = get_script_engine()(tx_script, txTo, inIdx, flags, execution_data)
+        verifying = stack.verifying
+        iterator = iter(stack)
         while 1:
             try:
                 state, last_op, log = iterator.next()
@@ -66,7 +71,12 @@ class ScriptExecution(object):
         return self.steps
 
 class Stack(object):
-    """State of a Script's execution."""
+    """State of a Script's execution.
+
+    This is the default implementation of a script engine.
+    Script engines are iterable. They have an attribute, 'verifying',
+    that is True if the script is being verified with a signature script.
+    """
     def __init__(self, tx_script, txTo=None, inIdx=0, flags=None, execution_data=None):
         super(Stack, self).__init__()
         self.tx_script = tx_script
@@ -77,6 +87,12 @@ class Stack(object):
         self.flags = flags
         self.execution_data = execution_data
         self.init_stack = []
+        self.verifying = True if self.txTo else False
+
+    def __iter__(self):
+        if self.txTo:
+            return self.verify_step()
+        return self.step()
 
     def verify_step(self):
         """Generator for verifying a script.

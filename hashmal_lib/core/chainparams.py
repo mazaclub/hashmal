@@ -35,6 +35,14 @@ class ParamsPreset(object):
                 - func: Function that takes stack data and executes the opcode.
                     This function should take the arguments (stack, txTo, inIdx, flags, err_raiser) and
                     return (stack, opcode, log_message).
+            Opcode overrides allow chainparams presets to affect only a small set of
+            opcodes without having to change them all via the 'opcode_names' and 'opcodes_by_name' arguments.
+            These overrides are accounted for in the Stack class, which is the script execution engine
+            used if none is specified by the ParamsPreset.
+        - script_engine_cls (class): Script execution engine class. If not specified, Stack will be used.
+        - opcode_names (dict): Dict of {opcode_value: opcode_name}.
+        - opcodes_by_name (dict): Dict of {opcode_name: opcode_value}.
+        - disabled_opcodes (list): List of disabled opcode values.
 
     """
     def __init__(self, **kwargs):
@@ -254,9 +262,9 @@ def set_to_preset(name):
     set_tx_fields(params.tx_fields)
     set_block_header_fields(params.block_header_fields)
     set_block_fields(params.block_fields)
-    set_opcode_overrides(params.opcode_overrides)
     set_script_engine_class(params.script_engine_cls)
     set_opcodes(params.opcode_names, params.opcodes_by_name, params.disabled_opcodes)
+    set_opcode_overrides(params.opcode_overrides)
 
 def signature_hash(script, txTo, inIdx, hashtype):
     if not active_preset:

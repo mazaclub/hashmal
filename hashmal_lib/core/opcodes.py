@@ -23,18 +23,15 @@ def override(opcode, stack, txTo, inIdx, flags, execution_data, err_raiser):
 
 def set_overridden_opcodes(ops):
     global opcode_names, opcodes_by_name, disabled_opcodes, overridden_opcodes
-    opcode_names = dict(OPCODE_NAMES)
-    opcodes_by_name = dict(OPCODES_BY_NAME)
     overridden_opcodes = {}
 
     if not ops:
         return
 
     for value, name, func in ops:
-        v = CScriptOp(value)
-        opcode_names[v] = name
-        opcodes_by_name[name] = v
-        overridden_opcodes[v] = func
+        opcode_names[value] = name
+        opcodes_by_name[name] = value
+        overridden_opcodes[value] = func
 
 def set_opcodes(op_names, ops_by_name, disabled_ops):
     """Set the known opcodes.

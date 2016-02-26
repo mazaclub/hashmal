@@ -49,6 +49,9 @@ class ParamsPreset(object):
     """
     def __init__(self, **kwargs):
         self.name = ''
+        self.prevout_fields = list(_bitcoin_prevout_fields)
+        self.txin_fields = list(_bitcoin_txin_fields)
+        self.txout_fields = list(_bitcoin_txout_fields)
         self.tx_fields = list(_bitcoin_tx_fields)
         self.tx_serializer = transaction.TransactionSerializer
         self.block_header_fields = list(_bitcoin_header_fields)
@@ -137,6 +140,23 @@ _bitcoin_tx_fields=[
     ('nLockTime', b'<I', 4, 0)
 ]
 
+_bitcoin_prevout_fields = [
+    ('hash', 'hash', 32, b'\x00'*32),
+    ('n', b'<I', 4, 0xffffffff)
+]
+
+_bitcoin_txin_fields = [
+    ('prevout', 'prevout', None, None),
+    ('scriptSig', 'script', None, None),
+    ('nSequence', b'<I', 4, 0xffffffff)
+]
+
+_bitcoin_txout_fields = [
+    ('nValue', b'<q', 8, -1),
+    ('scriptPubKey', 'script', None, None)
+]
+
+
 _bitcoin_opcode_overrides = []
 
 BitcoinPreset = ParamsPreset(
@@ -221,6 +241,15 @@ def set_tx_fields(fields):
     """
     transaction.transaction_fields = list(fields)
 
+def set_tx_prevout_fields(fields):
+    transaction.transaction_previous_outpoint_fields = list(fields)
+
+def set_txin_fields(fields):
+    transaction.transaction_input_fields = list(fields)
+
+def set_txout_fields(fields):
+    transaction.transaction_output_fields = list(fields)
+
 def set_tx_serializer(cls):
     transaction.Transaction.set_serializer_class(cls)
 
@@ -269,6 +298,9 @@ def set_to_preset(name):
     # Will throw an exception if name isn't a preset.
     params = presets[name]
     active_preset = params
+    set_tx_prevout_fields(params.prevout_fields)
+    set_txin_fields(params.txin_fields)
+    set_txout_fields(params.txout_fields)
     set_tx_fields(params.tx_fields)
     set_tx_serializer(params.tx_serializer)
     set_block_header_fields(params.block_header_fields)

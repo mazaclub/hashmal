@@ -16,6 +16,22 @@ Do not modify this list! Use chainparams.set_tx_fields()
 or a preset via chainparams.set_to_preset().
 """
 
+transaction_previous_outpoint_fields = [
+    ('hash', 'hash', 32, b'\x00'*32),
+    ('n', b'<I', 4, 0xffffffff)
+]
+
+transaction_input_fields = [
+    ('prevout', 'prevout', None, None),
+    ('scriptSig', 'script', None, None),
+    ('nSequence', b'<I', 4, 0xffffffff)
+]
+
+transaction_output_fields = [
+    ('nValue', b'<q', 8, -1),
+    ('scriptPubKey', 'script', None, None)
+]
+
 sighash_types = {
     'SIGHASH_ALL': SIGHASH_ALL,
     'SIGHASH_NONE': SIGHASH_NONE,

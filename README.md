@@ -1,10 +1,8 @@
 # Hashmal
 
-Hashmal is an IDE for Bitcoin transaction scripts. Its purpose is to make it easier to write, evaluate, and learn about transaction scripts.
+Hashmal is an IDE for Bitcoin transaction scripts and a general cryptocurrency development toolbox. Its primary purpose is to make it easier to write, evaluate, and learn about transaction scripts.
 
 Hashmal is intended for cryptocurrency developers and power users.
-
-Use at own risk!
 
 ## Key Features
 

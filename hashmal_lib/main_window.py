@@ -351,11 +351,10 @@ class HashmalMain(QMainWindow):
 
         txt = []
         txt.append(' '.join([
-                'Hashmal is an IDE for Bitcoin transaction scripts.',
-                'Its purpose is to make it easier to write, evaluate, and learn about transaction scripts.'
+                'Hashmal is an IDE for Bitcoin transaction scripts and a general cryptocurrency development toolbox.',
+                'Its primary purpose is to make it easier to write, evaluate, and learn about transaction scripts.',
         ]))
         txt.append('Hashmal is intended for cryptocurrency developers and power users.')
-        txt.append('Use at own risk!')
         txt = '\n\n'.join(txt)
 
         about_label.setText(txt)

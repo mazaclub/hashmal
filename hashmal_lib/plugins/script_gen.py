@@ -30,54 +30,49 @@ Attributes:
 
 """
 
+def format_variable_value(value, var_type):
+    """Returns a 2-tuple of (is_valid, formatted_value)."""
+    if var_type == 'address':
+        try:
+            h160 = CBase58Data(value).to_bytes()
+        except Exception:
+            # Check if value is a hash160.
+            if is_hex(value) and len(format_hex_string(value, with_prefix=False)) == 40:
+                h160 = format_hex_string(value, with_prefix=False).decode('hex')
+            else:
+                return False, 'Error: Could not decode address.'
+        return True, '0x' + h160.encode('hex')
+    elif var_type == 'pubkey':
+        if not is_hex(value):
+            return False, 'Error: Pubkey must be hex.'
+        key_hex = format_hex_string(value, with_prefix=False)
+        pub = CPubKey(key_hex.decode('hex'))
+        if not pub.is_fullyvalid:
+            return False, 'Error: Pubkey is invalid.'
+        return True, '0x' + key_hex
+    elif var_type == 'text':
+        try:
+            return True, '0x' + value.encode('hex')
+        except Exception as e:
+            return False, 'Error: ' + str(e)
+
+    return True, value
+
 def template_to_script(template, variables):
     text = template.text
     _vars = {}
     for k, v in variables.items():
         var_type = template.variables[k]
-        if var_type == 'address':
-            try:
-                h160 = CBase58Data(v).to_bytes()
-            except Exception:
-                # Check if value is a hash160.
-                if is_hex(v) and len(format_hex_string(v, with_prefix=False)) == 40:
-                    h160 = format_hex_string(v, with_prefix=False).decode('hex')
-                else:
-                    return 'Error: Could not decode <{}> address.'.format(k)
-            _vars[k] = ''.join(['0x', h160.encode('hex')])
-        elif var_type == 'pubkey':
-            if not is_hex(v):
-                return 'Error: Pubkey must be hex.'
-            key_hex = format_hex_string(v, with_prefix=False)
-            pub = CPubKey(key_hex.decode('hex'))
-            if not pub.is_fullyvalid:
-                return 'Error: Pubkey is invalid.'
-            _vars[k] = ''.join(['0x', key_hex])
-        elif var_type == 'text':
-            _vars[k] = ''.join(['0x', v.encode('hex')])
-        else:
-            _vars[k] = v
+        is_valid, formatted_value = format_variable_value(v, var_type)
+        if not is_valid:
+            return formatted_value
+        _vars[k] = formatted_value
 
     # Replace the <variable> occurrences with their values.
     for k, v in _vars.items():
         old = ''.join(['<', k, '>'])
         text = text.replace(old, v)
     return text
-
-def is_valid_variable_value(value, variable_type):
-    """Returns whether value is valid."""
-    try:
-        if variable_type == 'address':
-            v = format_hex_string(value, with_prefix=False)
-            if len(v) == 40:
-                return True
-        elif variable_type == 'pubkey':
-            v = format_hex_string(value, with_prefix=False)
-            pub = CPubKey(v.decode('hex'))
-            return pub.is_fullyvalid
-    except Exception:
-        pass
-    return False
 
 def is_template_script(script, template):
     """Returns whether script complies with template."""
@@ -92,7 +87,8 @@ def is_template_script(script, template):
             # Check variable value.
             if txt.startswith('<') and txt.endswith('>'):
                 var_type = template.variables[txt[1:-1]]
-                if not is_valid_variable_value(s, var_type):
+                is_valid, _ = format_variable_value(s, var_type)
+                if not is_valid:
                     return False
                 else:
                     used_variables.append(txt[1:-1])

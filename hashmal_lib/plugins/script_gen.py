@@ -55,6 +55,11 @@ def format_variable_value(value, var_type):
             return True, '0x' + value.encode('hex')
         except Exception as e:
             return False, 'Error: ' + str(e)
+    elif var_type == 'signature':
+        if not is_hex(value):
+            return False, 'Error: Signature must be hex.'
+        # We remain algorithm-agnostic by not checking the length.
+        return True, format_hex_string(value, with_prefix=True)
 
     return True, value
 
@@ -211,7 +216,11 @@ known_templates = [
     # OP_RETURN
     ScriptTemplate('Null Output',
         'OP_RETURN <text>',
-        {'text': 'text'})
+        {'text': 'text'}),
+    # Signature script
+    ScriptTemplate('Signature Script',
+        '<signature> <pubkey>',
+        {'signature': 'signature', 'pubkey':'pubkey'}),
 ]
 
 class ScriptGenerator(BaseDock):

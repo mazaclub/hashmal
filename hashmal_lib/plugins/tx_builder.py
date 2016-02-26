@@ -11,7 +11,7 @@ from PyQt4.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import chainparams
 from hashmal_lib.core.transaction import Transaction, sig_hash_name, sig_hash_explanation, sighash_types, sighash_types_by_value
-from hashmal_lib.core.utils import format_hex_string
+from hashmal_lib.core.utils import is_hex, format_hex_string
 from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.widgets.script import ScriptEditor
 from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font, OutputAmountEdit, RawRole
@@ -682,8 +682,13 @@ class SigHashWidget(QWidget):
         """Attempt to parse the private key that was input."""
         txt = str(self.privkey_edit.text())
         privkey = None
-        if len(txt) == 64:
+        if is_hex(txt):
+            txt = format_hex_string(txt, with_prefix=False)
+
+        try:
             privkey = CBitcoinSecret.from_secret_bytes(x(txt))
+        except Exception:
+            pass
 
         return privkey
 

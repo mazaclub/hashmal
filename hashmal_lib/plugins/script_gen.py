@@ -60,6 +60,14 @@ def format_variable_value(value, var_type):
             return False, 'Error: Signature must be hex.'
         # We remain algorithm-agnostic by not checking the length.
         return True, format_hex_string(value, with_prefix=True)
+    elif var_type == 'script':
+        if not is_hex(value):
+            return False, 'Error: Script must be hex.'
+        try:
+            scr = Script(format_hex_string(value, with_prefix=False).decode('hex'))
+            return True, format_hex_string(value, with_prefix=True)
+        except Exception:
+            return False, 'Error: Cannot parse script.'
 
     return True, value
 
@@ -145,9 +153,19 @@ class ScriptTemplateItem(Item):
 
         # Actions for copying all variables.
         for k, v in self.variables.items():
+            # Special case for scripts.
+            # Two actions: Copy X and Copy X (hex)
+            if self.template.variables[k] == 'script':
+                scr = Script(format_hex_string(v, with_prefix=False).decode('hex'))
+                label = ' '.join(['Copy', k])
+                self.add_copy_action(label, scr.get_human())
+                k = ' '.join([k, '(hex)'])
             label = ' '.join(['Copy', k])
-            copy_func = functools.partial(QApplication.clipboard().setText, v)
-            self.actions.append((label, copy_func))
+            self.add_copy_action(label, v)
+
+    def add_copy_action(self, label, data):
+        copy_func = functools.partial(QApplication.clipboard().setText, data)
+        self.actions.append((label, copy_func))
 
 class TemplateWidget(QWidget):
     def __init__(self, template):
@@ -221,6 +239,12 @@ known_templates = [
     ScriptTemplate('Signature Script',
         '<signature> <pubkey>',
         {'signature': 'signature', 'pubkey':'pubkey'}),
+    ScriptTemplate('Pay-To-Script-Hash Signature Script',
+        '<signature> <redeemscript>',
+        {'signature': 'signature', 'redeemscript': 'script'}),
+    ScriptTemplate('Pay-To-Script-Hash Multisig Signature Script',
+        'OP_0 <signature> <redeemscript>',
+        {'signature': 'signature', 'redeemscript': 'script'}),
 ]
 
 class ScriptGenerator(BaseDock):

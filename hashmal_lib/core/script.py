@@ -80,7 +80,7 @@ class Script(CScript):
             try:
                 opcode, data, byte_index = next(iterator)
                 op_name = opcodes.opcode_names.get(opcode)
-                if op_name and not op_name.startswith('OP_PUSHDATA'):
+                if op_name and not 'DATA' in op_name:
                     s = op_name
                 else:
                     if all(ord(c) < 128 and ord(c) > 31 for c in data):

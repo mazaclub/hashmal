@@ -49,7 +49,7 @@ class ParamsPreset(object):
     """
     def __init__(self, **kwargs):
         self.name = ''
-        self.tx_fields = []
+        self.tx_fields = list(_bitcoin_tx_fields)
         self.tx_serializer = transaction.TransactionSerializer
         self.block_header_fields = list(_bitcoin_header_fields)
         self.block_fields = list(_bitcoin_block_fields)
@@ -130,14 +130,17 @@ _bitcoin_block_fields = [
     ('vtx', 'vectortx', None, None)
 ]
 
+_bitcoin_tx_fields=[
+    ('nVersion', b'<i', 4, 1),
+    ('vin', 'inputs', None, None),
+    ('vout', 'outputs', None, None),
+    ('nLockTime', b'<I', 4, 0)
+]
+
 _bitcoin_opcode_overrides = []
 
 BitcoinPreset = ParamsPreset(
-        name='Bitcoin',
-        tx_fields=[('nVersion', b'<i', 4, 1),
-            ('vin', 'inputs', None, None),
-            ('vout', 'outputs', None, None),
-            ('nLockTime', b'<I', 4, 0)]
+        name='Bitcoin'
 )
 
 ClamsPreset = ParamsPreset(

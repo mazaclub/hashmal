@@ -1,8 +1,10 @@
 import struct
 
-from bitcoin.core import CMutableTransaction, CMutableTxIn, CMutableTxOut, b2x
-from bitcoin.core.serialize import ser_read, BytesSerializer, VectorSerializer
+from bitcoin.core import CMutableTransaction, CMutableTxIn, CMutableTxOut, CMutableOutPoint, b2x
+from bitcoin.core.serialize import ser_read, BytesSerializer, VectorSerializer, VarIntSerializer
 from bitcoin.core.script import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
+
+from script import Script
 
 transaction_fields = [
     ('nVersion', b'<i', 4, 1),
@@ -68,36 +70,213 @@ def sig_hash_explanation(hash_type):
     }
     return explanations.get(hash_type)
 
+def struct_deserialize(fmt, num_bytes, buf):
+    return struct.unpack(fmt, ser_read(buf, num_bytes))[0]
+
+def struct_serialize(value, fmt, buf):
+    return buf.write(struct.pack(fmt, value))
+
+class OutPoint(CMutableOutPoint):
+    """Previous outpoint.
+
+    Subclassed from CMutableOutPoint so that its fields can be altered.
+    """
+    def __init__(self, hash=b'\x00'*32, n=0xffffffff, kwfields=None):
+        super(OutPoint, self).__init__(hash, n)
+        self.serializer_class = Transaction.serializer_class
+        if kwfields is None:
+            kwfields = {}
+        for k, v in kwfields.items():
+            setattr(self, k, v)
+
+        self.fields = list(transaction_previous_outpoint_fields)
+        for name, _, _, default in self.fields:
+            if not hasattr(self, name):
+                setattr(self, name, default)
+
+    @classmethod
+    def from_outpoint(cls, outpoint):
+        kwfields = {}
+        for attr, _, _, default in transaction_previous_outpoint_fields:
+            if hasattr(outpoint, attr):
+                kwfields[attr] = getattr(outpoint, attr)
+
+        return cls(kwfields=kwfields)
+
+class TxIn(CMutableTxIn):
+    """Transaction input.
+
+    Subclassed from CMutableTxIn so that its fields can be altered.
+    """
+    def __init__(self, prevout=None, scriptSig=Script(), nSequence=0xffffffff, kwfields=None):
+        super(TxIn, self).__init__(prevout, scriptSig, nSequence)
+        if not isinstance(self.prevout, OutPoint):
+            self.prevout = OutPoint.from_outpoint(self.prevout)
+        self.serializer_class = Transaction.serializer_class
+        if kwfields is None:
+            kwfields = {}
+        for k, v in kwfields.items():
+            setattr(self, k, v)
+
+        self.fields = list(transaction_input_fields)
+        for name, _, _, default in self.fields:
+            if not hasattr(self, name):
+                setattr(self, name, default)
+
+    @classmethod
+    def from_txin(cls, txin):
+        kwfields = {}
+        for attr, _, _, default in transaction_input_fields:
+            if attr == 'prevout':
+                prevout = OutPoint.from_outpoint(txin.prevout)
+            elif hasattr(txin, attr):
+                kwfields[attr] = getattr(txin, attr)
+
+        return cls(prevout=prevout, kwfields=kwfields)
+
+class TxOut(CMutableTxOut):
+    """Transaction output.
+
+    Subclassed from CMutableTxOut so that its fields can be altered.
+    """
+    def __init__(self, nValue=-1, scriptPubKey=Script(), kwfields=None):
+        super(TxOut, self).__init__(nValue, scriptPubKey)
+        self.serializer_class = Transaction.serializer_class
+        if kwfields is None:
+            kwfields = {}
+        for k, v in kwfields.items():
+            setattr(self, k, v)
+
+        self.fields = list(transaction_output_fields)
+        for name, _, _, default in self.fields:
+            if not hasattr(self, name):
+                setattr(self, name, default)
+
+    @classmethod
+    def from_txout(cls, txout):
+        kwfields = {}
+        for attr, _, _, default in transaction_output_fields:
+            if hasattr(txout, attr):
+                kwfields[attr] = getattr(txout, attr)
+
+        return cls(kwfields=kwfields)
 
 class TransactionSerializer(object):
     """Default transaction serialization handler."""
     def stream_deserialize(self, tx, f):
         kwargs = {}
         for attr, fmt, num_bytes, _ in tx.fields:
-            self.deserialize_field(tx, kwargs, attr, fmt, num_bytes, f)
+            if fmt == 'inputs':
+                self.deserialize_inputs(tx, kwargs, attr, fmt, num_bytes, f)
+            elif fmt == 'outputs':
+                self.deserialize_outputs(tx, kwargs, attr, fmt, num_bytes, f)
+            else:
+                self.deserialize_field(tx, kwargs, attr, fmt, num_bytes, f)
         return kwargs
 
     def stream_serialize(self, tx, f):
         for attr, fmt, num_bytes, _ in tx.fields:
-            self.serialize_field(tx, attr, fmt, num_bytes, f)
+            if fmt == 'inputs':
+                self.serialize_inputs(tx, attr, fmt, num_bytes, f)
+            elif fmt == 'outputs':
+                self.serialize_outputs(tx, attr, fmt, num_bytes, f)
+            else:
+                self.serialize_field(tx, attr, fmt, num_bytes, f)
+
+    def struct_deserialize(self, kwargs, attr, fmt, num_bytes, f):
+        pos = f.tell()
+        try:
+            kwargs[attr] = struct_deserialize(fmt, num_bytes, f)
+            return True
+        except Exception as e:
+            f.seek(pos)
+            return False
+
+    def struct_serialize(self, obj, attr, fmt, num_bytes, f):
+        pos = f.tell()
+        try:
+            struct_serialize(getattr(obj, attr), fmt, f)
+            return True
+        except Exception:
+            f.seek(pos)
+            return False
+
+    def deserialize_outpoint(self, tx, kwargs, attr, fmt, num_bytes, f):
+        fields = list(transaction_previous_outpoint_fields)
+        for op_attr, op_fmt, op_num_bytes, _ in fields:
+            if self.struct_deserialize(kwargs, op_attr, op_fmt, op_num_bytes, f):
+                continue
+            if op_fmt == 'hash':
+                kwargs[op_attr] = ser_read(f, op_num_bytes)
+
+    def deserialize_inputs(self, tx, kwargs, attr, fmt, num_bytes, f):
+        n = VarIntSerializer.stream_deserialize(f)
+        r = []
+        fields = list(transaction_input_fields)
+        for i in range(n):
+            txin_kwargs = {}
+            for txi_attr, txi_fmt, txi_num_bytes, _ in fields:
+                if self.struct_deserialize(txin_kwargs, txi_attr, txi_fmt, txi_num_bytes, f):
+                    continue
+                if txi_fmt == 'prevout':
+                    prevout_kwargs = {}
+                    self.deserialize_outpoint(tx, prevout_kwargs, txi_attr, txi_fmt, txi_num_bytes, f)
+                    txin_kwargs[txi_attr] = OutPoint(kwfields=prevout_kwargs)
+                elif txi_fmt == 'script':
+                    txin_kwargs[txi_attr] = Script(BytesSerializer.stream_deserialize(f))
+            r.append(TxIn(kwfields=txin_kwargs))
+        kwargs['vin'] = r
+
+    def deserialize_outputs(self, tx, kwargs, attr, fmt, num_bytes, f):
+        n = VarIntSerializer.stream_deserialize(f)
+        r = []
+        fields = list(transaction_output_fields)
+        for i in range(n):
+            txout_kwargs = {}
+            for txo_attr, txo_fmt, txo_num_bytes, _ in fields:
+                if self.struct_deserialize(txout_kwargs, txo_attr, txo_fmt, txo_num_bytes, f):
+                    continue
+                if txo_fmt == 'script':
+                    txout_kwargs[txo_attr] = Script(BytesSerializer.stream_deserialize(f))
+            r.append(TxOut(kwfields=txout_kwargs))
+        kwargs['vout'] = r
+
+    def serialize_outpoint(self, outpoint, fmt, num_bytes, f):
+        for op_attr, op_fmt, op_num_bytes, _ in outpoint.fields:
+            if self.struct_serialize(outpoint, op_attr, op_fmt, op_num_bytes, f):
+                continue
+            if op_fmt == 'hash':
+                f.write(getattr(outpoint, op_attr))
+
+    def serialize_inputs(self, tx, attr, fmt, num_bytes, f):
+        VarIntSerializer.stream_serialize(len(tx.vin), f)
+        for txin in tx.vin:
+            for txi_attr, txi_fmt, txi_num_bytes, _ in txin.fields:
+                if self.struct_serialize(txin, txi_attr, txi_fmt, txi_num_bytes, f):
+                    continue
+                if txi_fmt == 'prevout':
+                    self.serialize_outpoint(getattr(txin, txi_attr), txi_fmt, txi_num_bytes, f)
+                elif txi_fmt == 'script':
+                    BytesSerializer.stream_serialize(getattr(txin, txi_attr), f)
+
+    def serialize_outputs(self, tx, attr, fmt, num_bytes, f):
+        VarIntSerializer.stream_serialize(len(tx.vout), f)
+        for txout in tx.vout:
+            for txo_attr, txo_fmt, txo_num_bytes, _ in txout.fields:
+                if self.struct_serialize(txout, txo_attr, txo_fmt, txo_num_bytes, f):
+                    continue
+                if txo_fmt == 'script':
+                    BytesSerializer.stream_serialize(getattr(txout, txo_attr), f)
 
     def deserialize_field(self, tx, kwargs, attr, fmt, num_bytes, f):
-        if fmt not in ['inputs', 'outputs', 'bytes']:
-            kwargs[attr] = struct.unpack(fmt, ser_read(f, num_bytes))[0]
-        elif fmt == 'inputs':
-            kwargs[attr] = VectorSerializer.stream_deserialize(CMutableTxIn, f)
-        elif fmt == 'outputs':
-            kwargs[attr] = VectorSerializer.stream_deserialize(CMutableTxOut, f)
+        if self.struct_deserialize(kwargs, attr, fmt, num_bytes, f):
+            return
         elif fmt == 'bytes':
-            kwargs[attr] =  BytesSerializer.stream_deserialize(f)
+            kwargs[attr] = BytesSerializer.stream_deserialize(f)
 
     def serialize_field(self, tx, attr, fmt, num_bytes, f):
-        if fmt not in ['inputs', 'outputs', 'bytes']:
-            f.write(struct.pack(fmt, getattr(tx, attr)))
-        elif fmt == 'inputs':
-            VectorSerializer.stream_serialize(CMutableTxIn, tx.vin, f)
-        elif fmt == 'outputs':
-            VectorSerializer.stream_serialize(CMutableTxOut, tx.vout, f)
+        if self.struct_serialize(tx, attr, fmt, num_bytes, f):
+            return
         elif fmt == 'bytes':
             BytesSerializer.stream_serialize(getattr(tx, attr), f)
 
@@ -114,8 +293,12 @@ class Transaction(CMutableTransaction):
     can be used instead.
     """
     serializer_class = TransactionSerializer
-    def __init__(self, vin=None, vout=None, locktime=0, version=1, fields=None, kwfields=None):
-        super(Transaction, self).__init__(vin, vout, locktime, version)
+    def __init__(self, vin=None, vout=None, nLockTime=0, nVersion=1, fields=None, kwfields=None):
+        super(Transaction, self).__init__(vin, vout, nLockTime, nVersion)
+        if not all(isinstance(txin, TxIn) for txin in self.vin):
+            self.vin = [TxIn.from_txin(txin) for txin in self.vin]
+        if not all(isinstance(txout, TxOut) for txout in self.vout):
+            self.vout = [TxOut.from_txout(txout) for txout in self.vout]
         if kwfields is None: kwfields = {}
         for k, v in kwfields.items():
             setattr(self, k, v)
@@ -154,23 +337,19 @@ class Transaction(CMutableTransaction):
 
     @classmethod
     def from_tx(cls, tx):
-        if not issubclass(tx.__class__, Transaction):
-            return super(Transaction, cls).from_tx(tx)
-        else:
-
-            kwfields = {}
-            for attr, _, _, default in transaction_fields:
-                if attr in ['vin', 'vout']:
-                    continue
-                if hasattr(tx, attr):
-                    kwfields[attr] = getattr(tx, attr)
+        kwfields = {}
+        for attr, _, _, default in transaction_fields:
+            if attr in ['vin', 'vout']:
+                continue
+            if hasattr(tx, attr):
+                kwfields[attr] = getattr(tx, attr)
 
 
-            vin = [CMutableTxIn.from_txin(txin) for txin in tx.vin]
-            vout = [CMutableTxOut.from_txout(txout) for txout in tx.vout]
-            kwfields['vin'] = vin
-            kwfields['vout'] = vout
-            return cls(kwfields=kwfields)
+        vin = [TxIn.from_txin(txin) for txin in tx.vin]
+        vout = [TxOut.from_txout(txout) for txout in tx.vout]
+        kwfields['vin'] = vin
+        kwfields['vout'] = vout
+        return cls(kwfields=kwfields)
 
     def as_hex(self):
         return b2x(self.serialize())

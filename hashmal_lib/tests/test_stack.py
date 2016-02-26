@@ -1,11 +1,10 @@
 import unittest
 
-from bitcoin.core import CMutableTxIn, CMutableTxOut, CMutableOutPoint
 from bitcoin.core.scripteval import EvalScript
 
 from hashmal_lib.core.script import Script, transform_human
 from hashmal_lib.core.stack import ScriptExecution
-from hashmal_lib.core.transaction import Transaction
+from hashmal_lib.core.transaction import Transaction, TxIn, TxOut, OutPoint
 
 class StackTest(unittest.TestCase):
     def setUp(self):
@@ -127,19 +126,19 @@ class StackTest(unittest.TestCase):
 
 
 def build_spending_tx(script_sig, credit_tx):
-    tx = Transaction(version=1, locktime=0)
-    txin = CMutableTxIn(CMutableOutPoint(credit_tx.GetHash(), 0), script_sig)
+    tx = Transaction(nVersion=1, nLockTime=0)
+    txin = TxIn(OutPoint(credit_tx.GetHash(), 0), script_sig)
     tx.vin = [txin]
-    txout = CMutableTxOut(0, Script())
+    txout = TxOut(0, Script())
     tx.vout = [txout]
     return tx
 
 def build_crediting_tx(script_pubkey):
-    tx = Transaction(version=1, locktime=0)
-    txin = CMutableTxIn()
+    tx = Transaction(nVersion=1, nLockTime=0)
+    txin = TxIn()
     txin.scriptSig = Script.from_human('0x00 0x00')
-    tx.vin = [txin]
-    txout = CMutableTxOut(0, script_pubkey)
-    tx.vout = [txout]
+    tx.vin.append(txin)
+    txout = TxOut(0, script_pubkey)
+    tx.vout.append(txout)
     return tx
 

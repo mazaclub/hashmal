@@ -86,7 +86,7 @@ class TransactionTest(unittest.TestCase):
     def test_init_with_field_keyword_args(self):
         ins = (
             CTxIn(COutPoint(lx('537ecb89e5ed7e872f988447432e6791c0a58b069c4ec8647e1683a383e867a3'), 0),
-                  x('473044022043b9aee9187effd7e6c7bc444b09162570f17e36b4a9c02cf722126cc0efa3d502200b3ba14c809fa9a6f7f835cbdbbb70f2f43f6b30beaf91eec6b8b5981c80cea50121025edf500f18f9f2b3f175f823fa996fbb2ec52982a9aeb1dc2e388a651054fb0f'))
+                  x('473044022043b9aee9187effd7e6c7bc444b09162570f17e36b4a9c02cf722126cc0efa3d502200b3ba14c809fa9a6f7f835cbdbbb70f2f43f6b30beaf91eec6b8b5981c80cea50121025edf500f18f9f2b3f175f823fa996fbb2ec52982a9aeb1dc2e388a651054fb0f')),
         )
         outs = (
             CTxOut(114263, x('76a91495efca2c6a6f0e0f0ce9530219b48607a962e77788ac')),

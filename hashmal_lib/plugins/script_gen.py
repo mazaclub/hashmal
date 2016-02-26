@@ -1,4 +1,5 @@
 from collections import namedtuple
+import functools
 
 import bitcoin
 from bitcoin.base58 import CBase58Data
@@ -141,13 +142,11 @@ class ScriptTemplateItem(Item):
                 break
         self.variables = variables
 
-        def copy_recipient():
-            QApplication.clipboard().setText(self.recipient())
-        if self.recipient():
-            self.actions.append(('Copy Recipient', copy_recipient))
-
-    def recipient(self):
-        return self.variables.get('recipient')
+        # Actions for copying all variables.
+        for k, v in self.variables.items():
+            label = ' '.join(['Copy', k])
+            copy_func = functools.partial(QApplication.clipboard().setText, v)
+            self.actions.append((label, copy_func))
 
 class TemplateWidget(QWidget):
     def __init__(self, template):

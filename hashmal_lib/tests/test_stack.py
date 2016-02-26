@@ -1,11 +1,10 @@
 import unittest
 
-import bitcoin
 from bitcoin.core import CMutableTxIn, CMutableTxOut, CMutableOutPoint
 from bitcoin.core.scripteval import EvalScript
 
 from hashmal_lib.core.script import Script, transform_human
-from hashmal_lib.core.stack import Stack, ScriptExecution
+from hashmal_lib.core.stack import ScriptExecution
 from hashmal_lib.core.transaction import Transaction
 
 class StackTest(unittest.TestCase):

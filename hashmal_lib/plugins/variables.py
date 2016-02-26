@@ -1,15 +1,10 @@
 from collections import OrderedDict, namedtuple
-from functools import partial
-
-from bitcoin.core import x, lx, b2x, b2lx
-from bitcoin.base58 import CBase58Data
 
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
 from base import BaseDock, Plugin, augmenter
 from item_types import ItemAction, item_types
-from hashmal_lib.core import Transaction, Block, BlockHeader
 from hashmal_lib.gui_utils import floated_buttons, HBox
 from hashmal_lib.core.utils import is_hex
 

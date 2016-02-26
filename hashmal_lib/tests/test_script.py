@@ -1,7 +1,6 @@
 import unittest
 from collections import namedtuple
 
-import bitcoin
 from bitcoin.core.script import *
 
 from hashmal_lib.core.script import Script, transform_human

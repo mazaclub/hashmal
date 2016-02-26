@@ -1,7 +1,7 @@
 import unittest
 from collections import OrderedDict
 
-from bitcoin.core import x, lx, b2x, b2lx
+from bitcoin.core import b2lx
 
 from hashmal_lib.plugins.addr_encoder import encode_address, decode_address
 from hashmal_lib.plugins.block_analyzer import deserialize_block_or_header

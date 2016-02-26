@@ -1,6 +1,6 @@
 import bitcoin
-from bitcoin.core import COutPoint, CTxIn, CTxOut, x, lx, b2x, b2lx, CMutableOutPoint, CMutableTxIn, CMutableTxOut
-from bitcoin.core.script import SIGHASH_ALL, SIGHASH_ANYONECANPAY, SignatureHash
+from bitcoin.core import x, b2x, CMutableOutPoint, CMutableTxIn, CMutableTxOut
+from bitcoin.core.script import SIGHASH_ALL, SIGHASH_ANYONECANPAY
 from bitcoin.core.scripteval import VerifyScript, SCRIPT_VERIFY_P2SH
 from bitcoin.wallet import CBitcoinSecret
 

@@ -1,9 +1,7 @@
-import bitcoin
 from bitcoin.core import x, b2x
 from bitcoin.base58 import CBase58Data
 
 from PyQt4.QtGui import *
-from PyQt4 import QtCore
 
 from base import BaseDock, Plugin, Category, augmenter
 from hashmal_lib.gui_utils import monospace_font, Separator

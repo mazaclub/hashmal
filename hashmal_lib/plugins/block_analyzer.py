@@ -3,8 +3,7 @@ from io import BytesIO
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-import bitcoin
-from bitcoin.core import CBlockHeader, CBlock, x, b2x, lx, b2lx
+from bitcoin.core import x, b2x
 from bitcoin.core.serialize import VarIntSerializer
 
 from base import BaseDock, Plugin, Category, augmenter

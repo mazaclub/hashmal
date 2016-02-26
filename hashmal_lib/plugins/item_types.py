@@ -5,7 +5,7 @@ parts of Hashmal to use consistent metadata.
 """
 from collections import namedtuple, defaultdict
 
-from bitcoin.core import x, lx, b2x, b2lx
+from bitcoin.core import x, b2x, b2lx
 from PyQt4.QtCore import pyqtSignal, QObject
 from PyQt4.QtGui import QApplication
 

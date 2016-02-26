@@ -1,9 +1,9 @@
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 import requests
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-from bitcoin.core import x, lx, b2x
+from bitcoin.core import lx
 
 from hashmal_lib.gui_utils import floated_buttons
 from hashmal_lib.core import BlockHeader

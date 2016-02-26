@@ -1,7 +1,6 @@
 import struct
 
-import bitcoin
-from bitcoin.core import __make_mutable, b2x, b2lx, CBlockHeader
+from bitcoin.core import __make_mutable, b2x, CBlockHeader
 from bitcoin.core.serialize import ser_read, Hash, BytesSerializer, VectorSerializer
 
 from transaction import Transaction

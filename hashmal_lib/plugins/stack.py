@@ -4,7 +4,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from hashmal_lib.core import Transaction, Script
-from hashmal_lib.core.stack import Stack, ScriptExecution, ExecutionData
+from hashmal_lib.core.stack import ScriptExecution, ExecutionData
 from hashmal_lib.gui_utils import monospace_font, floated_buttons, AmountEdit, HBox, ReadOnlyCheckBox
 from hashmal_lib.widgets import ScriptExecutionWidget
 from base import BaseDock, Plugin, Category, augmenter

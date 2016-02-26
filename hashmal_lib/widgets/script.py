@@ -1,9 +1,5 @@
-
-import os
-
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-from PyQt4 import QtCore
 
 from hashmal_lib.core.script import Script, transform_human
 from hashmal_lib.gui_utils import monospace_font

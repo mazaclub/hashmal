@@ -1,7 +1,6 @@
 import struct
 
-import bitcoin
-from bitcoin.core import CMutableTransaction, CMutableTxIn, CMutableTxOut, CTxIn, CTxOut, b2x, b2lx
+from bitcoin.core import CMutableTransaction, CMutableTxIn, CMutableTxOut, b2x
 from bitcoin.core.serialize import ser_read, BytesSerializer, VectorSerializer
 from bitcoin.core.script import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
 

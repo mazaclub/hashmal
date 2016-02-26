@@ -5,12 +5,12 @@ from decimal import Decimal
 from collections import OrderedDict
 
 import bitcoin
-from bitcoin.core import COutPoint, CTxIn, CTxOut, lx, x, b2x, b2lx, CMutableOutPoint, CMutableTxIn, CMutableTxOut
+from bitcoin.core import CTxIn, CTxOut, lx, x, b2x, b2lx, CMutableTxIn, CMutableTxOut
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 from PyQt4.QtCore import *
 
-from hashmal_lib.gui_utils import Amount, monospace_font, HBox, floated_buttons, RawRole, ReadOnlyCheckBox
+from hashmal_lib.gui_utils import HBox, floated_buttons, RawRole, ReadOnlyCheckBox
 from hashmal_lib.core import chainparams
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import Transaction

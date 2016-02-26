@@ -6,10 +6,10 @@ from PyQt4.QtCore import *
 
 from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
-from hashmal_lib.gui_utils import monospace_font, floated_buttons, Separator
+from hashmal_lib.gui_utils import monospace_font, floated_buttons
 from hashmal_lib.widgets.tx import TxWidget
 from hashmal_lib.core.script import Script
-from hashmal_lib.core.transaction import Transaction, sig_hash_name, sig_hash_explanation
+from hashmal_lib.core.transaction import Transaction, sig_hash_name
 
 def make_plugin():
     return Plugin(TxAnalyzer)

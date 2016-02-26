@@ -1,6 +1,6 @@
 import unittest
 
-from bitcoin.core import COutPoint, CTxIn, CTxOut, CTransaction, x, lx, b2x, b2lx
+from bitcoin.core import COutPoint, CTxIn, CTxOut, CTransaction, x, lx, b2x
 
 from hashmal_lib.core import chainparams, Transaction, BlockHeader, Block
 

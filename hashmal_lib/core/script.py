@@ -2,8 +2,6 @@ import pyparsing
 from pyparsing import Word, QuotedString, OneOrMore, Combine
 import shlex
 
-import bitcoin
-from bitcoin.base58 import CBase58Data
 from bitcoin.core.script import CScript
 
 import opcodes

@@ -1,7 +1,7 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from bitcoin.core import CBlockHeader, CBlock, x, b2x, lx, b2lx
+from bitcoin.core import CBlockHeader, b2x, b2lx
 
 from hashmal_lib.gui_utils import monospace_font
 from hashmal_lib.core import BlockHeader, Block

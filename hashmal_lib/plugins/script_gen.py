@@ -1,7 +1,6 @@
 from collections import namedtuple
 import functools
 
-import bitcoin
 from bitcoin.base58 import CBase58Data
 from bitcoin.core.key import CPubKey
 
@@ -11,7 +10,7 @@ from PyQt4.QtCore import *
 from base import BaseDock, Plugin, Category, augmenter
 from item_types import Item, ItemAction
 from hashmal_lib.core import Script
-from hashmal_lib.core.utils import is_hex, push_script, format_hex_string
+from hashmal_lib.core.utils import is_hex, format_hex_string
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 
 def make_plugin():

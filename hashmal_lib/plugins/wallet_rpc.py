@@ -1,12 +1,10 @@
 import json
 import urllib
 import shlex
-from collections import namedtuple
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-import hashmal_lib
 from hashmal_lib.plugins import BaseDock, Plugin, Category
 from hashmal_lib.gui_utils import floated_buttons
 from hashmal_lib.downloader import Downloader

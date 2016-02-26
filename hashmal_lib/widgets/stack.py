@@ -1,15 +1,10 @@
-import bitcoin
-from bitcoin.core.script import CScript
-from bitcoin.core.scripteval import EvalScript
-
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from hashmal_lib.core import Transaction, opcodes
-from hashmal_lib.core.script import Script, transform_human
-from hashmal_lib.core.utils import is_hex, format_hex_string
-from hashmal_lib.core.stack import Stack, ScriptExecution
-from hashmal_lib.gui_utils import monospace_font, floated_buttons
+from hashmal_lib.core import opcodes
+from hashmal_lib.core.script import Script
+from hashmal_lib.core.utils import format_hex_string
+from hashmal_lib.core.stack import ScriptExecution
 
 
 class ScriptExecutionItem(object):

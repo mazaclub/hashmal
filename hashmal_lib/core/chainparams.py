@@ -25,6 +25,9 @@ class ParamsPreset(object):
                     'inputs', 'outputs', or 'bytes'.
                 - num_bytes (int): Number of bytes for deserializer to read,
                 - default: Default value.
+        - tx_serializer (class): Transaction serializer class. If not specified, the default
+            serializer, TransactionSerializer, will be used. This argument is only necessary
+            if the ParamsPreset has transactions with complex serialization formats.
         - block_header_fields (list): Block header format. Same form as tx_fields.
             If not specified, the 80-byte Bitcoin block header format is used.
         - block_fields (list): Block (excluding header) format.
@@ -48,6 +51,7 @@ class ParamsPreset(object):
     def __init__(self, **kwargs):
         self.name = ''
         self.tx_fields = []
+        self.tx_serializer = transaction.TransactionSerializer
         self.block_header_fields = list(_bitcoin_header_fields)
         self.block_fields = list(_bitcoin_block_fields)
         self.opcode_overrides = list(_bitcoin_opcode_overrides)
@@ -145,6 +149,7 @@ ClamsPreset = ParamsPreset(
             ('vout', 'outputs', None, None),
             ('nLockTime', b'<I', 4, 0),
             ('ClamSpeech', 'bytes', None, b'')],
+        tx_serializer = transaction.ClamsTxSerializer,
         block_fields = list(_bitcoin_block_fields) + [('blockSig', 'bytes', None, None)],
         opcode_overrides=[(0xb0, 'OP_CHECKLOCKTIMEVERIFY', opcodes.clams_checklocktimeverify)]
 )
@@ -214,6 +219,9 @@ def set_tx_fields(fields):
     """
     transaction.transaction_fields = list(fields)
 
+def set_tx_serializer(cls):
+    transaction.Transaction.set_serializer_class(cls)
+
 def get_block_header_fields():
     return block.block_header_fields
 
@@ -260,6 +268,7 @@ def set_to_preset(name):
     params = presets[name]
     active_preset = params
     set_tx_fields(params.tx_fields)
+    set_tx_serializer(params.tx_serializer)
     set_block_header_fields(params.block_header_fields)
     set_block_fields(params.block_fields)
     set_script_engine_class(params.script_engine_cls)

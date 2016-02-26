@@ -8,6 +8,9 @@ maza_raw_tx = '010000000279fd18c19fad871077a757804561e11d722296b68e6afd4d2a16c06
 
 clams_raw_tx = '02000000404afb5501526139de11764d06f5110deeb1f9fd4aefec059ccf36135ad888edda689c1abc010000004948304502210091349ad30f0cf706a385b0bca04aa28f9f033228083a662b45d58e09df4058cb02200e2f17652b72ec514d174977fb2b799b5017bdf267fa557b0a7e7c429c4633ac01ffffffff0200000000000000000080a4607f000000002321037bedfabb451755cf6061636c8004dba32cb95095ba8cba61de236a70f95e3d2aac000000003045787072657373696f6e206f6620506f6c69746963616c2046726565646f6d3a204a65776973682066656d696e69736d'.decode('hex')
 
+# Clams tx from before clamspeech was implemented.
+clams_v1_raw_tx = '01000000177561540141a194d3caf8566d60ca7fa50d8aa49ca2276f9df0234349bc471f4957ee989a0100000049483045022100ef8e62fe6f440db4af8205bdefdc941483cc410205ef722b0b464386cdc1ccbc022051aa10338041ae8be828ae5015d95f9188ce2502643c42187db10928aaf506c401ffffffff0200000000000000000040b0191e00000000232103c93347d7be495afbf66f0783eba74230d08d386e128b58f5b9e0b2a6c7697251ac00000000'.decode('hex')
+
 ppc_raw_tx = '0100000058e4615501a367e883a383167e64c84e9c068ba5c091672e434784982f877eede589cb7e53000000006a473044022043b9aee9187effd7e6c7bc444b09162570f17e36b4a9c02cf722126cc0efa3d502200b3ba14c809fa9a6f7f835cbdbbb70f2f43f6b30beaf91eec6b8b5981c80cea50121025edf500f18f9f2b3f175f823fa996fbb2ec52982a9aeb1dc2e388a651054fb0fffffffff0257be0100000000001976a91495efca2c6a6f0e0f0ce9530219b48607a962e77788ac45702000000000001976a914f28abfb465126d6772dcb4403b9e1ad2ea28a03488ac00000000'.decode('hex')
 
 bitcoin_fields = [
@@ -67,12 +70,18 @@ class TransactionTest(unittest.TestCase):
         chainparams.set_to_preset('Clams')
         tx = Transaction.deserialize(clams_raw_tx)
         self.assertRaises(Exception, Transaction.deserialize, maza_raw_tx)
-        self.assertRaises(Exception, Transaction.deserialize, ppc_raw_tx)
 
         chainparams.set_to_preset('Peercoin')
         tx = Transaction.deserialize(ppc_raw_tx)
         self.assertRaises(Exception, Transaction.deserialize, clams_raw_tx)
         self.assertRaises(Exception, Transaction.deserialize, maza_raw_tx)
+
+    def test_chainparams_tx_serializer(self):
+        chainparams.set_to_preset('Clams')
+        tx = Transaction.deserialize(clams_raw_tx)
+        self.assertEqual(clams_raw_tx, tx.serialize())
+        tx2 = Transaction.deserialize(clams_v1_raw_tx)
+        self.assertEqual(clams_v1_raw_tx, tx2.serialize())
 
     def test_init_with_field_keyword_args(self):
         ins = (

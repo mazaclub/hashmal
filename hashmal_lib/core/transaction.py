@@ -54,6 +54,38 @@ def sig_hash_explanation(hash_type):
     return explanations.get(hash_type)
 
 
+class TransactionSerializer(object):
+    """Default transaction serialization handler."""
+    def stream_deserialize(self, tx, f):
+        kwargs = {}
+        for attr, fmt, num_bytes, _ in tx.fields:
+            self.deserialize_field(tx, kwargs, attr, fmt, num_bytes, f)
+        return kwargs
+
+    def stream_serialize(self, tx, f):
+        for attr, fmt, num_bytes, _ in tx.fields:
+            self.serialize_field(tx, attr, fmt, num_bytes, f)
+
+    def deserialize_field(self, tx, kwargs, attr, fmt, num_bytes, f):
+        if fmt not in ['inputs', 'outputs', 'bytes']:
+            kwargs[attr] = struct.unpack(fmt, ser_read(f, num_bytes))[0]
+        elif fmt == 'inputs':
+            kwargs[attr] = VectorSerializer.stream_deserialize(CMutableTxIn, f)
+        elif fmt == 'outputs':
+            kwargs[attr] = VectorSerializer.stream_deserialize(CMutableTxOut, f)
+        elif fmt == 'bytes':
+            kwargs[attr] =  BytesSerializer.stream_deserialize(f)
+
+    def serialize_field(self, tx, attr, fmt, num_bytes, f):
+        if fmt not in ['inputs', 'outputs', 'bytes']:
+            f.write(struct.pack(fmt, getattr(tx, attr)))
+        elif fmt == 'inputs':
+            VectorSerializer.stream_serialize(CMutableTxIn, tx.vin, f)
+        elif fmt == 'outputs':
+            VectorSerializer.stream_serialize(CMutableTxOut, tx.vout, f)
+        elif fmt == 'bytes':
+            BytesSerializer.stream_serialize(getattr(tx, attr), f)
+
 class Transaction(CMutableTransaction):
     """Cryptocurrency transaction.
 
@@ -66,6 +98,7 @@ class Transaction(CMutableTransaction):
     For the most common purposes, chainparams.set_to_preset()
     can be used instead.
     """
+    serializer_class = TransactionSerializer
     def __init__(self, vin=None, vout=None, locktime=0, version=1, fields=None, kwfields=None):
         super(Transaction, self).__init__(vin, vout, locktime, version)
         if kwfields is None: kwfields = {}
@@ -73,12 +106,17 @@ class Transaction(CMutableTransaction):
             setattr(self, k, v)
         self.set_serialization(fields)
 
+    @classmethod
+    def set_serializer_class(cls, ser_class):
+        cls.serializer_class = ser_class
+
     def set_serialization(self, fields=None):
         """Set the serialization format.
 
         This allows transactions to exist that do not comply with the
         global transaction_fields list.
         """
+        self.serializer_class = Transaction.serializer_class
         if fields is None:
             fields = list(transaction_fields)
         self.fields = fields
@@ -91,27 +129,13 @@ class Transaction(CMutableTransaction):
     @classmethod
     def stream_deserialize(cls, f):
         self = cls()
-        for attr, fmt, num_bytes, _ in self.fields:
-            if fmt not in ['inputs', 'outputs', 'bytes']:
-                setattr(self, attr, struct.unpack(fmt, ser_read(f, num_bytes))[0])
-            elif fmt == 'inputs':
-                setattr(self, attr, VectorSerializer.stream_deserialize(CMutableTxIn, f))
-            elif fmt == 'outputs':
-                setattr(self, attr, VectorSerializer.stream_deserialize(CMutableTxOut, f))
-            elif fmt == 'bytes':
-                setattr(self, attr, BytesSerializer.stream_deserialize(f))
+        kwargs = self.serializer_class().stream_deserialize(self, f)
+        for k, v in kwargs.items():
+            setattr(self, k, v)
         return self
 
     def stream_serialize(self, f):
-        for attr, fmt, num_bytes, _ in self.fields:
-            if fmt not in ['inputs', 'outputs', 'bytes']:
-                f.write(struct.pack(fmt, getattr(self, attr)))
-            elif fmt == 'inputs':
-                VectorSerializer.stream_serialize(CMutableTxIn, self.vin, f)
-            elif fmt == 'outputs':
-                VectorSerializer.stream_serialize(CMutableTxOut, self.vout, f)
-            elif fmt == 'bytes':
-                BytesSerializer.stream_serialize(getattr(self, attr), f)
+        self.serializer_class().stream_serialize(self, f)
 
     @classmethod
     def from_tx(cls, tx):
@@ -135,4 +159,23 @@ class Transaction(CMutableTransaction):
 
     def as_hex(self):
         return b2x(self.serialize())
+
+# Known serializer classes
+
+class ClamsTxSerializer(TransactionSerializer):
+    """Clams transaction serializer.
+
+    Required because transaction serialization depends on transaction version.
+    """
+    def deserialize_field(self, tx, kwargs, attr, fmt, num_bytes, f):
+        if attr != 'ClamSpeech':
+            return super(ClamsTxSerializer, self).deserialize_field(tx, kwargs, attr, fmt, num_bytes, f)
+        if kwargs['nVersion'] > 1:
+            return super(ClamsTxSerializer, self).deserialize_field(tx, kwargs, attr, fmt, num_bytes, f)
+
+    def serialize_field(self, tx, attr, fmt, num_bytes, f):
+        if attr != 'ClamSpeech':
+            return super(ClamsTxSerializer, self).serialize_field(tx, attr, fmt, num_bytes, f)
+        if tx.nVersion > 1:
+            return super(ClamsTxSerializer, self).serialize_field(tx, attr, fmt, num_bytes, f)
 

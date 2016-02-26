@@ -62,7 +62,11 @@ def format_variable_value(value, var_type):
         return True, format_hex_string(value, with_prefix=True)
     elif var_type == 'script':
         if not is_hex(value):
-            return False, 'Error: Script must be hex.'
+            try:
+                scr = Script.from_human(value)
+                return True, format_hex_string(scr.get_hex(), with_prefix=True)
+            except Exception:
+                return False, 'Error: Cannot parse human-readable script.'
         try:
             scr = Script(format_hex_string(value, with_prefix=False).decode('hex'))
             return True, format_hex_string(value, with_prefix=True)
@@ -221,30 +225,30 @@ class TemplateWidget(QWidget):
 known_templates = [
     # P2PKH
     ScriptTemplate('Pay-To-Public-Key-Hash Output',
-        'OP_DUP OP_HASH160 <recipient> OP_EQUALVERIFY OP_CHECKSIG',
-        {'recipient': 'address'}),
+        'OP_DUP OP_HASH160 <Recipient> OP_EQUALVERIFY OP_CHECKSIG',
+        {'Recipient': 'address'}),
     # P2SH
     ScriptTemplate('Pay-To-Script-Hash Output',
-        'OP_HASH160 <recipient> OP_EQUAL',
-        {'recipient': 'address'}),
+        'OP_HASH160 <Recipient> OP_EQUAL',
+        {'Recipient': 'address'}),
     # P2PK
     ScriptTemplate('Pay-To-Public-Key',
-        '<recipient> OP_CHECKSIG',
-        {'recipient': 'pubkey'}),
+        '<Recipient> OP_CHECKSIG',
+        {'Recipient': 'pubkey'}),
     # OP_RETURN
     ScriptTemplate('Null Output',
-        'OP_RETURN <text>',
-        {'text': 'text'}),
+        'OP_RETURN <Text>',
+        {'Text': 'text'}),
     # Signature script
     ScriptTemplate('Signature Script',
-        '<signature> <pubkey>',
-        {'signature': 'signature', 'pubkey':'pubkey'}),
+        '<Signature> <Pubkey>',
+        {'Signature': 'signature', 'Pubkey':'pubkey'}),
     ScriptTemplate('Pay-To-Script-Hash Signature Script',
-        '<signature> <redeemscript>',
-        {'signature': 'signature', 'redeemscript': 'script'}),
+        '<Signature> <RedeemScript>',
+        {'Signature': 'signature', 'RedeemScript': 'script'}),
     ScriptTemplate('Pay-To-Script-Hash Multisig Signature Script',
-        'OP_0 <signature> <redeemscript>',
-        {'signature': 'signature', 'redeemscript': 'script'}),
+        'OP_0 <Signature> <RedeemScript>',
+        {'Signature': 'signature', 'RedeemScript': 'script'}),
 ]
 
 class ScriptGenerator(BaseDock):

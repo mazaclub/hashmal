@@ -126,6 +126,7 @@ class TxIn(CMutableTxIn):
     @classmethod
     def from_txin(cls, txin):
         kwfields = {}
+        prevout = None
         for attr, _, _, default in transaction_input_fields:
             if attr == 'prevout':
                 prevout = OutPoint.from_outpoint(txin.prevout)
@@ -338,8 +339,14 @@ class Transaction(CMutableTransaction):
     @classmethod
     def from_tx(cls, tx):
         kwfields = {}
-        for attr, _, _, default in transaction_fields:
-            if attr in ['vin', 'vout']:
+        vin_attr = ''
+        vout_attr = ''
+        for attr, fmt, _, default in transaction_fields:
+            if fmt in ['inputs', 'outputs']:
+                if fmt == 'inputs':
+                    vin_attr = attr
+                elif fmt == 'outputs':
+                    vout_attr = attr
                 continue
             if hasattr(tx, attr):
                 kwfields[attr] = getattr(tx, attr)
@@ -347,8 +354,8 @@ class Transaction(CMutableTransaction):
 
         vin = [TxIn.from_txin(txin) for txin in tx.vin]
         vout = [TxOut.from_txout(txout) for txout in tx.vout]
-        kwfields['vin'] = vin
-        kwfields['vout'] = vout
+        kwfields[vin_attr] = vin
+        kwfields[vout_attr] = vout
         return cls(kwfields=kwfields)
 
     def as_hex(self):

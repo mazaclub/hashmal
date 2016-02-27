@@ -92,7 +92,7 @@ class ParamsPreset(object):
             tmp = txtmp.vout[outIdx]
             txtmp.vout = []
             for i in range(outIdx):
-                txtmp.vout.append(bitcoin.core.CMutableTxOut())
+                txtmp.vout.append(transaction.TxOut())
             txtmp.vout.append(tmp)
 
             for i in range(len(txtmp.vin)):

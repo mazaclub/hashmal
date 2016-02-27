@@ -5,7 +5,7 @@ from decimal import Decimal
 from collections import OrderedDict
 
 import bitcoin
-from bitcoin.core import CTxIn, CTxOut, lx, x, b2x, b2lx, CMutableTxIn, CMutableTxOut
+from bitcoin.core import lx, x, b2x, b2lx
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 from PyQt4.QtCore import *
@@ -13,7 +13,7 @@ from PyQt4.QtCore import *
 from hashmal_lib.gui_utils import HBox, floated_buttons, RawRole, ReadOnlyCheckBox
 from hashmal_lib.core import chainparams
 from hashmal_lib.core.script import Script
-from hashmal_lib.core import Transaction
+from hashmal_lib.core.transaction import Transaction, OutPoint, TxIn, TxOut
 from hashmal_lib import config
 
 class InputsModel(QAbstractTableModel):
@@ -87,15 +87,15 @@ class InputsModel(QAbstractTableModel):
         self.beginResetModel()
         self.vin = []
         for i in tx.vin:
-            self.vin.append(CMutableTxIn.from_txin(i))
+            self.vin.append(TxIn.from_txin(i))
         self.endResetModel()
 
     def add_input(self, tx_input=None, input_index=None):
         """Add an input at input_index, or append one if input_index is None."""
         if tx_input is None:
-            tx_input = CMutableTxIn()
-        elif tx_input.__class__ == CTxIn:
-            tx_input = CMutableTxIn.from_txin(tx_input)
+            tx_input = TxIn()
+        elif not isinstance(tx_input, TxIn):
+            tx_input = TxIn.from_txin(tx_input)
 
         if input_index is None:
             input_index = len(self.vin)
@@ -253,15 +253,15 @@ class OutputsModel(QAbstractTableModel):
         self.beginResetModel()
         self.vout = []
         for o in tx.vout:
-            self.vout.append(CMutableTxOut.from_txout(o))
+            self.vout.append(TxOut.from_txout(o))
         self.endResetModel()
 
     def add_output(self, tx_out=None, output_index=None):
         """Add an output at output_index, or append one if output_index is None."""
         if tx_out is None:
-            tx_out = CMutableTxOut()
-        elif tx_out.__class__ == CTxOut:
-            tx_out = CMutableTxOut.from_txout(tx_out)
+            tx_out = TxOut()
+        elif not isinstance(tx_out, TxOut):
+            tx_out = TxOut.from_txout(tx_out)
 
         if output_index is None:
             output_index = len(self.vout)

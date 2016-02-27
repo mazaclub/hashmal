@@ -1,5 +1,5 @@
 import bitcoin
-from bitcoin.core import x, b2x, CMutableOutPoint, CMutableTxIn, CMutableTxOut
+from bitcoin.core import x, b2x
 from bitcoin.core.script import SIGHASH_ALL, SIGHASH_ANYONECANPAY
 from bitcoin.core.scripteval import VerifyScript, SCRIPT_VERIFY_P2SH
 from bitcoin.wallet import CBitcoinSecret
@@ -10,7 +10,7 @@ from PyQt4.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
 
 from hashmal_lib.core.script import Script
 from hashmal_lib.core import chainparams
-from hashmal_lib.core.transaction import Transaction, sig_hash_name, sig_hash_explanation, sighash_types, sighash_types_by_value
+from hashmal_lib.core.transaction import Transaction, sig_hash_name, sig_hash_explanation, sighash_types, sighash_types_by_value, OutPoint, TxIn, TxOut
 from hashmal_lib.core.utils import is_hex, format_hex_string
 from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.widgets.script import ScriptEditor
@@ -112,8 +112,8 @@ class TxBuilder(BaseDock):
             self.inputs_editor.setEnabled(num_inputs > 0)
 
         def add_input():
-            outpoint = CMutableOutPoint(n=0)
-            new_input = CMutableTxIn(prevout=outpoint)
+            outpoint = OutPoint(n=0)
+            new_input = Txin(prevout=outpoint)
             self.inputs_tree.add_input(new_input)
 
             update_enabled_widgets()
@@ -151,7 +151,7 @@ class TxBuilder(BaseDock):
             self.outputs_editor.setEnabled(num_outputs > 0)
 
         def add_output():
-            new_output = CMutableTxOut(0)
+            new_output = TxOut(0)
             self.outputs_tree.add_output(new_output)
 
             update_enabled_widgets()

@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import bitcoin
 from bitcoin.core import x, b2x
 from bitcoin.core.script import SIGHASH_ALL, SIGHASH_ANYONECANPAY
@@ -14,7 +16,7 @@ from hashmal_lib.core.transaction import Transaction, sig_hash_name, sig_hash_ex
 from hashmal_lib.core.utils import is_hex, format_hex_string
 from hashmal_lib.widgets.tx import TxWidget, InputsTree, OutputsTree, TimestampWidget
 from hashmal_lib.widgets.script import ScriptEditor
-from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font, OutputAmountEdit, RawRole
+from hashmal_lib.gui_utils import Separator, floated_buttons, AmountEdit, HBox, monospace_font, OutputAmountEdit, RawRole, field_info
 from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
 
@@ -32,10 +34,19 @@ class TxBuilder(BaseDock):
         super(TxBuilder, self).__init__(handler)
         self.raw_tx.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.raw_tx.customContextMenuRequested.connect(self.context_menu)
+        self.augment('transaction_builder_field_help', None, callback=self.on_tx_builder_field_augmented)
 
     @augmenter
     def item_actions(self, *args):
         return [ItemAction(self.tool_name, 'Transaction', 'Edit', self.deserialize_item)]
+
+    def on_tx_builder_field_augmented(self, data):
+        global builder_field_help
+        for params_name, params_dict in data.items():
+            existing_dict = builder_field_help.get(params_name)
+            # Create new chainparams preset dict.
+            if not existing_dict:
+                builder_field_help[params_name] = params_dict
 
     def init_data(self):
         self.tx = None
@@ -113,6 +124,8 @@ class TxBuilder(BaseDock):
         self.inputs_editor = InputsEditor(self.handler.gui, self.inputs_tree)
         self.inputs_editor.setEnabled(False)
 
+        self.inputs_tree.model.fieldsChanged.connect(self.inputs_editor.adjust_editor_fields)
+
         def update_enabled_widgets():
             num_inputs = len(self.inputs_tree.get_inputs())
             self.inputs_editor.setEnabled(num_inputs > 0)
@@ -157,6 +170,8 @@ class TxBuilder(BaseDock):
 
         self.outputs_editor = OutputsEditor(self.handler.gui, self.outputs_tree)
         self.outputs_editor.setEnabled(False)
+
+        self.outputs_tree.model.fieldsChanged.connect(self.outputs_editor.adjust_editor_fields)
 
         def update_enabled_widgets():
             num_outputs = len(self.outputs_tree.get_outputs())
@@ -346,35 +361,44 @@ class BaseEditor(QWidget):
     def do_submit(self):
         self.mapper.submit()
 
+    def get_widget_for_field(self, info, main_window):
+        if info.fmt == 'script':
+            return ScriptEditor(main_window), 'humanText'
+        elif info.fmt == 'hash':
+            return QLineEdit(), None
+        elif info.fmt == 'amount':
+            return OutputAmountEdit(), 'satoshis'
+        elif info.cls == int:
+            return AmountEdit(), 'amount'
+        return QLineEdit(), None
+
 class InputsEditor(BaseEditor):
     def __init__(self, main_window, tree, parent=None):
         super(InputsEditor, self).__init__(tree, parent)
-        self.prev_tx = QLineEdit()
-        self.prev_tx.setToolTip('Transaction ID of the tx with the output being spent')
-        self.prev_tx.setWhatsThis('Use this field to specify the transaction that contains the output you\'re spending.')
+        self.gui = main_window
 
-        self.prev_vout = AmountEdit()
-        self.prev_vout.setToolTip('Output index of the previous transaction')
-        self.prev_vout.setWhatsThis('Use this field to specify the output you are spending of the previous transaction.')
-
-        self.script = ScriptEditor(main_window)
-        self.script.setToolTip('Script that will be put on the stack before the previous output\'s script.')
-        self.script.setWhatsThis('Enter a script here. This script will be evaluated directly before the script of the output you are spending. Any values that are pushed onto the stack when this script finishes its execution are present when the output script is evaluated afterward.')
-
-        self.sequence = AmountEdit()
-        self.sequence.setText('4294967295')
-        self.sequence.setWhatsThis('Use this field to specify the sequence value. It\'s likely that you should leave this as its default (maximum) value.')
         maxify_input_sequence = QPushButton('Max')
-        maxify_input_sequence.clicked.connect(lambda: self.sequence.setText('0xffffffff'))
         maxify_input_sequence.setWhatsThis('This button will set the sequence to its default value.')
 
-        for i in [self.prev_tx, self.prev_vout, self.script, self.sequence]:
-            i.setFont(monospace_font)
+        self.field_widgets = []
+        fields = self.tree.model.outpoint_fields()
+        fields.extend(self.tree.model.input_fields(with_prevout=False))
+        for field in fields:
+            info = field_info(field)
+            label = info.get_view_header()[Qt.DisplayRole]
+            widget, _property = self.get_widget_for_field(info, main_window)
+            widget.setFont(monospace_font)
+            # Special case for input sequence number.
+            if label == 'Sequence: ':
+                maxify_input_sequence.clicked.connect(lambda: widget.setText('0xffffffff'))
+            self.set_widget_help(widget, field)
+            self.field_widgets.append((label, widget, _property, field))
 
-        self.mapper.addMapping(self.prev_tx, 0)
-        self.mapper.addMapping(self.prev_vout, 1, 'amount')
-        self.mapper.addMapping(self.script, 2, 'humanText')
-        self.mapper.addMapping(self.sequence, 3, 'amount')
+        for i, (label, widget, _property, _) in enumerate(self.field_widgets):
+            if _property is None:
+                self.mapper.addMapping(widget, i)
+            else:
+                self.mapper.addMapping(widget, i, _property)
 
         delete_button = QPushButton('Remove Input')
         delete_button.setToolTip('Remove this input from the transaction')
@@ -385,32 +409,94 @@ class InputsEditor(BaseEditor):
 
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
-        form.addRow('Previous Transaction: ', self.prev_tx)
-        form.addRow('Previous Tx Output: ', self.prev_vout)
-        form.addRow('Input script: ', self.script)
-        seq_desc = QLabel('Sequence is mostly deprecated.\nIf an input has a sequence that\'s not the maximum value, the transaction\'s locktime will apply.')
-        seq_desc.setWordWrap(True)
-        form.addRow(seq_desc)
-        form.addRow('Sequence: ', HBox(self.sequence, maxify_input_sequence))
+        self.fields_form = QFormLayout()
+        self.fields_form.setContentsMargins(0, 0, 0, 0)
+        for label, widget, _, _ in self.field_widgets:
+            # Special case for input sequence number.
+            if label == 'Sequence: ':
+                self.fields_form.addRow(label, HBox(widget, maxify_input_sequence))
+                continue
+            self.fields_form.addRow(label, widget)
+        form.addRow(self.fields_form)
         form.addRow(floated_buttons([delete_button, submit_button]))
 
         self.setLayout(form)
+
+    def adjust_editor_fields(self):
+        """Show or hide input field widgets."""
+        fields = self.tree.model.outpoint_fields()
+        fields.extend(self.tree.model.input_fields(with_prevout=False))
+        for i, field in enumerate(fields):
+            info = field_info(field)
+            label = info.get_view_header()[Qt.DisplayRole]
+
+            # Create widget.
+            if label not in [f[0] for f in self.field_widgets]:
+                widget, _property = self.get_widget_for_field(info, self.gui)
+                widget.setFont(monospace_font)
+                self.set_widget_help(widget, field)
+                self.field_widgets.insert(i, (label, widget, _property, field))
+                self.fields_form.insertRow(i, label, widget)
+
+        self.mapper.clearMapping()
+        for i, field in enumerate(self.field_widgets):
+            widget = field[1]
+            _property = field[2]
+            raw_field = field[3]
+            # Hide or show widget.
+            label_widget = self.fields_form.labelForField(widget)
+            if raw_field in self.tree.model.outpoint_fields() or raw_field in self.tree.model.input_fields(with_prevout=False):
+                widget.show()
+                label_widget.show()
+
+                try:
+                    mapper_index = self.tree.model.outpoint_fields().index(raw_field)
+                except ValueError:
+                    mapper_index = self.tree.model.input_fields(with_prevout=False).index(raw_field) + len(self.tree.model.outpoint_fields())
+
+                if _property is None:
+                    self.mapper.addMapping(widget, mapper_index)
+                else:
+                    self.mapper.addMapping(widget, mapper_index, _property)
+            else:
+                widget.hide()
+                label_widget.hide()
+
+    def set_widget_help(self, widget, field):
+        def set_tooltip_and_whatsthis():
+            tooltip, whatsthis = get_builder_field_help(chainparams.active_preset.name, field, 'prevout')
+            if tooltip is None and whatsthis is None:
+                tooltip, whatsthis = get_builder_field_help(chainparams.active_preset.name, field, 'input')
+            if tooltip:
+                widget.setToolTip(tooltip)
+            if whatsthis:
+                widget.setWhatsThis(whatsthis)
+
+        if self.gui.plugin_handler.get_plugin('Chainparams'):
+            set_tooltip_and_whatsthis()
+        else:
+            self.gui.plugin_handler.pluginsLoaded.connect(set_tooltip_and_whatsthis)
 
 
 class OutputsEditor(BaseEditor):
     def __init__(self, main_window, tree, parent=None):
         super(OutputsEditor, self).__init__(tree, parent)
-        self.out_value = OutputAmountEdit()
-        self.out_value.setToolTip('Output amount')
-        self.out_value.setWhatsThis('Use this field to specify the value of this output. Depending on your settings, the value may be in satoshis (no decimals), or coins (1 coin = 100000000 satoshis).')
-        self.script = ScriptEditor(main_window)
-        self.script.setToolTip('Script that will be put on the stack after the input that spends it.')
-        self.script.setWhatsThis('Enter a script here. This script will be evaluated directly after the script of the input that spends it in the future. This script will have access to the values that are on the stack after the input script that spends it has executed.')
-        for i in [self.out_value, self.script]:
-            i.setFont(monospace_font)
+        self.gui = main_window
+        self.field_widgets = []
+        fields = self.tree.model.output_fields()
+        for field in fields:
+            info = field_info(field)
+            label = info.get_view_header()[Qt.DisplayRole]
+            widget, _property = self.get_widget_for_field(info, main_window)
+            self.set_widget_help(widget, field)
+            self.field_widgets.append((label, widget, _property, field))
 
-        self.mapper.addMapping(self.out_value, 0, 'satoshis')
-        self.mapper.addMapping(self.script, 1, 'humanText')
+
+        for i, (label, widget, _proprety, _) in enumerate(self.field_widgets):
+            if _property is None:
+                self.mapper.addMapping(widget, i)
+            else:
+                self.mapper.addMapping(widget, i, _property)
 
         submit_button = QPushButton('Save')
         submit_button.setToolTip('Update input with the above data')
@@ -421,11 +507,63 @@ class OutputsEditor(BaseEditor):
 
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
-        form.addRow('Amount: ', self.out_value)
-        form.addRow('Output script: ', self.script)
+        self.fields_form = QFormLayout()
+        self.fields_form.setContentsMargins(0, 0, 0, 0)
+        for label, widget, _, _ in self.field_widgets:
+            self.fields_form.addRow(label, widget)
+        form.addRow(self.fields_form)
         form.addRow(floated_buttons([delete_button, submit_button]))
+
         self.setLayout(form)
 
+    def adjust_editor_fields(self):
+        """Show or hide tx field widgets."""
+        fields = self.tree.model.output_fields()
+        for i, field in enumerate(fields):
+            info = field_info(field)
+            label = info.get_view_header()[Qt.DisplayRole]
+
+            # Create widget.
+            if label not in [f[0] for f in self.field_widgets]:
+                widget, _property = self.get_widget_for_field(info, self.gui)
+                widget.setFont(monospace_font)
+                self.set_widget_help(widget, field)
+                self.field_widgets.insert(i, (label, widget, _property, field))
+                self.fields_form.insertRow(i, label, widget)
+
+        self.mapper.clearMapping()
+        for i, field in enumerate(self.field_widgets):
+            widget = field[1]
+            _property = field[2]
+            raw_field = field[3]
+
+            # Hide or show widget.
+            label_widget = self.fields_form.labelForField(widget)
+            if raw_field in self.tree.model.output_fields():
+                widget.show()
+                label_widget.show()
+
+                mapper_index = self.tree.model.output_fields().index(raw_field)
+                if _property is None:
+                    self.mapper.addMapping(widget, mapper_index)
+                else:
+                    self.mapper.addMapping(widget, mapper_index, _property)
+            else:
+                widget.hide()
+                label_widget.hide()
+
+    def set_widget_help(self, widget, field):
+        def set_tooltip_and_whatsthis():
+            tooltip, whatsthis = get_builder_field_help(chainparams.active_preset.name, field, 'output')
+            if tooltip:
+                widget.setToolTip(tooltip)
+            if whatsthis:
+                widget.setWhatsThis(whatsthis)
+
+        if self.gui.plugin_handler.get_plugin('Chainparams'):
+            set_tooltip_and_whatsthis()
+        else:
+            self.gui.plugin_handler.pluginsLoaded.connect(set_tooltip_and_whatsthis)
 
 # Widgets for signing transactions.
 
@@ -711,4 +849,86 @@ class SigHashWidget(QWidget):
 
         return privkey
 
+
+# Transaction builder field help info.
+
+_bitcoin_tx_fields = list(chainparams._bitcoin_tx_fields)
+_bitcoin_prevout_fields = list(chainparams._bitcoin_prevout_fields)
+_bitcoin_txin_fields = list(chainparams._bitcoin_txin_fields)
+_bitcoin_txout_fields = list(chainparams._bitcoin_txout_fields)
+
+btc_field_help = {}
+btc_field_help['prevout'] = {}
+btc_field_help['input'] = {}
+btc_field_help['output'] = {}
+for i, field in enumerate(_bitcoin_tx_fields):
+    info = ''
+    if i == 0:
+        info = 'Transaction version'
+    elif i == 3:
+        info = 'Transaction lock time'
+    btc_field_help[field] = info
+
+for i, field in enumerate(_bitcoin_prevout_fields):
+    info = ''
+    whatsthis = ''
+    if i == 0:
+        info = 'Transaction ID of the tx with the output being spent'
+        whatsthis = 'Use this field to specify the transaction that contains the output you\'re spending.'
+    elif i == 1:
+        info = 'Output index of the previous transaction'
+        whatsthis = 'Use this field to specify the output you are spending of the previous transaction.'
+    btc_field_help['prevout'][field] = (info, whatsthis)
+
+for i, field in enumerate(_bitcoin_txin_fields):
+    info = ''
+    whatsthis = ''
+    if i == 1:
+        info = 'Script that will be put on the stack before the previous output\'s script.'
+        whatsthis = 'Enter a script here. This script will be evaluated directly before the script of the output you are spending. Any values that are pushed onto the stack when this script finishes its execution are present when the output script is evaluated afterward.'
+    elif i == 2:
+        whatsthis = 'Use this field to specify the sequence value. It\'s likely that you should leave this as its default (maximum) value.'
+    btc_field_help['input'][field] = (info, whatsthis)
+
+for i, field in enumerate(_bitcoin_txout_fields):
+    info = ''
+    whatsthis = ''
+    if i == 0:
+        info = 'Output amount'
+        whatsthis = 'Use this field to specify the value of this output. Depending on your settings, the value may be in satoshis (no decimals), or coins (1 coin = 100000000 satoshis).'
+    elif i == 1:
+        info = 'Script that will be put on the stack after the input that spends it.'
+        whatsthis = 'Enter a script here. This script will be evaluated directly after the script of the input that spends it in the future. This script will have access to the values that are on the stack after the input script that spends it has executed.'
+    btc_field_help['output'][field] = (info, whatsthis)
+
+clams_field_help = {
+    ('Timestamp', b'<i', 4, 0): ('', 'Use this to specify the timestamp of your transaction.'),
+    ('ClamSpeech', 'bytes', None, b''): ('CLAMspeech text', 'Use this to specify the CLAMspeech text of your transaction.'),
+}
+
+frc_field_help = {
+    ('RefHeight', b'<i', 4, 0): ('Reference height', 'Use this to specify the reference height (block height when the transaction was made) of your transaction.'),
+}
+
+ppc_field_help = {
+    ('Timestamp', b'<i', 4, 0): ('', 'Use this to specify the timestamp of your transaction.')
+}
+
+builder_field_help = {
+    'Bitcoin': btc_field_help,
+    'Clams': clams_field_help,
+    'Freicoin': frc_field_help,
+    'Peercoin': ppc_field_help,
+}
+
+def get_builder_field_help(params_name, field, section=None):
+    d = builder_field_help.get(params_name, {})
+    if section:
+        d = d.get(section, {})
+    value = d.get(field, None)
+    if value is None and params_name != 'Bitcoin':
+        return get_builder_field_help('Bitcoin', field, section)
+    if value is None:
+        return (None, None)
+    return value
 

@@ -18,6 +18,7 @@ from hashmal_lib import config
 
 class InputsModel(QAbstractTableModel):
     """Model of a transaction's inputs."""
+    fieldsChanged = pyqtSignal()
     def __init__(self, parent=None):
         super(InputsModel, self).__init__(parent)
         self.vin = []
@@ -26,6 +27,7 @@ class InputsModel(QAbstractTableModel):
     def set_plugin_handler(self, plugin_handler):
         """Set plugin handler so that tx field data can be retrieved."""
         self.plugin_handler = plugin_handler
+        self.plugin_handler.config.optionChanged.connect(self.on_option_changed)
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(self.outpoint_fields()) + len(self.input_fields(with_prevout=False)) - 1)
 
     def get_outpoint(self, txinput):
@@ -128,9 +130,15 @@ class InputsModel(QAbstractTableModel):
 
     def set_tx(self, tx):
         """Reset the model to reflect tx."""
+        for attr, fmt, _, _ in tx.fields:
+            if fmt == 'inputs':
+                return self.set_vin(getattr(tx, attr))
+
+    def set_vin(self, vin):
+        """Reset the model to reflect vin."""
         self.beginResetModel()
         self.vin = []
-        for i in tx.vin:
+        for i in vin:
             self.vin.append(TxIn.from_txin(i))
         self.endResetModel()
 
@@ -159,6 +167,11 @@ class InputsModel(QAbstractTableModel):
 
     def clear(self):
         self.set_tx(Transaction())
+
+    def on_option_changed(self, key):
+        if key == 'chainparams':
+            self.set_vin(list(self.vin))
+            self.fieldsChanged.emit()
 
 class InputsTree(QWidget):
     """Model and View showing a transaction's inputs."""
@@ -260,6 +273,7 @@ class InputsTree(QWidget):
 
 class OutputsModel(QAbstractTableModel):
     """Model of a transaction's outputs."""
+    fieldsChanged = pyqtSignal()
     def __init__(self, parent=None):
         super(OutputsModel, self).__init__(parent)
         self.vout = []
@@ -269,6 +283,7 @@ class OutputsModel(QAbstractTableModel):
     def set_plugin_handler(self, plugin_handler):
         """Set plugin handler so that tx field data can be retrieved."""
         self.plugin_handler = plugin_handler
+        self.plugin_handler.config.optionChanged.connect(self.on_option_changed)
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(self.output_fields()) - 1)
 
     def output_fields(self):
@@ -330,9 +345,15 @@ class OutputsModel(QAbstractTableModel):
 
     def set_tx(self, tx):
         """Reset the model to reflect tx."""
+        for attr, fmt, _, _ in tx.fields:
+            if fmt == 'outputs':
+                return self.set_vout(getattr(tx, attr))
+
+    def set_vout(self, vout):
+        """Reset the model to reflect vout."""
         self.beginResetModel()
         self.vout = []
-        for o in tx.vout:
+        for o in vout:
             self.vout.append(TxOut.from_txout(o))
         self.endResetModel()
 
@@ -373,6 +394,11 @@ class OutputsModel(QAbstractTableModel):
     def amount_format_changed(self):
         """Refreshes TxOut amounts with the new format."""
         self.dataChanged.emit(QModelIndex(), QModelIndex())
+
+    def on_option_changed(self, key):
+        if key == 'chainparams':
+            self.set_vout(list(self.vout))
+            self.fieldsChanged.emit()
 
 class OutputsTree(QWidget):
     """Model and View showing a transaction's outputs."""

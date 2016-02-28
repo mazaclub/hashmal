@@ -21,6 +21,12 @@ class InputsModel(QAbstractTableModel):
     def __init__(self, parent=None):
         super(InputsModel, self).__init__(parent)
         self.vin = []
+        self.plugin_handler = None
+
+    def set_plugin_handler(self, plugin_handler):
+        """Set plugin handler so that tx field data can be retrieved."""
+        self.plugin_handler = plugin_handler
+        self.headerDataChanged.emit(Qt.Horizontal, 0, len(self.outpoint_fields()) + len(self.input_fields(with_prevout=False)) - 1)
 
     def get_outpoint(self, txinput):
         """Get the outpoint of a TxIn."""
@@ -68,9 +74,13 @@ class InputsModel(QAbstractTableModel):
         for field in self.outpoint_fields():
             info = field_info(field)
             headers.append(info.get_view_header())
+            if self.plugin_handler:
+                headers[-1][Qt.ToolTipRole] = self.plugin_handler.get_tx_field_help(field, 'prevout')
         for field in self.input_fields(with_prevout=False):
             info = field_info(field)
             headers.append(info.get_view_header())
+            if self.plugin_handler:
+                headers[-1][Qt.ToolTipRole] = self.plugin_handler.get_tx_field_help(field, 'input')
         try:
             data = QVariant(headers[section][role])
             return data
@@ -254,6 +264,12 @@ class OutputsModel(QAbstractTableModel):
         super(OutputsModel, self).__init__(parent)
         self.vout = []
         self.amount_format = config.get_config().get_option('amount_format', 'coins')
+        self.plugin_handler = None
+
+    def set_plugin_handler(self, plugin_handler):
+        """Set plugin handler so that tx field data can be retrieved."""
+        self.plugin_handler = plugin_handler
+        self.headerDataChanged.emit(Qt.Horizontal, 0, len(self.output_fields()) - 1)
 
     def output_fields(self):
         """Get the fields of TxOuts."""
@@ -273,6 +289,8 @@ class OutputsModel(QAbstractTableModel):
         for field in self.output_fields():
             info = field_info(field)
             headers.append(info.get_view_header())
+            if self.plugin_handler:
+                headers[-1][Qt.ToolTipRole] = self.plugin_handler.get_tx_field_help(field, 'output')
         try:
             data = QVariant(headers[section][role])
             return data

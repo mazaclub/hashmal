@@ -8,6 +8,7 @@ import __builtin__
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
+from hashmal_lib.core import chainparams
 from gui_utils import required_plugins, default_plugins, add_shortcuts, hashmal_entry_points
 import plugins
 from plugins.base import Category
@@ -57,6 +58,7 @@ class Augmentations(list):
 
 class PluginHandler(QWidget):
     """Handles loading/unloading plugins and managing their UI widgets."""
+    pluginsLoaded = pyqtSignal()
     def __init__(self, main_window):
         super(PluginHandler, self).__init__(main_window)
         self.gui = main_window
@@ -144,6 +146,7 @@ class PluginHandler(QWidget):
         self.plugins_loaded = True
         for i in self.waiting_augmentations:
             self.do_augment_hook(*i)
+        self.pluginsLoaded.emit()
 
     def set_plugin_enabled(self, plugin_name, is_enabled):
         """Enable or disable a plugin and its UI."""
@@ -376,6 +379,11 @@ class PluginHandler(QWidget):
                     getattr(widget, setter)(var_value)
 
         widget.textChanged.connect(on_text_changed)
+
+    def get_tx_field_help(self, field, section=None):
+        """Get the help text for a transaction field."""
+        chainparams_plugin = self.get_plugin('Chainparams')
+        return chainparams_plugin.get_field_help(chainparams.active_preset.name, field, section)
 
     def on_option_changed(self, key):
         if key == 'enabled_plugins':

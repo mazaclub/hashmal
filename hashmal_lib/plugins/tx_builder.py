@@ -104,6 +104,12 @@ class TxBuilder(BaseDock):
         form = QFormLayout()
         self.inputs_tree = InputsTree()
         self.inputs_tree.view.setWhatsThis('The inputs of your transaction are displayed here.')
+        # Set plugin handler for tx tooltips.
+        if self.handler.get_plugin('Chainparams'):
+            self.inputs_tree.model.set_plugin_handler(self.handler)
+        else:
+            self.handler.pluginsLoaded.connect(lambda: self.inputs_tree.model.set_plugin_handler(self.handler))
+
         self.inputs_editor = InputsEditor(self.handler.gui, self.inputs_tree)
         self.inputs_editor.setEnabled(False)
 
@@ -113,7 +119,7 @@ class TxBuilder(BaseDock):
 
         def add_input():
             outpoint = OutPoint(n=0)
-            new_input = Txin(prevout=outpoint)
+            new_input = TxIn(prevout=outpoint)
             self.inputs_tree.add_input(new_input)
 
             update_enabled_widgets()
@@ -143,6 +149,12 @@ class TxBuilder(BaseDock):
         form = QFormLayout()
         self.outputs_tree = OutputsTree()
         self.outputs_tree.view.setWhatsThis('The outputs of your transaction are displayed here.')
+        # Set plugin handler for tx tooltips.
+        if self.handler.get_plugin('Chainparams'):
+            self.outputs_tree.model.set_plugin_handler(self.handler)
+        else:
+            self.handler.pluginsLoaded.connect(lambda: self.outputs_tree.model.set_plugin_handler(self.handler))
+
         self.outputs_editor = OutputsEditor(self.handler.gui, self.outputs_tree)
         self.outputs_editor.setEnabled(False)
 
@@ -185,6 +197,13 @@ class TxBuilder(BaseDock):
         self.raw_tx.setReadOnly(True)
 
         self.tx_widget = TxWidget()
+        if self.handler.get_plugin('Chainparams'):
+            self.tx_widget.inputs_tree.model.set_plugin_handler(self.handler)
+            self.tx_widget.outputs_tree.model.set_plugin_handler(self.handler)
+        else:
+            self.handler.pluginsLoaded.connect(lambda: self.tx_widget.inputs_tree.model.set_plugin_handler(self.handler))
+            self.handler.pluginsLoaded.connect(lambda: self.tx_widget.outputs_tree.model.set_plugin_handler(self.handler))
+
 
         form.addRow('Raw Tx:', self.raw_tx)
         form.addRow(self.tx_widget)

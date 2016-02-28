@@ -43,6 +43,10 @@ class FieldInfo(object):
             name = name[1].capitalize() + name[2:]
         elif name.startswith('script'):
             name = name[6:] + ' Script'
+        # attr_name --> Attr Name
+        elif '_' in name:
+            words = name.split('_')
+            name = ' '.join([word.capitalize() for word in words])
         # Capitalize all-lowercase attribute name.
         elif name == name.lower():
             name = name.capitalize()

@@ -183,16 +183,8 @@ class InputsTree(QWidget):
         self.view.setModel(self.model)
 
         self.view.horizontalHeader().setStretchLastSection(False)
-        for i, field in enumerate(self.model.outpoint_fields()):
-            info = field_info(field)
-            resize_mode = info.get_header_resize_mode()
-            if resize_mode is not None:
-                self.view.horizontalHeader().setResizeMode(i, resize_mode)
-        for i, field in enumerate(self.model.input_fields(with_prevout=False)):
-            info = field_info(field)
-            resize_mode = info.get_header_resize_mode()
-            if resize_mode is not None:
-                self.view.horizontalHeader().setResizeMode(i + len(self.model.outpoint_fields()), resize_mode)
+        self.redistribute_header_space()
+        self.model.fieldsChanged.connect(self.redistribute_header_space)
 
         self.view.horizontalHeader().setHighlightSections(False)
         self.view.verticalHeader().setDefaultSectionSize(22)
@@ -205,6 +197,18 @@ class InputsTree(QWidget):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(self.view)
         self.setLayout(vbox)
+
+    def redistribute_header_space(self):
+        for i, field in enumerate(self.model.outpoint_fields()):
+            info = field_info(field)
+            resize_mode = info.get_header_resize_mode()
+            if resize_mode is not None:
+                self.view.horizontalHeader().setResizeMode(i, resize_mode)
+        for i, field in enumerate(self.model.input_fields(with_prevout=False)):
+            info = field_info(field)
+            resize_mode = info.get_header_resize_mode()
+            if resize_mode is not None:
+                self.view.horizontalHeader().setResizeMode(i + len(self.model.outpoint_fields()), resize_mode)
 
     def clear(self):
         self.model.clear()
@@ -410,11 +414,8 @@ class OutputsTree(QWidget):
         self.view.setModel(self.model)
 
         self.view.horizontalHeader().setStretchLastSection(False)
-        for i, field in enumerate(self.model.output_fields()):
-            info = field_info(field)
-            resize_mode = info.get_header_resize_mode()
-            if resize_mode is not None:
-                self.view.horizontalHeader().setResizeMode(i, resize_mode)
+        self.redistribute_header_space()
+        self.model.fieldsChanged.connect(self.redistribute_header_space)
 
         self.view.horizontalHeader().setHighlightSections(False)
         self.view.verticalHeader().setDefaultSectionSize(22)
@@ -428,6 +429,13 @@ class OutputsTree(QWidget):
         vbox.addWidget(self.view)
         self.setLayout(vbox)
         config.get_config().optionChanged.connect(self.on_option_changed)
+
+    def redistribute_header_space(self):
+        for i, field in enumerate(self.model.output_fields()):
+            info = field_info(field)
+            resize_mode = info.get_header_resize_mode()
+            if resize_mode is not None:
+                self.view.horizontalHeader().setResizeMode(i, resize_mode)
 
     def clear(self):
         self.model.clear()

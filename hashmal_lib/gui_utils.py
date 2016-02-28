@@ -2,9 +2,12 @@ import decimal
 from decimal import Decimal
 
 from PyQt4 import QtGui
-from PyQt4.QtGui import QFont, QHBoxLayout, QFrame, QLineEdit
+from PyQt4.QtGui import QFont, QHBoxLayout, QFrame, QLineEdit, QHeaderView
 from PyQt4 import QtCore
 
+from bitcoin.core import lx, b2lx
+
+from hashmal_lib.core.script import Script
 import config
 
 RawRole = QtCore.Qt.UserRole + 1
@@ -18,6 +21,116 @@ monospace_font.setPointSize(9)
 monospace_font.setStyleHint(QFont.TypeWriter)
 
 script_file_filter = 'Coinscripts (*.coinscript);;Text files (*.txt);;All files (*.*)'
+
+class FieldInfo(object):
+    """GUI-relevant field info for a data field."""
+    def __init__(self, attr, fmt, num_bytes, default, cls, qvariant_method):
+        self.attr = attr
+        self.fmt = fmt
+        self.num_bytes = num_bytes
+        self.default = default
+        self.cls = cls
+        self.qvariant_method = qvariant_method
+
+    def get_view_header(self):
+        """Get the header label for a view."""
+        name = self.attr
+        # Special case for Bitcoin previous outpoint indices.
+        if self.attr == 'n':
+            name = 'Index'
+        # Convert Hungarian notation to English.
+        elif len(name) > 1 and ((name[0] == name[0].lower()) and (name[1] == name[1].upper())):
+            name = name[1].capitalize() + name[2:]
+        elif name.startswith('script'):
+            name = name[6:] + ' Script'
+        # Capitalize all-lowercase attribute name.
+        elif name == name.lower():
+            name = name.capitalize()
+        header = {
+            QtCore.Qt.DisplayRole: name,
+            QtCore.Qt.EditRole: name,
+            QtCore.Qt.ToolTipRole: name,
+        }
+        return header
+
+    def get_header_resize_mode(self):
+        """Get the header resize model for a view.
+
+        Returns None if no resize mode should be assigned.
+        """
+        if self.fmt == 'script':
+            return QHeaderView.Stretch
+        elif self.fmt == 'hash':
+            return QHeaderView.Interactive
+        elif self.qvariant_method in ['toInt', 'toUInt', 'toLongLong', 'toULongLong', 'toFloat']:
+            return QHeaderView.ResizeToContents
+        return None
+
+    def format_data(self, value, role = QtCore.Qt.DisplayRole):
+        """Format data for a view."""
+        data = None
+        if self.fmt == 'script':
+            s = Script(value)
+            if role == RawRole:
+                data = s.get_hex()
+            else:
+                data = s.get_human()
+        # Hashes are presented as hex-encoded little-endian strings.
+        elif self.fmt == 'hash':
+            data = b2lx(value)
+        elif self.cls in [int, float]:
+            data = value
+            if role in [QtCore.Qt.DisplayRole, QtCore.Qt.ToolTipRole]:
+                data = str(data)
+        return data
+
+    def get_qvariant_data(self, qvariant):
+        """Get data from a QVariant."""
+        value = None
+        method = getattr(qvariant, self.qvariant_method)
+        if self.fmt == 'script':
+            value = Script.from_human(str(method()))
+        # Switch endianness and decode hex.
+        elif self.fmt == 'hash':
+            value = lx(str(method()))
+        elif self.qvariant_method in ['toInt', 'toUInt', 'toLongLong', 'toULongLong', 'toFloat']:
+            tmp, ok = method()
+            if ok:
+                value = tmp
+        elif self.qvariant_method == 'toString':
+            value = str(method())
+        return value
+
+def _field_info_for_struct_format(fmt):
+    cls, qvariant_method = None, None
+    char = fmt[1]
+    if char in ['b', 'B', 'h', 'H', 'i', 'I', 'l', 'L', 'q', 'Q']:
+        cls = int
+        qvariant_method = 'toInt'
+        if char == 'q':
+            qvariant_method = 'toLongLong'
+        elif char == 'Q':
+            qvariant_method = 'toULongLong'
+        elif char == char.upper():
+            qvariant_method = 'toUInt'
+    elif char in ['f', 'd']:
+        cls = float
+        qvariant_method = 'toFloat'
+    return cls, qvariant_method
+
+def field_info(field):
+    """Get GUI-relevant info for a data field."""
+    attr, fmt, num_bytes, default = field
+    cls, qvariant_method = str, 'toString'
+
+    field_fmt = fmt
+    if 'value' in attr.lower():
+        field_fmt = 'amount'
+
+    if fmt.startswith(('<', '>')) and len(fmt) == 2:
+        cls, qvariant_method = _field_info_for_struct_format(fmt)
+
+    return FieldInfo(attr, field_fmt, num_bytes, default, cls, qvariant_method)
 
 def HBox(*widgets):
     """Create an HBoxLayout with the widgets passed."""

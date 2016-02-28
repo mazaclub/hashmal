@@ -10,7 +10,7 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 from PyQt4.QtCore import *
 
-from hashmal_lib.gui_utils import HBox, floated_buttons, RawRole, ReadOnlyCheckBox
+from hashmal_lib.gui_utils import HBox, floated_buttons, RawRole, ReadOnlyCheckBox, field_info
 from hashmal_lib.core import chainparams
 from hashmal_lib.core.script import Script
 from hashmal_lib.core.transaction import Transaction, OutPoint, TxIn, TxOut
@@ -22,20 +22,55 @@ class InputsModel(QAbstractTableModel):
         super(InputsModel, self).__init__(parent)
         self.vin = []
 
+    def get_outpoint(self, txinput):
+        """Get the outpoint of a TxIn."""
+        for attr, fmt, _, _ in txinput.fields:
+            if fmt == 'prevout':
+                return getattr(txinput, attr)
+
+    def outpoint_fields(self):
+        """Get the fields of OutPoints."""
+        ti = TxIn()
+        if self.vin:
+            ti = self.vin[0]
+
+        return self.get_outpoint(ti).fields
+
+    def input_fields(self, with_prevout=True):
+        """Get the fields of TxIns.
+
+        If with_prevout is False, the previous outpoint field
+        of the TxIn fields will be removed.
+        """
+        if not self.vin:
+            fields = TxIn().fields
+        else:
+            fields = self.vin[0].fields
+        if with_prevout:
+            return list(fields)
+
+        txin_fields = list(fields)
+        for field in fields:
+            _, fmt, _, _ = field
+            if fmt == 'prevout':
+                txin_fields.remove(field)
+        return txin_fields
+
     def rowCount(self, parent=QModelIndex()):
         return len(self.vin)
 
     def columnCount(self, parent=QModelIndex()):
-        return 4
+        return len(self.outpoint_fields()) + len(self.input_fields(with_prevout=False))
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation != Qt.Horizontal: return QVariant(None)
-        headers = [
-            {Qt.DisplayRole: 'Prev Tx', Qt.ToolTipRole: 'Previous Transaction Hash'},
-            {Qt.DisplayRole: 'Prev Output', Qt.ToolTipRole: 'Previous Transaction Output'},
-            {Qt.DisplayRole: 'scriptSig', Qt.ToolTipRole: 'Input script'},
-            {Qt.DisplayRole: 'Sequence', Qt.ToolTipRole: 'Input sequence'}
-        ]
+        headers = []
+        for field in self.outpoint_fields():
+            info = field_info(field)
+            headers.append(info.get_view_header())
+        for field in self.input_fields(with_prevout=False):
+            info = field_info(field)
+            headers.append(info.get_view_header())
         try:
             data = QVariant(headers[section][role])
             return data
@@ -46,40 +81,39 @@ class InputsModel(QAbstractTableModel):
         if not index.isValid() or not self.vin: return QVariant(None)
         if role not in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole, RawRole]:
             return None
-        tx_input = self.vin[index.row()]
-        col = index.column()
+        txin_object = self.vin[index.row()]
         data = None
-        if col == 0:
-            data = b2lx(tx_input.prevout.hash)
-        elif col == 1:
-            data = tx_input.prevout.n
-            if role == Qt.DisplayRole:
-                data = str(data)
-        elif col == 2:
-            if role == RawRole:
-                data = Script(tx_input.scriptSig).get_hex()
-            else:
-                data = Script(tx_input.scriptSig).get_human()
-        elif col == 3:
-            data = tx_input.nSequence
-            if role == Qt.DisplayRole:
-                data = str(data)
+
+        if index.column() < len(self.outpoint_fields()):
+            # Set input object to previous outpoint.
+            txin_object = self.get_outpoint(txin_object)
+            field = self.outpoint_fields()[index.column()]
+        else:
+            field = self.input_fields(with_prevout=False)[index.column() - len(self.outpoint_fields())]
+
+        info = field_info(field)
+        data = info.format_data(getattr(txin_object, info.attr), role)
 
         return QVariant(data)
 
     def setData(self, index, value, role = Qt.EditRole):
         if not index.isValid() or not self.vin: return False
-        tx_input = self.vin[index.row()]
-        col = index.column()
-        if col == 0:
-            tx_input.prevout.hash = lx(str(value.toString()))
-        elif col == 1:
-            tx_input.prevout.n, _ = value.toUInt()
-        elif col == 2:
-            tx_input.scriptSig = x(Script.from_human(str(value.toString())).get_hex())
-        elif col == 3:
-            tx_input.nSequence, _ = value.toUInt()
-        self.dataChanged.emit(self.index(index.row(), col), self.index(index.row(), col))
+        txin_object = self.vin[index.row()]
+
+        if index.column() < len(self.outpoint_fields()):
+            # Set input object to previous outpoint.
+            txin_object = self.get_outpoint(txin_object)
+            field = self.outpoint_fields()[index.column()]
+        else:
+            field = self.input_fields(with_prevout=False)[index.column() - len(self.outpoint_fields())]
+        info = field_info(field)
+        data = info.get_qvariant_data(value)
+        if data is None:
+            return False
+        if info.fmt == 'script':
+            data = x(data.get_hex())
+        setattr(txin_object, info.attr, data)
+        self.dataChanged.emit(self.index(index.row(), index.column()), self.index(index.row(), index.column()))
         return True
 
     def set_tx(self, tx):
@@ -124,11 +158,19 @@ class InputsTree(QWidget):
         self.view = QTableView()
         self.view.setAlternatingRowColors(True)
         self.view.setModel(self.model)
+
         self.view.horizontalHeader().setStretchLastSection(False)
-        self.view.horizontalHeader().setResizeMode(0, QHeaderView.Interactive)
-        self.view.horizontalHeader().setResizeMode(1, QHeaderView.ResizeToContents)
-        self.view.horizontalHeader().setResizeMode(2, QHeaderView.Stretch)
-        self.view.horizontalHeader().setResizeMode(3, QHeaderView.Interactive)
+        for i, field in enumerate(self.model.outpoint_fields()):
+            info = field_info(field)
+            resize_mode = info.get_header_resize_mode()
+            if resize_mode is not None:
+                self.view.horizontalHeader().setResizeMode(i, resize_mode)
+        for i, field in enumerate(self.model.input_fields(with_prevout=False)):
+            info = field_info(field)
+            resize_mode = info.get_header_resize_mode()
+            if resize_mode is not None:
+                self.view.horizontalHeader().setResizeMode(i + len(self.model.outpoint_fields()), resize_mode)
+
         self.view.horizontalHeader().setHighlightSections(False)
         self.view.verticalHeader().setDefaultSectionSize(22)
         self.view.verticalHeader().setVisible(False)
@@ -144,21 +186,37 @@ class InputsTree(QWidget):
     def clear(self):
         self.model.clear()
 
+    def _previous_tx_index(self):
+        idx = 0
+        for i, field in enumerate(self.model.outpoint_fields()):
+            _, fmt, _, _ = field
+            if fmt == 'hash':
+                idx = i
+        return idx
+
+    def _script_index(self):
+        idx = 0
+        for i, field in enumerate(self.model.input_fields(with_prevout=False)):
+            _, fmt, _, _ = field
+            if fmt == 'script':
+                idx = i
+        return idx + len(self.model.outpoint_fields())
+
     def copy_prev_tx(self):
         """Copy the previous transaction ID to clipboard."""
-        idx = self.view.selectedIndexes()[0]
+        idx = self.view.selectedIndexes()[self._previous_tx_index()]
         data = self.model.data(idx)
         QApplication.clipboard().setText(data.toString())
 
     def copy_script(self):
         """Copy the scriptSig to clipboard."""
-        idx = self.view.selectedIndexes()[2]
+        idx = self.view.selectedIndexes()[self._script_index()]
         data = self.model.data(idx)
         QApplication.clipboard().setText(data.toString())
 
     def copy_script_hex(self):
         """Copy the scriptSig to clipboard as hex."""
-        idx = self.view.selectedIndexes()[2]
+        idx = self.view.selectedIndexes()[self._script_index()]
         data = self.model.data(idx, RawRole)
         QApplication.clipboard().setText(data.toString())
 
@@ -171,7 +229,7 @@ class InputsTree(QWidget):
 
         def copy_serialized():
             row = self.view.selectedIndexes()[0].row()
-            inp = self.model.tx.vin[row]
+            inp = self.model.vin[row]
             data = b2x(inp.serialize())
             QApplication.clipboard().setText(data)
         copy.addAction('Serialized Input', copy_serialized)
@@ -197,18 +255,24 @@ class OutputsModel(QAbstractTableModel):
         self.vout = []
         self.amount_format = config.get_config().get_option('amount_format', 'coins')
 
+    def output_fields(self):
+        """Get the fields of TxOuts."""
+        if not self.vout:
+            return TxOut().fields
+        return self.vout[0].fields
+
     def rowCount(self, parent=QModelIndex()):
         return len(self.vout)
 
     def columnCount(self, parent=QModelIndex()):
-        return 2
+        return len(self.output_fields())
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation != Qt.Horizontal: return QVariant(None)
-        headers = [
-            {Qt.DisplayRole: 'Value', Qt.ToolTipRole: 'Output amount'},
-            {Qt.DisplayRole: 'scriptPubKey', Qt.ToolTipRole: 'Output script'}
-        ]
+        if orientation != Qt.Horizontal or section >= len(self.output_fields()): return QVariant(None)
+        headers = []
+        for field in self.output_fields():
+            info = field_info(field)
+            headers.append(info.get_view_header())
         try:
             data = QVariant(headers[section][role])
             return data
@@ -220,32 +284,30 @@ class OutputsModel(QAbstractTableModel):
         if role not in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole, RawRole]:
             return None
         tx_out = self.vout[index.row()]
-        col = index.column()
         data = None
-        if col == 0:
-            if role in [Qt.EditRole, RawRole]:
-                data = tx_out.nValue
-            elif role in [Qt.ToolTipRole]:
-                data = ' '.join([str(tx_out.nValue), 'satoshis'])
-            else:
-                data = self.format_amount(tx_out.nValue)
-        elif col == 1:
-            if role == RawRole:
-                data = Script(tx_out.scriptPubKey).get_hex()
-            else:
-                data = Script(tx_out.scriptPubKey).get_human()
+
+        field = self.output_fields()[index.column()]
+        info = field_info(field)
+        data = info.format_data(getattr(tx_out, info.attr), role)
+        if info.fmt == 'amount':
+            if role not in [Qt.EditRole, RawRole]:
+                data = self.format_amount(data)
 
         return QVariant(data)
 
     def setData(self, index, value, role = Qt.EditRole):
         if not index.isValid() or not self.vout: return False
         tx_out = self.vout[index.row()]
-        col = index.column()
-        if col == 0:
-            tx_out.nValue, _ = value.toULongLong()
-        elif col == 1:
-            tx_out.scriptPubKey = x(Script.from_human(str(value.toString())).get_hex())
-        self.dataChanged.emit(self.index(index.row(), col), self.index(index.row(), col))
+
+        field = self.output_fields()[index.column()]
+        info = field_info(field)
+        data = info.get_qvariant_data(value)
+        if data is None:
+            return False
+        if info.fmt == 'script':
+            data = x(data.get_hex())
+        setattr(tx_out, info.attr, data)
+        self.dataChanged.emit(self.index(index.row(), index.column()), self.index(index.row(), index.column()))
         return True
 
     def set_tx(self, tx):
@@ -302,8 +364,14 @@ class OutputsTree(QWidget):
         self.view = QTableView()
         self.view.setAlternatingRowColors(True)
         self.view.setModel(self.model)
-        self.view.horizontalHeader().setResizeMode(0, QHeaderView.Interactive)
-        self.view.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
+
+        self.view.horizontalHeader().setStretchLastSection(False)
+        for i, field in enumerate(self.model.output_fields()):
+            info = field_info(field)
+            resize_mode = info.get_header_resize_mode()
+            if resize_mode is not None:
+                self.view.horizontalHeader().setResizeMode(i, resize_mode)
+
         self.view.horizontalHeader().setHighlightSections(False)
         self.view.verticalHeader().setDefaultSectionSize(22)
         self.view.verticalHeader().setVisible(False)
@@ -320,21 +388,37 @@ class OutputsTree(QWidget):
     def clear(self):
         self.model.clear()
 
+    def _amount_index(self):
+        idx = 0
+        for i, field in enumerate(self.model.output_fields()):
+            _, fmt, _, _ = field
+            if fmt == 'amount':
+                idx = i
+        return idx
+
+    def _script_index(self):
+        idx = 0
+        for i, field in enumerate(self.model.output_fields()):
+            _, fmt, _, _ = field
+            if fmt == 'script':
+                idx = i
+        return idx
+
     def copy_script(self):
         """Copy the scriptPubKey to clipboard."""
-        idx = self.view.selectedIndexes()[1]
+        idx = self.view.selectedIndexes()[self._script_index()]
         data = self.model.data(idx)
         QApplication.clipboard().setText(data.toString())
 
     def copy_script_hex(self):
         """Copy the scriptPubKey to clipboard as hex."""
-        idx = self.view.selectedIndexes()[1]
+        idx = self.view.selectedIndexes()[self._script_index()]
         data = self.model.data(idx, RawRole)
         QApplication.clipboard().setText(data.toString())
 
     def copy_amount(self):
         """Copy the output amount to clipboard."""
-        idx = self.view.selectedIndexes()[0]
+        idx = self.view.selectedIndexes()[self._amount_index()]
         data = self.model.data(idx)
         QApplication.clipboard().setText(data.toString())
 
@@ -346,7 +430,7 @@ class OutputsTree(QWidget):
         copy.addAction('Output Script (Hex)', self.copy_script_hex)
         def copy_serialized():
             row = self.view.selectedIndexes()[0].row()
-            out = self.model.tx.vout[row]
+            out = self.model.vout[row]
             data = b2x(out.serialize())
             QApplication.clipboard().setText(data)
         copy.addAction('Serialized Output', copy_serialized)

@@ -10,7 +10,7 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 from PyQt4.QtCore import *
 
-from hashmal_lib.gui_utils import HBox, floated_buttons, RawRole, ReadOnlyCheckBox, field_info
+from hashmal_lib.gui_utils import HBox, floated_buttons, RawRole, ReadOnlyCheckBox, field_info, Amount
 from hashmal_lib.core import chainparams
 from hashmal_lib.core.script import Script
 from hashmal_lib.core.transaction import Transaction, OutPoint, TxIn, TxOut
@@ -23,11 +23,11 @@ class InputsModel(QAbstractTableModel):
         super(InputsModel, self).__init__(parent)
         self.vin = []
         self.plugin_handler = None
+        config.get_config().optionChanged.connect(self.on_option_changed)
 
     def set_plugin_handler(self, plugin_handler):
         """Set plugin handler so that tx field data can be retrieved."""
         self.plugin_handler = plugin_handler
-        self.plugin_handler.config.optionChanged.connect(self.on_option_changed)
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(self.outpoint_fields()) + len(self.input_fields(with_prevout=False)) - 1)
 
     def get_outpoint(self, txinput):
@@ -105,6 +105,9 @@ class InputsModel(QAbstractTableModel):
 
         info = field_info(field)
         data = info.format_data(getattr(txin_object, info.attr), role)
+        if info.fmt == 'amount':
+            if role not in [Qt.EditRole, RawRole]:
+                data = Amount(data).get_str()
 
         return QVariant(data)
 
@@ -172,6 +175,9 @@ class InputsModel(QAbstractTableModel):
         if key == 'chainparams':
             self.set_vin(list(self.vin))
             self.fieldsChanged.emit()
+        # Cause coin amounts to update if present.
+        elif key == 'amount_format':
+            self.dataChanged.emit(QModelIndex(), QModelIndex())
 
 class InputsTree(QWidget):
     """Model and View showing a transaction's inputs."""
@@ -281,13 +287,12 @@ class OutputsModel(QAbstractTableModel):
     def __init__(self, parent=None):
         super(OutputsModel, self).__init__(parent)
         self.vout = []
-        self.amount_format = config.get_config().get_option('amount_format', 'coins')
         self.plugin_handler = None
+        config.get_config().optionChanged.connect(self.on_option_changed)
 
     def set_plugin_handler(self, plugin_handler):
         """Set plugin handler so that tx field data can be retrieved."""
         self.plugin_handler = plugin_handler
-        self.plugin_handler.config.optionChanged.connect(self.on_option_changed)
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(self.output_fields()) - 1)
 
     def output_fields(self):
@@ -328,7 +333,7 @@ class OutputsModel(QAbstractTableModel):
         data = info.format_data(getattr(tx_out, info.attr), role)
         if info.fmt == 'amount':
             if role not in [Qt.EditRole, RawRole]:
-                data = self.format_amount(data)
+                data = Amount(data).get_str()
 
         return QVariant(data)
 
@@ -387,22 +392,13 @@ class OutputsModel(QAbstractTableModel):
     def clear(self):
         self.set_tx(Transaction())
 
-    def format_amount(self, satoshis):
-        if self.amount_format == 'satoshis':
-            return str(satoshis)
-        elif self.amount_format == 'coins':
-            amount = Decimal(satoshis) / pow(10, 8)
-            amount = amount.quantize(Decimal('0.00000001'), rounding=decimal.ROUND_DOWN)
-            return '{:f}'.format(amount)
-
-    def amount_format_changed(self):
-        """Refreshes TxOut amounts with the new format."""
-        self.dataChanged.emit(QModelIndex(), QModelIndex())
-
     def on_option_changed(self, key):
         if key == 'chainparams':
             self.set_vout(list(self.vout))
             self.fieldsChanged.emit()
+        # Cause coin amounts to update.
+        elif key == 'amount_format':
+            self.dataChanged.emit(QModelIndex(), QModelIndex())
 
 class OutputsTree(QWidget):
     """Model and View showing a transaction's outputs."""
@@ -428,7 +424,6 @@ class OutputsTree(QWidget):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(self.view)
         self.setLayout(vbox)
-        config.get_config().optionChanged.connect(self.on_option_changed)
 
     def redistribute_header_space(self):
         for i, field in enumerate(self.model.output_fields()):
@@ -499,11 +494,6 @@ class OutputsTree(QWidget):
 
     def get_outputs(self):
         return self.model.get_outputs()
-
-    def on_option_changed(self, key):
-        if key == 'amount_format':
-            self.model.amount_format = config.get_config().get_option('amount_format', 'coins')
-            self.model.amount_format_changed()
 
 class LockTimeWidget(QWidget):
     """Displays a transaction's locktime.

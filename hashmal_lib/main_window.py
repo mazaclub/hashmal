@@ -66,6 +66,7 @@ class HashmalMain(QMainWindow):
         if needs_params_change:
             try:
                 chainparams.set_to_preset(active_params)
+                self.config.optionChanged.emit('chainparams')
             except KeyError:
                 self.log_message('Core', 'Chainparams preset "%s" does not exist. Setting chainparams to Bitcoin.', logging.ERROR)
                 self.config.set_option('chainparams', 'Bitcoin')

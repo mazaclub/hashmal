@@ -291,7 +291,11 @@ class TxBuilder(BaseDock):
 
     def on_option_changed(self, key):
         if key == 'chainparams':
-            self.needsUpdate.emit()
+            self.tx = Transaction()
+            self.inputs_tree.model.set_tx(self.tx)
+            self.outputs_tree.model.set_tx(self.tx)
+            self.adjust_tx_fields()
+            self.build_transaction()
 
     def adjust_tx_fields(self):
         """Show or hide tx field widgets."""
@@ -330,10 +334,6 @@ class TxBuilder(BaseDock):
             self.tabs.setTabEnabled(3, False)
         else:
             self.tabs.setTabEnabled(3, True)
-
-    def refresh_data(self):
-        self.adjust_tx_fields()
-        self.build_transaction()
 
 class BaseEditor(QWidget):
     """Item editor for inputs or outputs."""

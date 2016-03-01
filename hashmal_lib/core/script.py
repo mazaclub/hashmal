@@ -13,6 +13,21 @@ class Script(CScript):
     Subclassed from CScript to provide methods for
     getting/setting according to certain formats.
     """
+    @staticmethod
+    def decode_human_word(word):
+        opcode = opcodes.opcodes_by_name.get(word)
+        if opcode is not None:
+            return format_hex_string(hex(opcode), with_prefix=False)
+        # Make sure hex is formatted.
+        elif is_hex(word):
+            word = format_hex_string(word, with_prefix=False)
+        # Hex-encode text.
+        else:
+            if word.startswith('"') and word.endswith('"'):
+                word = word[1:-1]
+            word = word.encode('hex')
+        return push_script(word)
+
     @classmethod
     def from_human(cls, data):
         hex_str = []
@@ -25,31 +40,7 @@ class Script(CScript):
                 break
             word = d[0]
             d = d[1:]
-
-            if word.startswith('PUSHDATA'):
-                continue
-
-            opcode = opcodes.opcodes_by_name.get(word)
-            if opcode is not None:
-                hex_str.append(format_hex_string(hex(opcode), with_prefix=False))
-                continue
-
-            # data to be pushed
-            pushdata = word
-
-            # Make sure hex is formatted.
-            if is_hex(pushdata):
-                if pushdata.startswith('0x'):
-                    pushdata = pushdata[2:]
-                if len(pushdata) % 2 != 0:
-                    pushdata = ''.join(['0', pushdata])
-            # Hex-encode text.
-            else:
-                if pushdata.startswith('"') and pushdata.endswith('"'):
-                    pushdata = pushdata[1:-1]
-                pushdata = pushdata.encode('hex')
-            hex_str.append(push_script(pushdata))
-
+            hex_str.append(Script.decode_human_word(word))
         hex_str = ''.join(hex_str)
         return cls(hex_str.decode('hex'))
 
@@ -60,9 +51,7 @@ class Script(CScript):
         while 1:
             try:
                 opcode, data, byte_index = next(iterator)
-                hexcode = hex(opcode)[2:]
-                if len(hexcode) % 2 != 0:
-                    hexcode = ''.join(['0', hexcode])
+                hexcode = format_hex_string(hex(opcode), with_prefix=False)
                 s.append(hexcode)
                 if data:
                     s.append(data.encode('hex'))
@@ -75,7 +64,6 @@ class Script(CScript):
 
     def human_iter(self):
         iterator = self.raw_iter()
-        s = ''
         while 1:
             try:
                 opcode, data, byte_index = next(iterator)

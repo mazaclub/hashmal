@@ -336,6 +336,7 @@ class Variables(BaseDock):
         """Store a new variable."""
         self.model.set_key(key, value)
         self.dataChanged.emit()
+        self.view.sortByColumn(self.proxy_model.sortColumn(), self.proxy_model.sortOrder())
 
     def remove_key(self, key):
         """Remove a key."""
@@ -408,6 +409,7 @@ class Variables(BaseDock):
         self.new_var_value.clear()
 
     def hide_unused_category_names(self):
+        current_filter = str(self.filter_category.currentText())
         filters = list(self.filters)
         used_categories = set()
         for i in range(self.model.rowCount()):
@@ -417,6 +419,12 @@ class Variables(BaseDock):
         filters.insert(0, 'None')
         self.filter_category.clear()
         self.filter_category.addItems(filters)
+        # Try to set the filter category.
+        # Exception will be thrown if no variables of the current filter category exist now.
+        try:
+            self.filter_category.setCurrentIndex(filters.index(current_filter))
+        except Exception:
+            pass
 
     def on_var_types_changed(self):
         self.filters = variable_types.keys()

@@ -322,6 +322,10 @@ class ScriptGenerator(BaseDock):
                 template = i
         self.template_widget.set_template(template)
         self.script_output.setPlainText(template.text)
+        # If the new template works with the existing fields, generate script.
+        new_script = self.template_widget.get_script()
+        if not new_script.startswith('Error'):
+            self.generate()
 
     def set_completed_item(self, item):
         """Deserialize a completed template."""

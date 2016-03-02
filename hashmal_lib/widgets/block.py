@@ -63,15 +63,19 @@ class BlockHeaderModel(QAbstractTableModel):
         self.beginResetModel()
         self.header = BlockHeader.from_header(header)
 
+        self.setup_vertical_header()
+        self.endResetModel()
+
+    def setup_vertical_header(self):
         self.vertical_header = []
         for i, field in enumerate(self.header_fields()):
             info = field_info(field)
             self.setHeaderData(i, Qt.Vertical, info.get_view_header())
-        self.endResetModel()
 
     def clear(self):
         self.beginResetModel()
         self.header = None
+        self.setup_vertical_header()
         self.endResetModel()
 
     def on_option_changed(self, key):
@@ -103,7 +107,7 @@ class BlockHeaderWidget(QWidget):
         self.setLayout(vbox)
 
     def context_menu(self, pos):
-        if len(self.view.selectedIndexes()) == 0:
+        if len(self.view.selectedIndexes()) == 0 or not self.model.header:
             return
         menu = QMenu()
         copy = menu.addMenu('Copy')

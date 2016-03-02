@@ -170,6 +170,12 @@ class SettingsDialog(QDialog):
         self.setWindowTitle('Settings')
         self.config.optionChanged.connect(self.on_option_changed)
 
+    def _create_section(self, title, layout):
+        """Create a group box."""
+        groupbox = QGroupBox(title)
+        groupbox.setLayout(layout)
+        return groupbox
+
     def info(self, msg):
         self.gui.log_message('Settings', msg, logging.INFO)
 
@@ -252,22 +258,20 @@ class SettingsDialog(QDialog):
         reset_font_button = QPushButton('Reset to Default')
         reset_font_button.clicked.connect(reset_font)
 
-        font_group = QGroupBox('Font')
         font_form = QFormLayout()
         font_form.addRow('Family:', editor_font_combo)
         font_form.addRow('Size:', editor_font_size)
         font_form.addRow(floated_buttons([reset_font_button]))
-        font_group.setLayout(font_form)
+        font_group = self._create_section('Font', font_form)
 
 
         vars_color = ColorButton('variables', QColor('darkMagenta'))
         strs_color = ColorButton('strings', QColor('gray'))
 
-        colors_group = QGroupBox('Colors')
         colors_form = QFormLayout()
         colors_form.addRow('Variables:', floated_buttons([vars_color], True))
         colors_form.addRow('String literals:', floated_buttons([strs_color], True))
-        colors_group.setLayout(colors_form)
+        colors_group = self._create_section('Colors', colors_form)
 
         form.addRow(font_group)
         form.addRow(colors_group)
@@ -292,6 +296,7 @@ class SettingsDialog(QDialog):
             self.config.set_option('amount_format', new_format)
         amnt_format.currentIndexChanged.connect(set_amount_format)
         amnt_format.setToolTip('Format that transaction amounts are shown in')
+        amnt_format.setWhatsThis('Use this to change the format that coin amounts are shown in.')
 
 
         self.data_retriever = data_retriever = QComboBox()
@@ -313,6 +318,7 @@ class SettingsDialog(QDialog):
             self.config.set_option('data_retriever', new_retriever)
         data_retriever.currentIndexChanged.connect(set_retriever)
         data_retriever.setToolTip('Plugin used to download blockchain data')
+        data_retriever.setWhatsThis('Use this to change the plugin that is used to retrieve blockchain data.')
 
 
         self.log_level = QComboBox()
@@ -323,6 +329,7 @@ class SettingsDialog(QDialog):
             current_level = 'Info'
         self.log_level.setCurrentIndex(possible_levels.index(current_level))
         self.log_level.setToolTip('Minimum priority for a message to be logged')
+        self.log_level.setWhatsThis('Use this to change the types of log messages that are displayed.')
 
         def change_log_level():
             level = str(self.log_level.currentText())

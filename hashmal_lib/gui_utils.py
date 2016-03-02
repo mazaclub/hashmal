@@ -22,6 +22,65 @@ monospace_font.setStyleHint(QFont.TypeWriter)
 
 script_file_filter = 'Coinscripts (*.coinscript);;Text files (*.txt);;All files (*.*)'
 
+def get_label_for_attr(name):
+    """Get a display-appropriate label for an attribute name."""
+    # Special case for Bitcoin previous outpoint indices.
+    def parse_special_case(text):
+        if text == 'n':
+            return 'Index'
+    # Convert snake_case. (e.g. 'block_height' --> 'BlockHeight')
+    def parse_snake_case(text):
+        if '_' in text:
+            words = text.split('_')
+            return ''.join([word.capitalize() for word in words])
+    # Convert Hungarian notation. (e.g. 'nVersion' --> 'Version')
+    def parse_hungarian_notation(text):
+        if len(text) <= 1 or text[0].isupper():
+            return
+        prefix_len = 0
+        for i, char in enumerate(text):
+            if char == ' ':
+                return
+            elif char.isupper():
+                prefix_len = i
+                break
+        if prefix_len:
+            # Place prefix at the end if it's a word.
+            if prefix_len > 2:
+                prefix = text[:prefix_len]
+                return ''.join([text[prefix_len:], prefix.capitalize()])
+            # Otherwise, remove the prefix.
+            return text[prefix_len:]
+    # Split words (e.g. 'PrevBlock' --> 'Prev Block')
+    def split_words(text):
+        if text.islower():
+            return
+        capital_idxs = []
+        for i, char in enumerate(text):
+            if char.isupper():
+                capital_idxs.append(i)
+
+        if len(capital_idxs) > 0:
+            idx = 0
+            words = []
+            for i in capital_idxs:
+                if i == idx:
+                    continue
+                words.append(text[idx:i].capitalize())
+                idx = i
+            words.append(text[idx:])
+            return ' '.join(words)
+    # Capitalize all-lowercase attribute name.
+    def capitalize_word(text):
+        if text.islower():
+            return text.capitalize()
+
+    for func in [parse_special_case, parse_snake_case, parse_hungarian_notation, split_words, capitalize_word]:
+        new_name = func(name)
+        if new_name:
+            name = new_name
+    return name
+
 class FieldInfo(object):
     """GUI-relevant field info for a data field."""
     def __init__(self, attr, fmt, num_bytes, default, cls, qvariant_method):
@@ -34,22 +93,7 @@ class FieldInfo(object):
 
     def get_view_header(self):
         """Get the header label for a view."""
-        name = self.attr
-        # Special case for Bitcoin previous outpoint indices.
-        if self.attr == 'n':
-            name = 'Index'
-        # Convert Hungarian notation to English.
-        elif len(name) > 1 and ((name[0] == name[0].lower()) and (name[1] == name[1].upper())):
-            name = name[1].capitalize() + name[2:]
-        elif name.startswith('script'):
-            name = name[6:] + ' Script'
-        # attr_name --> Attr Name
-        elif '_' in name:
-            words = name.split('_')
-            name = ' '.join([word.capitalize() for word in words])
-        # Capitalize all-lowercase attribute name.
-        elif name == name.lower():
-            name = name.capitalize()
+        name = get_label_for_attr(self.attr)
         header = {
             QtCore.Qt.DisplayRole: name,
             QtCore.Qt.EditRole: name,

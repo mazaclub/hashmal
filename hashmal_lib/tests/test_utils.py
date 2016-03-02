@@ -1,6 +1,8 @@
 import unittest
+from collections import namedtuple
 
 from hashmal_lib.core import utils
+from hashmal_lib import gui_utils
 
 class UtilsTest(unittest.TestCase):
     def test_is_hex(self):
@@ -35,3 +37,35 @@ class UtilsTest(unittest.TestCase):
         )
         for value, expected in push_tests:
             self.assertEqual(expected, utils.push_script(value))
+
+LabelTest = namedtuple('LabelTest', ('attr', 'label'))
+
+class GuiUtilsTest(unittest.TestCase):
+    def test_view_label_for_block_headers(self):
+        test_items = [
+            LabelTest('nVersion', 'Version'),
+            LabelTest('hashPrevBlock', 'Prev Block Hash'),
+            LabelTest('hashMerkleRoot', 'Merkle Root Hash'),
+            LabelTest('nTime', 'Time'),
+            LabelTest('nBits', 'Bits'),
+            LabelTest('nNonce', 'Nonce'),
+        ]
+        for test in test_items:
+            self.assertEqual(test.label, gui_utils.get_label_for_attr(test.attr))
+
+    def test_view_label_for_tx_fields(self):
+        test_items = [
+            LabelTest('nVersion', 'Version'),
+            LabelTest('nLockTime', 'Lock Time'),
+            # Previous outpoint
+            LabelTest('hash', 'Hash'),
+            LabelTest('n', 'Index'),
+            # TxIn
+            LabelTest('scriptSig', 'Sig Script'),
+            LabelTest('nSequence', 'Sequence'),
+            # TxOut
+            LabelTest('nValue', 'Value'),
+            LabelTest('scriptPubKey', 'Pub Key Script')
+        ]
+        for test in test_items:
+            self.assertEqual(test.label, gui_utils.get_label_for_attr(test.attr))

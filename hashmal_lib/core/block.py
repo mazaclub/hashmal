@@ -7,8 +7,8 @@ from transaction import Transaction
 
 block_header_fields = [
     ('nVersion', b'<i', 4, 1),
-    ('hashPrevBlock', 'bytes', 32, b'\x00'*32),
-    ('hashMerkleRoot', 'bytes', 32, b'\x00'*32),
+    ('hashPrevBlock', 'hash', 32, b'\x00'*32),
+    ('hashMerkleRoot', 'hash', 32, b'\x00'*32),
     ('nTime', b'<I', 4, 0),
     ('nBits', b'<I', 4, 0),
     ('nNonce', b'<I', 4, 0)
@@ -85,17 +85,17 @@ class BlockHeader(CBlockHeader):
         if not hasattr(self, 'fields'):
             setattr(self, 'fields', list(block_header_fields))
         for attr, fmt, num_bytes, _ in self.fields:
-            if fmt not in ['bytes']:
+            if fmt not in ['bytes', 'hash']:
                 setattr(self, attr, struct.unpack(fmt, ser_read(f, num_bytes))[0])
-            elif fmt == 'bytes':
+            else:
                 setattr(self, attr, ser_read(f, num_bytes))
         return self
 
     def stream_serialize(self, f):
         for attr, fmt, num_bytes, _ in self.fields:
-            if fmt not in ['bytes']:
+            if fmt not in ['bytes', 'hash']:
                 f.write(struct.pack(fmt, getattr(self, attr)))
-            elif fmt == 'bytes':
+            else:
                 f.write(getattr(self, attr))
 
     def as_hex(self):

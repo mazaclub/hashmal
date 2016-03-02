@@ -5,7 +5,7 @@ from PyQt4 import QtGui
 from PyQt4.QtGui import QFont, QHBoxLayout, QFrame, QLineEdit, QHeaderView
 from PyQt4 import QtCore
 
-from bitcoin.core import lx, b2lx
+from bitcoin.core import b2x, lx, b2lx
 
 from hashmal_lib.core.script import Script
 import config
@@ -82,6 +82,9 @@ class FieldInfo(object):
         # Hashes are presented as hex-encoded little-endian strings.
         elif self.fmt == 'hash':
             data = b2lx(value)
+        # Hex-encode byte strings.
+        elif self.fmt == 'bytes':
+            data = b2x(value)
         elif self.cls in [int, float]:
             data = value
             if role in [QtCore.Qt.DisplayRole, QtCore.Qt.ToolTipRole]:

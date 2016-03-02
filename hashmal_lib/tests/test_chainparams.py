@@ -122,8 +122,8 @@ bitcoin_raw_header = '0100000000000000000000000000000000000000000000000000000000
 
 bitcoin_header_fields = [
     ('nVersion', b'<i', 4, 1),
-    ('hashPrevBlock', 'bytes', 32, b'\x00'*32),
-    ('hashMerkleRoot', 'bytes', 32, b'\x00'*32),
+    ('hashPrevBlock', 'hash', 32, b'\x00'*32),
+    ('hashMerkleRoot', 'hash', 32, b'\x00'*32),
     ('nTime', b'<I', 4, 0),
     ('nBits', b'<I', 4, 0),
     ('nNonce', b'<I', 4, 0)

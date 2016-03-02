@@ -3,15 +3,25 @@ from PyQt4.QtCore import *
 
 from bitcoin.core import CBlockHeader, b2x, b2lx
 
-from hashmal_lib.gui_utils import monospace_font
+from hashmal_lib.gui_utils import monospace_font, field_info
 from hashmal_lib.core import BlockHeader, Block
+from hashmal_lib import config
 
 class BlockHeaderModel(QAbstractTableModel):
     """Model of a block header."""
+    fieldsChanged = pyqtSignal()
+
     def __init__(self, header=None, parent=None):
         super(BlockHeaderModel, self).__init__(parent)
         self.vertical_header = []
         self.set_header(header)
+        config.get_config().optionChanged.connect(self.on_option_changed)
+
+    def header_fields(self):
+        """Get the fields of block headers."""
+        if self.header:
+            return self.header.fields
+        return BlockHeader().fields
 
     def rowCount(self, parent=QModelIndex()):
         return len(self.header.fields) if self.header else len(self.vertical_header)
@@ -22,7 +32,7 @@ class BlockHeaderModel(QAbstractTableModel):
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role not in [Qt.DisplayRole, Qt.EditRole]: return None
         if orientation != Qt.Vertical or section >= len(self.vertical_header): return None
-        return self.vertical_header[section]
+        return self.vertical_header[section][role]
 
     def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
         if orientation != Qt.Vertical: return False
@@ -40,13 +50,10 @@ class BlockHeaderModel(QAbstractTableModel):
         if role not in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole]:
             return None
 
-        field_name = self.header.fields[index.row()][0]
-        field = self.header.fields[index.row()]
-        data = getattr(self.header, field[0])
-        if field[1] == 'bytes':
-            data = b2lx(data)
-        else:
-            data = str(data)
+        field = self.header_fields()[index.row()]
+        info = field_info(field)
+        data = info.format_data(getattr(self.header, info.attr), role)
+
         return data
 
     def set_header(self, header):
@@ -57,15 +64,20 @@ class BlockHeaderModel(QAbstractTableModel):
         self.header = BlockHeader.from_header(header)
 
         self.vertical_header = []
-        field_names = [i[0] for i in self.header.fields]
-        for i, field in enumerate(self.header.fields):
-            self.setHeaderData(i, Qt.Vertical, field[0])
+        for i, field in enumerate(self.header_fields()):
+            info = field_info(field)
+            self.setHeaderData(i, Qt.Vertical, info.get_view_header())
         self.endResetModel()
 
     def clear(self):
         self.beginResetModel()
         self.header = None
         self.endResetModel()
+
+    def on_option_changed(self, key):
+        if key == 'chainparams':
+            self.set_header(self.header)
+            self.fieldsChanged.emit()
 
 class BlockHeaderWidget(QWidget):
     """Model and View showing a block header."""
@@ -150,28 +162,26 @@ class BlockWidget(QWidget):
         splitter = QSplitter()
         splitter.setChildrenCollapsible(False)
 
-        form = QFormLayout()
-        form.setContentsMargins(0,0,0,0)
-        form1 = QFormLayout()
-        form2 = QFormLayout()
-        for i in [form, form1, form2]:
-            i.setRowWrapPolicy(QFormLayout.WrapAllRows)
-        form1.addRow('Header:', self.header_widget)
-        form1.setContentsMargins(0,0,5,0)
-        form2.addRow('Transactions:', self.txs_widget)
-        form2.setContentsMargins(5,0,0,0)
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0,0,0,0)
+
+        vbox1 = QVBoxLayout()
+        vbox1.addWidget(QLabel('Header:'))
+        vbox1.addWidget(self.header_widget, stretch=1)
+        vbox2 = QVBoxLayout()
+        vbox2.addWidget(QLabel('Transactions:'))
+        vbox2.addWidget(self.txs_widget, stretch=1)
+
         w = QWidget()
-        w.setLayout(form1)
+        w.setLayout(vbox1)
         splitter.addWidget(w)
         w = QWidget()
-        w.setLayout(form2)
+        w.setLayout(vbox2)
         splitter.addWidget(w)
 
-        hbox = QHBoxLayout()
-        hbox.addWidget(splitter)
-        form.addRow(hbox)
+        vbox.addWidget(splitter)
 
-        self.setLayout(form)
+        self.setLayout(vbox)
 
     def clear(self):
         self.header_widget.clear()

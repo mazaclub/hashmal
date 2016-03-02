@@ -73,13 +73,13 @@ class BlockAnalyzer(BaseDock):
         self.block_widget.txs_widget.view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.block_widget.txs_widget.view.customContextMenuRequested.connect(self.txs_context_menu)
         
-        form = QFormLayout()
-        form.setRowWrapPolicy(QFormLayout.WrapAllRows)
-        form.addRow('Raw Block (Or Block Header):', self.raw_block_edit)
-        form.addRow(self.raw_block_invalid)
-        form.addRow(Separator())
-        form.addRow(self.block_widget)
-        return form
+        vbox = QVBoxLayout()
+        vbox.addWidget(QLabel('Raw Block (Or Block Header):'))
+        vbox.addWidget(self.raw_block_edit)
+        vbox.addWidget(self.raw_block_invalid)
+        vbox.addWidget(Separator())
+        vbox.addWidget(self.block_widget, stretch=1)
+        return vbox
 
     def raw_block_context_menu(self, pos):
         menu = self.raw_block_edit.createStandardContextMenu()
@@ -92,7 +92,8 @@ class BlockAnalyzer(BaseDock):
         if txt.startswith('$'):
             return
         self.block, self.header = deserialize_block_or_header(txt)
-        self.raw_block_invalid.setVisible(self.header is None)
+        show_invalid_msg = True if self.header is None and txt else False
+        self.raw_block_invalid.setVisible(show_invalid_msg)
 
         # Clears the widget if block_header is None.
         self.block_widget.set_block(self.header, self.block)

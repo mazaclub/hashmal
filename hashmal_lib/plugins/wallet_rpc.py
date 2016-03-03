@@ -310,7 +310,7 @@ class WalletRPC(BaseDock):
         """Get the types of data this plugin can retrieve."""
         return ['raw_transaction', 'raw_block', 'raw_header', 'block_hash']
 
-    def retrieve_blockchain_data(self, data_type, identifier):
+    def retrieve_blockchain_data(self, data_type, identifier, callback=None):
         """Signifies that this plugin is a data retriever."""
         params = [identifier]
         method_name = ''
@@ -325,6 +325,12 @@ class WalletRPC(BaseDock):
         else:
             raise Exception('Unsupported data type "%s"' % data_type)
 
+
+        if callback:
+            # Callback with the data as an argument.
+            cb = lambda methodname, res, error: callback(str(res))
+            downloader = RPCDownloader(self.profile, method_name, params)
+            return self.download_async(downloader, cb)
 
         result, err = self.do_rpc(method_name, params, async=False)
         if err:
@@ -353,6 +359,11 @@ class WalletRPC(BaseDock):
 
     def do_rpc(self, method_name, params, async=True):
         """Call the full client.
+
+        Args:
+            method_name (str): RPC method.
+            params (list): RPC parameters.
+            async (bool): Whether to download asynchronously.
 
         Returns:
             Result or raises an exception with an error.

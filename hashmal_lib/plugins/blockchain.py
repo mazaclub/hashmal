@@ -73,6 +73,8 @@ class BlockchainDownloader(Downloader):
     finished = pyqtSignal(str, str, str, str, name='finished')
     def __init__(self, explorer, data_type, identifier):
         super(BlockchainDownloader, self).__init__()
+        if data_type == 'raw_transaction':
+            data_type = 'raw_tx'
         self.explorer = explorer
         self.data_type = data_type
         self.identifier = identifier
@@ -85,6 +87,9 @@ class BlockchainDownloader(Downloader):
             raw = self.explorer.get_data(self.data_type, self.identifier)
         except Exception as e:
             error = '{}: {}'.format(str(e.__class__.__name__), str(e))
+
+        if not raw:
+            raw = ''
         self.finished.emit(self.data_type, self.identifier, raw, error)
 
 class Blockchain(BaseDock):
@@ -284,9 +289,14 @@ class Blockchain(BaseDock):
         """Get the types of data this plugin can retrieve."""
         return ['raw_transaction', 'raw_header']
 
-    def retrieve_blockchain_data(self, data_type, identifier):
+    def retrieve_blockchain_data(self, data_type, identifier, callback=None):
         """Signifies that this plugin is a data retriever."""
-        if data_type == 'raw_transaction':
+        if callback:
+            # Callback with the data as an argument.
+            cb = lambda datatype, ident, raw, err: callback(str(raw))
+            downloader = BlockchainDownloader(self.explorer, data_type, identifier)
+            self.download_async(downloader, cb)
+        elif data_type == 'raw_transaction':
             return self.download_raw_tx(identifier)
         elif data_type == 'raw_header':
             return self.download_block_header(identifier)

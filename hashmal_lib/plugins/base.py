@@ -138,7 +138,7 @@ class BaseDock(BasePluginUI, QDockWidget):
     """Base class for docks.
 
     Optional methods:
-        retrieve_blockchain_data(data_type, identifier): Signifies that
+        retrieve_blockchain_data(data_type, identifier, callback=None): Signifies that
             this dock is a data retriever, and can be used when the user
             wants to download blockchain data such as transactions.
 

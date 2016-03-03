@@ -302,12 +302,13 @@ class PluginHandler(QWidget):
         return retrievers
 
     # TODO access data retrievers from Plugin, not UI
-    def download_blockchain_data(self, data_type, identifier):
+    def download_blockchain_data(self, data_type, identifier, callback=None):
         """Download blockchain data with the pre-chosen plugin.
 
         Args:
             data_type (str): Type of data (e.g. 'raw_transaction').
             identifier (str): Data identifier (e.g. transaction ID).
+            callback (function): If supplied, download will be asynchronous.
         """
         plugin_name = self.config.get_option('data_retriever', 'Blockchain')
         plugin = self.get_plugin(plugin_name)
@@ -315,7 +316,7 @@ class PluginHandler(QWidget):
             plugin = self.get_plugin('Blockchain')
         if not data_type in plugin.ui.supported_blockchain_data_types():
             raise Exception('Plugin "%s" does not support downloading "%s" data.' % (plugin.name, data_type))
-        return plugin.ui.retrieve_blockchain_data(data_type, identifier)
+        return plugin.ui.retrieve_blockchain_data(data_type, identifier, callback)
 
     def evaluate_current_script(self):
         """Evaluate the script being edited with the Stack Evaluator tool."""

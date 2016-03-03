@@ -492,7 +492,7 @@ class OutputsEditor(BaseEditor):
             self.field_widgets.append((label, widget, _property, field))
 
 
-        for i, (label, widget, _proprety, _) in enumerate(self.field_widgets):
+        for i, (label, widget, _property, _) in enumerate(self.field_widgets):
             if _property is None:
                 self.mapper.addMapping(widget, i)
             else:

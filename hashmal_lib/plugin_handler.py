@@ -378,8 +378,8 @@ class PluginHandler(QWidget):
 
         def on_text_changed():
             txt = str(getattr(widget, getter)())
-            if txt.startswith('$'):
-                var_value = self.get_plugin('Variables').ui.get_key(txt[1:])
+            if txt.startswith('$') and txt != txt.rstrip():
+                var_value = self.get_plugin('Variables').ui.get_key(txt[1:].rstrip())
                 if var_value:
                     # Substitute variable value.
                     getattr(widget, setter)(var_value)

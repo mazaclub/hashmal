@@ -142,7 +142,7 @@ class StackEval(BaseDock):
 
         # Spending transaction
         self.tx_edit = QPlainTextEdit()
-        self.tx_edit.setWhatsThis('Enter a serialized transaction here. If you have a raw transaction stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically.')
+        self.tx_edit.setWhatsThis('Enter a serialized transaction here. If you have a raw transaction stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically after pressing the space key.')
         self.tx_edit.setFont(monospace_font)
         self.tx_edit.textChanged.connect(self.set_tx)
         self.handler.substitute_variables(self.tx_edit)

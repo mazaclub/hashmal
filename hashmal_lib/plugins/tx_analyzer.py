@@ -122,7 +122,7 @@ class TxAnalyzer(BaseDock):
 
     def create_layout(self):
         self.raw_tx_edit = QPlainTextEdit()
-        self.raw_tx_edit.setWhatsThis('Enter a serialized transaction here. If you have a raw transaction stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically.')
+        self.raw_tx_edit.setWhatsThis('Enter a serialized transaction here. If you have a raw transaction stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically after pressing the space key.')
         self.raw_tx_edit.setTabChangesFocus(True)
         self.raw_tx_edit.setFont(monospace_font)
         self.raw_tx_edit.setContextMenuPolicy(Qt.CustomContextMenu)

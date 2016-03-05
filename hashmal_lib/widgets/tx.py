@@ -603,6 +603,7 @@ class TxProperties(QWidget):
 
         # Transaction fee. Hidden by default.
         self.fee_edit = OutputAmountEdit()
+        self.fee_edit.setReadOnly(True)
         fee_layout = HBox(QLabel('Fee:'), self.fee_edit)
         fee_layout.setContentsMargins(0, 0, 0, 0)
         self.fee = QWidget()

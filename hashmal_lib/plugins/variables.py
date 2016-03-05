@@ -206,8 +206,6 @@ class Variables(BaseDock):
         self.filters = variable_types.keys()
 
     def create_layout(self):
-        form = QFormLayout()
-
         self.model = VarsModel(self.data)
         self.proxy_model = VarsProxyModel()
         self.proxy_model.setSourceModel(self.model)
@@ -228,8 +226,9 @@ class Variables(BaseDock):
         self.view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.view.setAlternatingRowColors(True)
 
-        form.addRow(self.create_filters_box())
-        form.addRow(self.view)
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.create_filters_box())
+        vbox.addWidget(self.view, stretch=1)
 
         # Controls for adding/removing variables
 
@@ -257,9 +256,11 @@ class Variables(BaseDock):
         self.save_button.setToolTip('Save variables to config file')
         self.save_button.setWhatsThis('This button will save your stored variables in the Hashmal config file.')
 
+        form = QFormLayout()
         form.addRow('Add:', add_var_hbox)
         form.addRow(floated_buttons([self.auto_save_check, self.save_button]))
-        return form
+        vbox.addLayout(form)
+        return vbox
 
     def create_filters_box(self):
         form = QFormLayout()

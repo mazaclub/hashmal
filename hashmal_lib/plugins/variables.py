@@ -3,7 +3,7 @@ from collections import OrderedDict, namedtuple
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from base import BaseDock, Plugin, augmenter
+from base import BaseDock, Plugin, augmenter, Category
 from item_types import ItemAction, item_types
 from hashmal_lib.gui_utils import floated_buttons, HBox
 from hashmal_lib.core.utils import is_hex
@@ -175,6 +175,7 @@ class Variables(BaseDock):
 
     tool_name = 'Variables'
     description = 'Variables records data for later access.'
+    category = Category.Core
 
     dataChanged = QtCore.pyqtSignal()
     def __init__(self, handler):

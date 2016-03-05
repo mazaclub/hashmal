@@ -5,7 +5,7 @@ import datetime
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from hashmal_lib.plugins import BaseDock, Plugin
+from hashmal_lib.plugins import BaseDock, Plugin, Category
 
 def make_plugin():
     return Plugin(Log)
@@ -138,6 +138,7 @@ class LogModel(QAbstractTableModel):
 class Log(BaseDock):
     tool_name = 'Log'
     description = 'Contains a log of recent events.'
+    category = Category.Core
 
     def create_layout(self):
         self.model = LogModel(self.config)

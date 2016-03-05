@@ -625,6 +625,7 @@ class TxProperties(QWidget):
     def clear(self):
         self.tx_size_edit.clear()
         self.fee.setVisible(False)
+        self.fee_edit.setProperty('hasError', False)
         self.is_final.setChecked(False)
         self.is_coinbase.setChecked(False)
 
@@ -639,6 +640,7 @@ class TxProperties(QWidget):
     def set_fee(self, fee):
         """Set the tx fee and show the fee QLineEdit."""
         self.fee_edit.set_satoshis(fee)
+        self.fee_edit.setProperty('hasError', True if fee < 0 else False)
         self.fee.setVisible(True)
 
 class TxWidget(QWidget):

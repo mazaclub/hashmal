@@ -211,7 +211,7 @@ class TxBuilder(BaseDock):
         self.raw_tx.setWhatsThis('The transaction you build is displayed here.')
         self.raw_tx.setReadOnly(True)
 
-        self.tx_widget = TxWidget()
+        self.tx_widget = TxWidget(plugin_handler=self.handler)
         if self.handler.get_plugin('Chainparams'):
             self.tx_widget.inputs_tree.model.set_plugin_handler(self.handler)
             self.tx_widget.outputs_tree.model.set_plugin_handler(self.handler)

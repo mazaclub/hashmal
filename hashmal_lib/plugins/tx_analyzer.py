@@ -151,7 +151,7 @@ class TxAnalyzer(BaseDock):
         return vbox
 
     def create_deserialize_tab(self):
-        self.tx_widget = TxWidget()
+        self.tx_widget = TxWidget(plugin_handler=self.handler)
         self.tx_widget.inputs_tree.view.customContextMenuRequested.disconnect(self.tx_widget.inputs_tree.customContextMenu)
         self.tx_widget.inputs_tree.view.customContextMenuRequested.connect(self.inputs_context_menu)
         self.tx_widget.outputs_tree.view.customContextMenuRequested.disconnect(self.tx_widget.outputs_tree.customContextMenu)

@@ -10,7 +10,7 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 from PyQt4.QtCore import *
 
-from hashmal_lib.gui_utils import HBox, floated_buttons, RawRole, ReadOnlyCheckBox, field_info, Amount
+from hashmal_lib.gui_utils import HBox, floated_buttons, RawRole, ReadOnlyCheckBox, field_info, Amount, OutputAmountEdit
 from hashmal_lib.core import chainparams
 from hashmal_lib.core.script import Script
 from hashmal_lib.core.transaction import Transaction, OutPoint, TxIn, TxOut
@@ -301,6 +301,14 @@ class OutputsModel(QAbstractTableModel):
             return TxOut().fields
         return self.vout[0].fields
 
+    def value_field(self):
+        """Get the field that contains output value."""
+        fields = self.output_fields()
+        for field in fields:
+            info = field_info(field)
+            if info.fmt == 'amount':
+                return info.attr
+
     def rowCount(self, parent=QModelIndex()):
         return len(self.vout)
 
@@ -381,6 +389,11 @@ class OutputsModel(QAbstractTableModel):
 
     def get_outputs(self):
         return list(self.vout)
+
+    def get_total_value(self):
+        attr = self.value_field()
+        total = sum(getattr(output, attr) for output in self.vout)
+        return total
 
     def removeRows(self, row, count, parent=QModelIndex()):
         self.beginRemoveRows(QModelIndex(), row, row + count - 1)
@@ -587,16 +600,27 @@ class TxProperties(QWidget):
         self.tx_size.setLayout(tx_size)
         self.tx_size.setToolTip('Size (in bytes) of the serialized tx')
 
+        # Transaction fee. Hidden by default.
+        self.fee_edit = OutputAmountEdit()
+        fee_layout = HBox(QLabel('Fee:'), self.fee_edit)
+        fee_layout.setContentsMargins(0, 0, 0, 0)
+        self.fee = QWidget()
+        self.fee.setLayout(fee_layout)
+        self.fee.setToolTip('Transaction fee')
+        self.fee.setWhatsThis('The transaction fee is the value paid to miners for mining the transaction.')
+        self.fee.setVisible(False)
+
         self.is_final = ReadOnlyCheckBox('Is Final')
         self.is_final.setToolTip('True if all inputs have a Sequence of 0xffffffff')
         self.is_coinbase = ReadOnlyCheckBox('Is Coinbase')
         self.is_coinbase.setToolTip('True if the tx generates new coins via mining')
-        hbox = floated_buttons([self.tx_size, self.is_final, self.is_coinbase], left=True)
+        hbox = floated_buttons([self.tx_size, self.fee, self.is_final, self.is_coinbase], left=True)
         hbox.setContentsMargins(16, 0, 0, 0)
         self.setLayout(hbox)
 
     def clear(self):
         self.tx_size_edit.clear()
+        self.fee.setVisible(False)
         self.is_final.setChecked(False)
         self.is_coinbase.setChecked(False)
 
@@ -608,9 +632,18 @@ class TxProperties(QWidget):
             self.is_final.setChecked(False)
         self.is_coinbase.setChecked(tx.is_coinbase())
 
+    def set_fee(self, fee):
+        """Set the tx fee and show the fee QLineEdit."""
+        self.fee_edit.set_satoshis(fee)
+        self.fee.setVisible(True)
+
 class TxWidget(QWidget):
-    """Displays the deserialized fields of a transaction."""
-    def __init__(self, parent=None):
+    """Displays the deserialized fields of a transaction.
+
+    A PluginHandler instance can be provided so that blockchain
+    data can be downloaded.
+    """
+    def __init__(self, plugin_handler=None, parent=None):
         super(TxWidget, self).__init__(parent)
         self.config = config.get_config()
         self.config.optionChanged.connect(self.on_option_changed)
@@ -652,6 +685,11 @@ class TxWidget(QWidget):
 
         self.setLayout(form)
 
+        self.prevout_values = OrderedDict()
+        self.max_prevout_values = 5000
+        self.set_plugin_handler(plugin_handler)
+
+
     def set_tx(self, tx):
         self.version_edit.setText(str(tx.nVersion))
 
@@ -672,6 +710,7 @@ class TxWidget(QWidget):
         self.tx_properties.set_tx(tx)
 
         self.tx_id.setText(bitcoin.core.b2lx(tx.GetHash()))
+        self.download_metadata()
 
     def clear(self):
         self.tx_id.clear()
@@ -721,4 +760,62 @@ class TxWidget(QWidget):
                 w.hide()
                 l.hide()
 
+    def set_plugin_handler(self, plugin_handler):
+        """Set the PluginHandler instance so metadata can be downloaded."""
+        self.plugin_handler = plugin_handler
+        self.download_metadata()
 
+    def download_metadata(self):
+        """Download transaction metadata."""
+        if not self.plugin_handler:
+            return
+        already_have_prevouts = True
+
+        inputs = self.inputs_tree.model.get_inputs()
+        if not inputs:
+            return
+        for txin in inputs:
+            outpoint = self.inputs_tree.model.get_outpoint(txin)
+            if self.prevout_values.get(str(outpoint)) is None:
+                already_have_prevouts = False
+            tx_hash = str(outpoint).split(':')[0]
+
+            callback = lambda raw, outpoint=outpoint: self._download_rawtx_callback(raw, outpoint)
+            self.plugin_handler.download_blockchain_data('raw_transaction', tx_hash, callback=callback)
+
+        if already_have_prevouts:
+            self.show_tx_fee()
+
+    def _download_rawtx_callback(self, raw, outpoint):
+        if not raw:
+            return
+        try:
+            tx = Transaction.deserialize(x(raw))
+        except Exception:
+            return
+        output_idx = int(str(outpoint).split(':')[1])
+        value_attr = self.outputs_tree.model.value_field()
+        output_value = getattr(tx.vout[output_idx], value_attr)
+
+        self.prevout_values[str(outpoint)] = output_value
+        while len(self.prevout_values) > self.max_prevout_values:
+            self.prevout_values.popitem(last=False)
+        self.show_tx_fee()
+
+    def show_tx_fee(self):
+        """Calculate and show transaction fee.
+
+        Will do nothing if not all utxo values are downloaded.
+        """
+        total_input_value = 0
+        total_output_value = self.outputs_tree.model.get_total_value()
+
+        inputs = self.inputs_tree.model.get_inputs()
+        for txin in inputs:
+            outpoint = self.inputs_tree.model.get_outpoint(txin)
+            value = self.prevout_values.get(str(outpoint))
+            if value is None:
+                return
+            total_input_value += value
+        fee = total_input_value - total_output_value
+        self.tx_properties.set_fee(fee)

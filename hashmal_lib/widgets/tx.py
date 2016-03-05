@@ -599,6 +599,7 @@ class TxProperties(QWidget):
         self.tx_size = QWidget()
         self.tx_size.setLayout(tx_size)
         self.tx_size.setToolTip('Size (in bytes) of the serialized tx')
+        self.tx_size.setWhatsThis('The number of bytes that the serialized transaction occupies is displayed here.')
 
         # Transaction fee. Hidden by default.
         self.fee_edit = OutputAmountEdit()
@@ -607,13 +608,16 @@ class TxProperties(QWidget):
         self.fee = QWidget()
         self.fee.setLayout(fee_layout)
         self.fee.setToolTip('Transaction fee')
-        self.fee.setWhatsThis('The transaction fee is the value paid to miners for mining the transaction.')
+        self.fee.setWhatsThis('\n\n'.join(['The value that is paid to miners for mining the transaction is displayed here.',
+            'Transaction fee is equal to the total value of spendable coins minus the total value of outputs.']))
         self.fee.setVisible(False)
 
         self.is_final = ReadOnlyCheckBox('Is Final')
         self.is_final.setToolTip('True if all inputs have a Sequence of 0xffffffff')
+        self.is_final.setWhatsThis('This box is checked if all the transaction\'s inputs are final.')
         self.is_coinbase = ReadOnlyCheckBox('Is Coinbase')
         self.is_coinbase.setToolTip('True if the tx generates new coins via mining')
+        self.is_coinbase.setWhatsThis('This box is checked if the transaction generates new coins.')
         hbox = floated_buttons([self.tx_size, self.fee, self.is_final, self.is_coinbase], left=True)
         hbox.setContentsMargins(16, 0, 0, 0)
         self.setLayout(hbox)

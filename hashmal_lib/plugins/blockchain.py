@@ -104,6 +104,12 @@ class Blockchain(BaseDock):
         self.augment('block_explorers', {'known_explorers': self.known_explorers}, callback=self.on_explorers_augmented)
         self.data_group.button(0).setChecked(True)
 
+    def get_cache_data(self, key, default=None):
+        return self.handler.gui.download_controller.get_cache_data(key, default)
+
+    def add_cache_data(self, key, value):
+        return self.handler.gui.download_controller.add_cache_data(key, value)
+
     def init_data(self):
         self.known_explorers = OrderedDict(known_explorers)
         chain = self.option('chain', 'Bitcoin')
@@ -114,8 +120,6 @@ class Blockchain(BaseDock):
             explorer = self.known_explorers['Bitcoin'][0]
         self.chain = chain
         self.explorer = explorer
-        # Cache of recently downloaded txs
-        self.recent_data = OrderedDict()
 
     def create_layout(self):
         """Two tabs:
@@ -128,7 +132,6 @@ class Blockchain(BaseDock):
         tabs = QTabWidget()
         tabs.addTab(self.create_download_tab(), 'Download')
         tabs.addTab(self.create_explorer_tab(), 'Block Explorer')
-        tabs.addTab(self.create_options_tab(), 'Settings')
         self.setFocusProxy(tabs)
 
         vbox.addWidget(tabs)
@@ -170,29 +173,6 @@ class Blockchain(BaseDock):
         w = QWidget()
         w.setLayout(form)
         return w
-
-    def create_options_tab(self):
-        form = QFormLayout()
-
-        cache_size = int(self.option('cache_size', 25))
-
-        cache_size_box = QSpinBox()
-        cache_size_box.setWhatsThis('Use this to change the number of recent downloaded data items that are kept in memory for quicker access to them.')
-        cache_size_box.setRange(0, 100)
-        cache_size_box.setValue(cache_size)
-        cache_size_box.setToolTip('Number of recent raw transactions/blocks to keep in memory')
-
-        def change_cache_size():
-            new_size = cache_size_box.value()
-            self.set_option('cache_size', new_size)
-        cache_size_box.valueChanged.connect(change_cache_size)
-
-        form.addRow('Transaction cache size:', cache_size_box)
-
-        w = QWidget()
-        w.setLayout(form)
-        return w
-
 
     def create_download_tab(self):
         form = QFormLayout()
@@ -245,17 +225,12 @@ class Blockchain(BaseDock):
 
         menu.exec_(self.raw_edit.viewport().mapToGlobal(position))
 
-    def update_cache(self, identifier, raw):
-        self.recent_data[identifier] = raw
-        while len(self.recent_data.keys()) > int(self.option('cache_size', 25)):
-            self.recent_data.popitem(False)
-
     def do_download(self):
         self.download_button.setEnabled(False)
         identifier = str(self.id_edit.text())
         data_type = known_data_types[str(self.data_group.checkedButton().text())]
 
-        cached_data = self.recent_data.get(identifier)
+        cached_data = self.get_cache_data(identifier)
         if cached_data:
             self.set_result(data_type, identifier, cached_data, '')
             return
@@ -275,7 +250,7 @@ class Blockchain(BaseDock):
             self.raw_edit.clear()
         else:
             self.raw_edit.setText(raw)
-            self.update_cache(identifier, raw)
+            self.add_cache_data(identifier, raw)
             # Get human-friendly name for data type.
             word = 'data'
             for k, v in known_data_types.items():
@@ -293,35 +268,34 @@ class Blockchain(BaseDock):
         """Signifies that this plugin is a data retriever."""
         if callback:
             # Callback with the data as an argument.
-            cb = lambda datatype, ident, raw, err: callback(str(raw))
+            def cb(datatype, ident, raw, err):
+                raw, err = str(raw), str(err)
+                if raw and not err:
+                    self.add_cache_data(ident, raw)
+                callback(raw)
+
             downloader = BlockchainDownloader(self.explorer, data_type, identifier)
             self.download_async(downloader, cb)
         elif data_type == 'raw_transaction':
-            return self.download_raw_tx(identifier)
+            rawtx = self.download_raw_tx(identifier)
+            if rawtx:
+                self.add_cache_data(identifier, rawtx)
+            return rawtx
         elif data_type == 'raw_header':
-            return self.download_block_header(identifier)
+            rawheader = self.download_block_header(identifier)
+            if rawheader:
+                self.add_cache_data(identifier, rawheader)
+            return rawheader
         else:
             raise Exception('Unsupported data type "%s"' % data_type)
 
     def download_raw_tx(self, txid):
         """This is for use by other widgets."""
-        if self.recent_data.get(txid):
-            return self.recent_data.get(txid)
-
-        rawtx = self.explorer.get_data('raw_tx', txid)
-        if rawtx:
-            self.update_cache(txid, rawtx)
-        return rawtx
+        return self.explorer.get_data('raw_tx', txid)
 
     def download_block_header(self, blockhash):
         """This is for use by other widgets."""
-        if self.recent_data.get(blockhash):
-            return self.recent_data.get(blockhash)
-
-        rawheader = self.explorer.get_data('raw_header', blockhash)
-        if rawheader:
-            self.update_cache(blockhash, rawheader)
-        return rawheader
+        return self.explorer.get_data('raw_header', blockhash)
 
     def on_explorer_combo_changed(self, idx):
         new_explorer = self.known_explorers[self.chain][idx]

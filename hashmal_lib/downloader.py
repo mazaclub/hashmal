@@ -26,6 +26,8 @@ class DownloadController(QObject):
         self.max_data_values = self.config.get_option('max_download_cache_items', 10000)
 
     def add_cache_data(self, key, value):
+        if self.get_cache_data(key) == value:
+            return
         self.data_cache[key] = value
         while len(self.data_cache) > self.max_data_values:
             self.data_cache.popitem(last=False)

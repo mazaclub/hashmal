@@ -152,6 +152,9 @@ class WalletRPC(BaseDock):
         super(WalletRPC, self).__init__(*args)
         self.augment('rpc_methods', None, callback=self.on_methods_augmented)
 
+    def add_cache_data(self, key, value):
+        return self.handler.gui.download_controller.add_cache_data(key, value)
+
     def set_profile(self, profile):
         self.profile = profile
         self.profile_model.set_profile(self.profile)
@@ -328,7 +331,11 @@ class WalletRPC(BaseDock):
 
         if callback:
             # Callback with the data as an argument.
-            cb = lambda methodname, res, error: callback(str(res))
+            def cb(methodname, res, error):
+                res, error = str(res), str(error)
+                if res and not error:
+                    self.add_cache_data(identifier, res)
+                callback(res)
             downloader = RPCDownloader(self.profile, method_name, params)
             return self.download_async(downloader, cb)
 

@@ -310,6 +310,11 @@ class PluginHandler(QWidget):
             identifier (str): Data identifier (e.g. transaction ID).
             callback (function): If supplied, download will be asynchronous.
         """
+        # Check if data is cached.
+        cached_data = self.gui.download_controller.get_cache_data(identifier)
+        if cached_data is not None:
+            return cached_data
+
         plugin_name = self.config.get_option('data_retriever', 'Blockchain')
         plugin = self.get_plugin(plugin_name)
         if not plugin or not hasattr(plugin.ui, 'retrieve_blockchain_data'):

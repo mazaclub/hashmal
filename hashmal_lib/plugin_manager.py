@@ -162,6 +162,8 @@ class PluginsProxyModel(QSortFilterProxyModel):
         super(PluginsProxyModel, self).__init__(parent)
         self.name_filter = QRegExp()
         self.hide_core_plugins = True
+        self.hide_gui_plugins = False
+        self.hide_nongui_plugins = False
 
     def set_name_filter(self, regexp):
         self.name_filter = regexp
@@ -171,11 +173,24 @@ class PluginsProxyModel(QSortFilterProxyModel):
         self.hide_core_plugins = do_hide
         self.invalidateFilter()
 
+    def set_hide_gui_plugins(self, do_hide):
+        self.hide_gui_plugins = do_hide
+        self.invalidateFilter()
+
+    def set_hide_nongui_plugins(self, do_hide):
+        self.hide_nongui_plugins = do_hide
+        self.invalidateFilter()
+
     def filterAcceptsRow(self, source_row, source_parent):
+        plugin = self.sourceModel().plugin_for_row(source_row)
+
         if self.hide_core_plugins:
-            plugin = self.sourceModel().plugin_for_row(source_row)
             if plugin.ui.category == Category.Core:
                 return False
+        if self.hide_gui_plugins and plugin.has_gui:
+            return False
+        if self.hide_nongui_plugins and not plugin.has_gui:
+            return False
         if self.name_filter:
             idx = self.sourceModel().index(source_row, 0, source_parent)
             name = str(self.sourceModel().data(idx).toString())
@@ -352,6 +367,76 @@ class PluginDetails(QWidget):
         self.plugin_is_enabled.setEnabled(not plugin.name in required_plugins)
         self.plugin_is_favorite.setEnabled(plugin.has_gui)
 
+class OptionsWidget(QWidget):
+    """Plugin view options."""
+    def __init__(self, plugin_manager, parent=None):
+        super(OptionsWidget, self).__init__(parent)
+        self.plugin_manager = plugin_manager
+        self.proxy_model = plugin_manager.proxy_model
+
+        # General
+
+        self.hide_core_plugins = QCheckBox('Hide Core plugins')
+        self.hide_core_plugins.setToolTip('A "core plugin" refers to required Hashmal functionality implemented as a plugin')
+        self.hide_core_plugins.setChecked(self.option('hide_core_plugins', True))
+        self.hide_core_plugins.stateChanged.connect(self.change_hide_core_plugins)
+
+        general_vbox = QVBoxLayout()
+        general_vbox.addWidget(self.hide_core_plugins)
+        general_group = self.make_section('General', general_vbox)
+
+        # Graphical plugins
+
+        self.hide_gui_plugins = QCheckBox('Hide graphical plugins')
+        self.hide_gui_plugins.setToolTip('Hide plugins that have graphical interfaces')
+        self.hide_gui_plugins.setChecked(self.option('hide_gui_plugins', False))
+        self.hide_gui_plugins.stateChanged.connect(self.change_hide_gui_plugins)
+
+        self.hide_nongui_plugins = QCheckBox('Hide non-graphical plugins')
+        self.hide_nongui_plugins.setToolTip('Hide plugins that do not have graphical interfaces')
+        self.hide_nongui_plugins.setChecked(self.option('hide_nongui_plugins', False))
+        self.hide_nongui_plugins.stateChanged.connect(self.change_hide_nongui_plugins)
+
+        gui_vbox = QVBoxLayout()
+        gui_vbox.addWidget(self.hide_gui_plugins)
+        gui_vbox.addWidget(self.hide_nongui_plugins)
+        gui_group = self.make_section('Graphical Plugins', gui_vbox)
+
+
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.addWidget(general_group)
+        vbox.addWidget(gui_group)
+        vbox.addStretch()
+        self.setLayout(vbox)
+
+    def make_section(self, title, layout):
+        group = QGroupBox(title)
+        group.setFlat(True)
+        group.setLayout(layout)
+        return group
+
+    def option(self, key, default=None):
+        return self.plugin_manager.option(key, default)
+
+    def set_option(self, key, value):
+        return self.plugin_manager.set_option(key, value)
+
+    def change_hide_core_plugins(self, state):
+        do_hide = True if state == Qt.Checked else False
+        self.set_option('hide_core_plugins', do_hide)
+        self.proxy_model.set_hide_core_plugins(do_hide)
+
+    def change_hide_gui_plugins(self):
+        do_hide = self.hide_gui_plugins.isChecked()
+        self.set_option('hide_gui_plugins', do_hide)
+        self.proxy_model.set_hide_gui_plugins(do_hide)
+
+    def change_hide_nongui_plugins(self):
+        do_hide = self.hide_nongui_plugins.isChecked()
+        self.set_option('hide_nongui_plugins', do_hide)
+        self.proxy_model.set_hide_nongui_plugins(do_hide)
+
 class PluginManager(QDialog):
     """GUI for the plugin system."""
     def __init__(self, main_window):
@@ -363,7 +448,7 @@ class PluginManager(QDialog):
         self.view.setFocus()
 
     def sizeHint(self):
-        return QSize(500, 400)
+        return QSize(750, 550)
 
     def options(self):
         return self.config.get_option('Plugin Manager', {})
@@ -408,23 +493,6 @@ class PluginManager(QDialog):
         self.proxy_model.setSourceModel(self.model)
         self.proxy_model.set_hide_core_plugins(self.option('hide_core_plugins', True))
 
-        # Options
-        options_group = QGroupBox('Options')
-        options_vbox = QVBoxLayout()
-
-        self.hide_core_plugins = QCheckBox('Hide Core plugins')
-        self.hide_core_plugins.setToolTip('A "core plugin" refers to required Hashmal functionality implemented as a plugin')
-        self.hide_core_plugins.setChecked(self.option('hide_core_plugins', True))
-        def set_hide_core_plugins():
-            do_hide = self.hide_core_plugins.isChecked()
-            self.set_option('hide_core_plugins', do_hide)
-            self.proxy_model.set_hide_core_plugins(do_hide)
-        self.hide_core_plugins.stateChanged.connect(set_hide_core_plugins)
-
-        options_vbox.addWidget(self.hide_core_plugins)
-        options_group.setLayout(options_vbox)
-
-
         self.view = QTableView()
         self.view.setModel(self.proxy_model)
         self.view.setSortingEnabled(True)
@@ -445,6 +513,7 @@ class PluginManager(QDialog):
         self.view.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         self.view.sortByColumn(0, Qt.AscendingOrder)
 
+        self.options_widget = OptionsWidget(self)
         self.plugin_details = PluginDetails(self)
 
         filter_edit = QLineEdit()
@@ -464,13 +533,17 @@ class PluginManager(QDialog):
         vbox = QVBoxLayout()
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(is_local)
-        vbox.addWidget(options_group)
         vbox.addLayout(filter_box)
         vbox.addWidget(self.view, stretch=1)
         vbox.addWidget(Separator())
         vbox.addWidget(self.plugin_details)
+
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0,0,0,0)
+        hbox.addWidget(self.options_widget)
+        hbox.addLayout(vbox, stretch=1)
         w = QWidget()
-        w.setLayout(vbox)
+        w.setLayout(hbox)
         return w
 
     def create_favorites_page(self):

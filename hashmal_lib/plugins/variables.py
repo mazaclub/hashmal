@@ -272,6 +272,7 @@ class Variables(BaseDock):
         def filter_by_key():
             s = str(self.filter_key.text())
             self.proxy_model.set_key_filter(s)
+            self.view.sortByColumn(self.proxy_model.sortColumn(), self.proxy_model.sortOrder())
         self.filter_key.textChanged.connect(filter_by_key)
 
         # Filtering by data category.
@@ -281,6 +282,7 @@ class Variables(BaseDock):
         def filter_by_category():
             s = str(self.filter_category.currentText())
             self.proxy_model.set_category_filter(s)
+            self.view.sortByColumn(self.proxy_model.sortColumn(), self.proxy_model.sortOrder())
         self.filter_category.currentIndexChanged.connect(filter_by_category)
 
         form.addRow('Key:', self.filter_key)

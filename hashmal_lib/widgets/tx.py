@@ -42,7 +42,7 @@ class InputsModel(QAbstractTableModel):
         if self.vin:
             ti = self.vin[0]
 
-        return self.get_outpoint(ti).fields
+        return OutPoint.from_outpoint(self.get_outpoint(ti)).fields
 
     def input_fields(self, with_prevout=True):
         """Get the fields of TxIns.

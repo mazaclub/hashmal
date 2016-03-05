@@ -291,7 +291,7 @@ class TxBuilder(BaseDock):
 
     def on_option_changed(self, key):
         if key == 'chainparams':
-            self.tx = Transaction()
+            self.tx = Transaction() if not self.tx else Transaction.from_tx(self.tx)
             self.inputs_tree.model.set_tx(self.tx)
             self.outputs_tree.model.set_tx(self.tx)
             self.adjust_tx_fields()

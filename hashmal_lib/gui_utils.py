@@ -236,15 +236,13 @@ class Amount(object):
     """Bitcoin output amount.
 
     Internally, the amount is stored as satoshis.
-    Widgets that use instances of this class should connect
-    to the singleton config.Config's optionChanged signal,
-    and account for changes to 'amount_format'.
     """
     def __init__(self, satoshis=0):
         super(Amount, self).__init__()
         self.satoshis = satoshis
         self.config = config.get_config()
         self.fmt = self.config.get_option('amount_format', 'satoshis')
+        self.config.optionChanged.connect(self.on_option_changed)
 
     @staticmethod
     def known_formats():
@@ -260,6 +258,10 @@ class Amount(object):
         else:
             value = str(self.satoshis)
         return value
+
+    def on_option_changed(self, key):
+        if key == 'amount_format':
+            self.fmt = self.config.get_option('amount_format', 'satoshis')
 
 class OutputAmountEdit(QLineEdit):
     def __init__(self, parent=None):

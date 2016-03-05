@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
@@ -16,6 +18,21 @@ class Downloader(QObject):
 
 class DownloadController(QObject):
     """Manages creation of QThreads for downloading."""
+    def __init__(self, config, parent=None):
+        super(DownloadController, self).__init__(parent)
+        self.config = config
+        # Cache for downloaded data.
+        self.data_cache = OrderedDict()
+        self.max_data_values = self.config.get_option('max_download_cache_items', 10000)
+
+    def add_cache_data(self, key, value):
+        self.data_cache[key] = value
+        while len(self.data_cache) > self.max_data_values:
+            self.data_cache.popitem(last=False)
+
+    def get_cache_data(self, key, default=None):
+        return self.data_cache.get(key, default)
+
     def do_download(self, downloader, callback):
         """Execute a download in a separate QThread."""
         self.downloader = downloader

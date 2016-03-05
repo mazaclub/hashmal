@@ -685,10 +685,7 @@ class TxWidget(QWidget):
 
         self.setLayout(form)
 
-        self.prevout_values = OrderedDict()
-        self.max_prevout_values = 5000
         self.set_plugin_handler(plugin_handler)
-
 
     def set_tx(self, tx):
         self.version_edit.setText(str(tx.nVersion))
@@ -763,6 +760,7 @@ class TxWidget(QWidget):
     def set_plugin_handler(self, plugin_handler):
         """Set the PluginHandler instance so metadata can be downloaded."""
         self.plugin_handler = plugin_handler
+        self.download_controller = plugin_handler.gui.download_controller
         self.download_metadata()
 
     def download_metadata(self):
@@ -776,7 +774,7 @@ class TxWidget(QWidget):
             return
         for txin in inputs:
             outpoint = self.inputs_tree.model.get_outpoint(txin)
-            if self.prevout_values.get(str(outpoint)) is None:
+            if self.download_controller.get_cache_data(str(outpoint)) is None:
                 already_have_prevouts = False
             tx_hash = str(outpoint).split(':')[0]
 
@@ -797,9 +795,7 @@ class TxWidget(QWidget):
         value_attr = self.outputs_tree.model.value_field()
         output_value = getattr(tx.vout[output_idx], value_attr)
 
-        self.prevout_values[str(outpoint)] = output_value
-        while len(self.prevout_values) > self.max_prevout_values:
-            self.prevout_values.popitem(last=False)
+        self.download_controller.add_cache_data(str(outpoint), output_value)
         self.show_tx_fee()
 
     def show_tx_fee(self):
@@ -813,7 +809,7 @@ class TxWidget(QWidget):
         inputs = self.inputs_tree.model.get_inputs()
         for txin in inputs:
             outpoint = self.inputs_tree.model.get_outpoint(txin)
-            value = self.prevout_values.get(str(outpoint))
+            value = self.download_controller.get_cache_data(str(outpoint))
             if value is None:
                 return
             total_input_value += value

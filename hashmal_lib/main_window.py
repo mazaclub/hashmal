@@ -54,7 +54,7 @@ class HashmalMain(QMainWindow):
             chainparams.set_to_preset('Bitcoin')
             needs_params_change = True
 
-        self.download_controller = DownloadController()
+        self.download_controller = DownloadController(self.config)
 
         self.setDockNestingEnabled(True)
         # Plugin Handler loads plugins and handles their dock widgets.

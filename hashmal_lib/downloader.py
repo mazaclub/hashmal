@@ -16,11 +16,21 @@ class Downloader(QObject):
         """
         self.finished.emit()
 
+class DownloadTask(QRunnable):
+    def __init__(self, downloader):
+        super(DownloadTask, self).__init__()
+        self.downloader = downloader
+
+    def run(self):
+        self.downloader.download()
+
 class DownloadController(QObject):
     """Manages creation of QThreads for downloading."""
     def __init__(self, config, parent=None):
         super(DownloadController, self).__init__(parent)
         self.config = config
+        self.thread_pool = QThreadPool(self)
+        self.thread_pool.setMaxThreadCount(5)
         # Cache for downloaded data.
         self.data_cache = OrderedDict()
         self.max_data_values = self.config.get_option('max_download_cache_items', 10000)
@@ -37,15 +47,7 @@ class DownloadController(QObject):
 
     def do_download(self, downloader, callback):
         """Execute a download in a separate QThread."""
-        self.downloader = downloader
-        self.downloader_thread = thread = QThread()
-        downloader.moveToThread(thread)
-        thread.started.connect(downloader.download)
-
         downloader.finished.connect(callback)
-        downloader.finished.connect(thread.quit)
         downloader.finished.connect(downloader.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-
-        thread.start()
-
+        task = DownloadTask(downloader)
+        self.thread_pool.start(task)

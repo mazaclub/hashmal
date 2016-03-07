@@ -279,7 +279,7 @@ class ScriptGenerator(BaseDock):
 
     def __init__(self, handler):
         super(ScriptGenerator, self).__init__(handler)
-        self.augment('script_templates', {'known_templates': known_templates}, callback=self.on_templates_augmented)
+        self.augment('script_templates', None, callback=self.on_templates_augmented)
         self.template_combo.currentIndexChanged.emit(0)
         self.widget().setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 
@@ -370,6 +370,15 @@ class ScriptGenerator(BaseDock):
             script_type = str(self.template_combo.currentText())
             self.info('Generated %s script.' % script_type)
 
-    def on_templates_augmented(self, arg):
+    def on_templates_augmented(self, data):
+        global known_templates
+        if isinstance(data, ScriptTemplate):
+            known_templates.append(data)
+        else:
+            try:
+                known_templates.extend(data)
+            except Exception:
+                return
+
         self.template_combo.clear()
         self.template_combo.addItems([i.name for i in known_templates])

@@ -101,7 +101,7 @@ class Blockchain(BaseDock):
 
     def __init__(self, handler):
         super(Blockchain, self).__init__(handler)
-        self.augment('block_explorers', {'known_explorers': self.known_explorers}, callback=self.on_explorers_augmented)
+        self.augment('block_explorers', None, callback=self.on_explorers_augmented)
         self.data_group.button(0).setChecked(True)
 
     def get_cache_data(self, key, default=None):
@@ -324,8 +324,16 @@ class Blockchain(BaseDock):
         self.explorer_combo.setCurrentIndex(index)
         self.explorer_combo.currentIndexChanged.emit(index)
 
-    def on_explorers_augmented(self, arg):
+    def on_explorers_augmented(self, data):
         """Update combo boxes after augmentation."""
+        try:
+            for chain_name, explorers_list in data.items():
+                if not self.known_explorers.get(chain_name):
+                    self.known_explorers[chain_name] = []
+                self.known_explorers[chain_name].extend(explorers_list)
+        except Exception:
+            return
+
         chain = self.option('chain', 'Bitcoin')
         explorer_name = self.option('explorer', 'insight')
 

@@ -26,11 +26,23 @@ Attributes:
         Variable types can be any of the following:
             - 'address': Base58 address.
             - 'pubkey': Public key.
+            - 'signature': Signature.
+            - 'text': Text.
 
 """
 
+class VariableError(ValueError):
+    """Raised when a variable has an invalid value."""
+    pass
+
 def format_variable_value(value, var_type):
-    """Returns a 2-tuple of (is_valid, formatted_value)."""
+    """Returns the value formatted for use in a script.
+
+    Raises an exception if the value is invalid.
+    """
+    if not value:
+        raise VariableError('Variable has no value.')
+
     if var_type == 'address':
         try:
             h160 = CBase58Data(value).to_bytes()
@@ -39,50 +51,52 @@ def format_variable_value(value, var_type):
             if is_hex(value) and len(format_hex_string(value, with_prefix=False)) == 40:
                 h160 = format_hex_string(value, with_prefix=False).decode('hex')
             else:
-                return False, 'Error: Could not decode address.'
-        return True, '0x' + h160.encode('hex')
+                raise VariableError('Could not decode address or RIPEMD-160 hash.')
+        return '0x' + h160.encode('hex')
     elif var_type == 'pubkey':
         if not is_hex(value):
-            return False, 'Error: Pubkey must be hex.'
+            raise VariableError('Pubkey must be hex.')
         key_hex = format_hex_string(value, with_prefix=False)
         pub = CPubKey(key_hex.decode('hex'))
         if not pub.is_fullyvalid:
-            return False, 'Error: Pubkey is invalid.'
-        return True, '0x' + key_hex
+            raise VariableError('Pubkey is invalid.')
+        return '0x' + key_hex
     elif var_type == 'text':
         try:
-            return True, '0x' + value.encode('hex')
+            return '0x' + value.encode('hex')
         except Exception as e:
-            return False, 'Error: ' + str(e)
+            raise VariableError(str(e))
     elif var_type == 'signature':
         if not is_hex(value):
-            return False, 'Error: Signature must be hex.'
+            raise VariableError('Signature must be hex.')
         # We remain algorithm-agnostic by not checking the length.
-        return True, format_hex_string(value, with_prefix=True)
+        return format_hex_string(value, with_prefix=True)
     elif var_type == 'script':
         if not is_hex(value):
             try:
                 scr = Script.from_human(value)
-                return True, format_hex_string(scr.get_hex(), with_prefix=True)
+                return format_hex_string(scr.get_hex(), with_prefix=True)
             except Exception:
-                return False, 'Error: Cannot parse human-readable script.'
+                raise VariableError('Cannot parse human-readable script.')
         try:
             scr = Script(format_hex_string(value, with_prefix=False).decode('hex'))
-            return True, format_hex_string(value, with_prefix=True)
+            return format_hex_string(value, with_prefix=True)
         except Exception:
-            return False, 'Error: Cannot parse script.'
+            raise VariableError('Cannot parse script.')
 
-    return True, value
+    return value
 
 def template_to_script(template, variables):
     text = template.text
     _vars = {}
     for k, v in variables.items():
         var_type = template.variables[k]
-        is_valid, formatted_value = format_variable_value(v, var_type)
-        if not is_valid:
-            return formatted_value
-        _vars[k] = formatted_value
+        try:
+            formatted_value = format_variable_value(v, var_type)
+            _vars[k] = formatted_value
+        except VariableError as e:
+            error = '<' + k + '>: ' + str(e)
+            raise Exception(error)
 
     # Replace the <variable> occurrences with their values.
     for k, v in _vars.items():
@@ -103,8 +117,9 @@ def is_template_script(script, template):
             # Check variable value.
             if txt.startswith('<') and txt.endswith('>'):
                 var_type = template.variables[txt[1:-1]]
-                is_valid, _ = format_variable_value(s, var_type)
-                if not is_valid:
+                try:
+                    _ = format_variable_value(s, var_type)
+                except Exception:
                     return False
                 else:
                     used_variables.append(txt[1:-1])
@@ -323,9 +338,11 @@ class ScriptGenerator(BaseDock):
         self.template_widget.set_template(template)
         self.script_output.setPlainText(template.text)
         # If the new template works with the existing fields, generate script.
-        new_script = self.template_widget.get_script()
-        if not new_script.startswith('Error'):
+        try:
+            _ = self.template_widget.get_script()
             self.generate()
+        except Exception:
+            pass
 
     def set_completed_item(self, item):
         """Deserialize a completed template."""
@@ -337,10 +354,12 @@ class ScriptGenerator(BaseDock):
         self.needsFocus.emit()
 
     def generate(self):
-        new_script = self.template_widget.get_script()
-        self.script_output.setPlainText(new_script)
-        if new_script.startswith('Error'):
-            self.error(new_script)
+        try:
+            new_script = self.template_widget.get_script()
+            self.script_output.setPlainText(new_script)
+        except Exception as e:
+            self.script_output.setPlainText(str(e))
+            self.error(str(e))
         else:
             script_type = str(self.template_combo.currentText())
             self.info('Generated %s script.' % script_type)

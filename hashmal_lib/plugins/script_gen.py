@@ -186,9 +186,14 @@ class ScriptTemplateItem(Item):
         self.actions.append((label, copy_func))
 
 class TemplateWidget(QWidget):
-    def __init__(self, template):
+    """Widget for a template's variables.
+
+    Requires a plugin_handler instance for variable substitution.
+    """
+    def __init__(self, template, plugin_handler):
         super(TemplateWidget, self).__init__()
         self.template = template
+        self.plugin_handler = plugin_handler
         # {var_name: input_widget, ...}
         self.variable_widgets = {}
         self.setLayout(QVBoxLayout())
@@ -204,6 +209,7 @@ class TemplateWidget(QWidget):
             var_input = QLineEdit()
             var_input.setFont(monospace_font)
             var_input.setToolTip('Value for template variable "%s"' % var_name)
+            self.plugin_handler.substitute_variables(var_input)
             form.addRow(label, var_input)
             self.variable_widgets[var_name] = var_input
         form.addRow(floated_buttons([self.clear_button], left=True))
@@ -293,7 +299,7 @@ class ScriptGenerator(BaseDock):
         self.setFocusProxy(self.template_combo)
 
         template = known_templates[0]
-        self.template_widget = TemplateWidget(template)
+        self.template_widget = TemplateWidget(template, self.handler)
 
         self.template_combo.currentIndexChanged.connect(self.change_template)
 

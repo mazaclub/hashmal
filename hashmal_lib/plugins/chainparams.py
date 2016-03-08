@@ -98,8 +98,8 @@ class ChainParams(BasePluginUI):
         super(ChainParams, self).__init__(*args)
         self.chainparams_object = ChainParamsObject()
         self.paramsPresetsChanged = self.chainparams_object.paramsPresetsChanged
-        self.augment('chainparams_presets', None, callback=self.on_chainparams_augmented)
-        self.augment('transaction_field_help', None, callback=self.on_tx_field_help_augmented)
+        self.augment('chainparams_presets', callback=self.on_chainparams_augmented)
+        self.augment('transaction_field_help', callback=self.on_tx_field_help_augmented)
 
     def add_params_preset(self, preset):
         try:

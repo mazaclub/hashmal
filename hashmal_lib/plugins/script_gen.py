@@ -279,7 +279,7 @@ class ScriptGenerator(BaseDock):
 
     def __init__(self, handler):
         super(ScriptGenerator, self).__init__(handler)
-        self.augment('script_templates', None, callback=self.on_templates_augmented)
+        self.augment('script_templates', callback=self.on_templates_augmented)
         self.template_combo.currentIndexChanged.emit(0)
         self.widget().setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 

@@ -110,7 +110,7 @@ class TxAnalyzer(BaseDock):
         self.raw_tx_edit.textChanged.emit()
 
     @augmenter
-    def item_actions(self, arg):
+    def item_actions(self, *args):
         actions = [
             ItemAction(self.tool_name, 'Transaction', 'Deserialize', self.deserialize_item),
             ItemAction(self.tool_name, 'Transaction', 'Verify inputs', self.verify_item_inputs)

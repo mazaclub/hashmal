@@ -197,8 +197,8 @@ class ItemsPlugin(BasePluginUI):
         super(ItemsPlugin, self).__init__(*args)
         self.item_types_object = ItemTypesObject()
         self.itemTypesChanged = self.item_types_object.itemTypesChanged
-        self.augment('item_types', None, callback=self.on_item_types_augmented)
-        self.augment('item_actions', None, callback=self.on_item_actions_augmented)
+        self.augment('item_types', callback=self.on_item_types_augmented)
+        self.augment('item_actions', callback=self.on_item_actions_augmented)
 
     def on_item_types_augmented(self, data):
         try:

@@ -12,48 +12,7 @@ from hashmal_lib.core import chainparams
 from gui_utils import required_plugins, default_plugins, add_shortcuts, hashmal_entry_points
 import plugins
 from plugins.base import Category
-
-
-class Augmentation(object):
-    """Model of an augmentation.
-
-    Attributes:
-        - augmenter_plugin: Plugin instance that has the augmenter.
-        - hook_name: Augmentation hook name.
-        - requester: Class name of object that requested augmentation.
-        - data: Data passed to the augmenter.
-        - callback: Function to call after augmenting.
-        - has_run: Whether the augmentation has been done.
-        - is_enabled: Whether the augmentation can be done.
-    """
-    def __init__(self, augmenter_plugin, hook_name, requester=None, data=None, callback=None):
-        self.augmenter_plugin = augmenter_plugin
-        self.hook_name = hook_name
-        self.requester = requester
-        self.data = data
-        self.callback = callback
-
-        self.has_run = False
-        self.is_enabled = True
-
-    def __str__(self):
-        return '%s.%s' % (self.augmenter_plugin.name, self.hook_name)
-
-class Augmentations(list):
-    """Container for Augmentation instances."""
-    def get(self, plugin_name, hook_name):
-        for i in self:
-            if i.augmenter_plugin.name == plugin_name and i.hook_name == hook_name:
-                return i
-        return None
-
-    def for_plugin(self, plugin_name):
-        """Return an Augmentations instance with augmenters in plugin_name."""
-        return Augmentations(filter(lambda i: i.augmenter_plugin.name == plugin_name, self))
-
-    def disabled(self):
-        """Return an Augmentations instance with disabled augmentations."""
-        return Augmentations(filter(lambda i: i.is_enabled == False, self))
+from augment import Augmentations
 
 
 class PluginHandler(QWidget):
@@ -166,10 +125,14 @@ class PluginHandler(QWidget):
 
         if is_enabled:
             # Run augmentations that were disabled.
-            for i in self.augmentations.disabled().for_plugin(plugin.name):
-                if not i.has_run:
-                    i.is_enabled = True
-                    self.do_augment(i)
+            for i in self.augmentations.get_disabled_augmentations(plugin.name):
+                i.is_enabled = True
+                self.do_augment(i)
+        else:
+            # Undo augmentations that ran.
+            for i in self.augmentations.get_completed_augmentations(plugin.name):
+                i.is_enabled = False
+                self.undo_augment(i)
         self.assign_dock_shortcuts()
 
     def bring_to_front(self, dock):
@@ -247,25 +210,17 @@ class PluginHandler(QWidget):
                 for label, func in plugin_actions:
                     plugin_menu.addAction(label, partial(func, item))
 
-    def do_augment_hook(self, class_name, hook_name, data, callback=None):
+    def do_augment_hook(self, class_name, hook_name, data=None, callback=None, undo_callback=None):
         """Consult plugins that can augment hook_name."""
         # Don't hook until initial plugin loading is done.
         if not self.plugins_loaded:
-            augmentation = (class_name, hook_name, data, callback)
+            augmentation = (class_name, hook_name, data, callback, undo_callback)
             if not augmentation in self.waiting_augmentations:
                 self.waiting_augmentations.append(augmentation)
             return
         for plugin in self.loaded_plugins:
             if hook_name in plugin.augmenters():
-
-                augmentation = self.augmentations.get(plugin.name, hook_name)
-                if augmentation is None:
-                    augmentation = Augmentation(plugin, hook_name, requester=class_name, data=data, callback=callback)
-                    self.augmentations.append(augmentation)
-
-                augmentation = self.augmentations.get(plugin.name, hook_name)
-                if augmentation is None:
-                    continue
+                augmentation = self.augmentations.get_augmentation(plugin, hook_name, class_name, data=data, callback=callback, undo_callback=undo_callback)
 
                 # Don't hook disabled plugins.
                 if plugin.name not in self.config.get_option('enabled_plugins', default_plugins):
@@ -277,18 +232,11 @@ class PluginHandler(QWidget):
 
     def do_augment(self, augmentation):
         """Call the augmenter for an Augmentation."""
-        # Don't run augmentations that have been run, aren't enabled,
-        # or are from the same class that wants augmenting.
-        if (
-            augmentation.has_run or
-            not augmentation.is_enabled or
-            augmentation.requester == augmentation.augmenter_plugin.ui.__class__.__name__
-        ): return
-        func = augmentation.augmenter_plugin.get_augmenter(augmentation.hook_name)
-        data = func(augmentation.data)
-        if augmentation.callback:
-            augmentation.callback(data)
-        augmentation.has_run = True
+        self.augmentations.do_augment(augmentation)
+
+    def undo_augment(self, augmentation):
+        """Undo an Augmentation."""
+        self.augmentations.undo_augment(augmentation)
 
     # TODO access data retrievers from Plugin, not UI
     def get_data_retrievers(self):

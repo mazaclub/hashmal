@@ -101,7 +101,7 @@ class Blockchain(BaseDock):
 
     def __init__(self, handler):
         super(Blockchain, self).__init__(handler)
-        self.augment('block_explorers', None, callback=self.on_explorers_augmented)
+        self.augment('block_explorers', callback=self.on_explorers_augmented)
         self.data_group.button(0).setChecked(True)
 
     def get_cache_data(self, key, default=None):

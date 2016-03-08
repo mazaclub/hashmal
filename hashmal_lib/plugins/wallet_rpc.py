@@ -150,7 +150,7 @@ class WalletRPC(BaseDock):
     is_large = True
     def __init__(self, *args):
         super(WalletRPC, self).__init__(*args)
-        self.augment('rpc_methods', None, callback=self.on_methods_augmented)
+        self.augment('rpc_methods', known_methods, callback=self.on_methods_augmented)
 
     def add_cache_data(self, key, value):
         return self.handler.gui.download_controller.add_cache_data(key, value)

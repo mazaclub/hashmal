@@ -111,12 +111,19 @@ class BasePluginUI(object):
         """Save options to config file."""
         self.config.set_option(self.tool_name, options)
 
-    def augment(self, target, data, callback=None):
+    def augment(self, target, data=None, callback=None, undo_callback=None):
         """Ask other plugins if they have anything to contribute.
 
         Allows plugins to enhance other plugins.
+
+        Args:
+            target: Augmentation hook name.
+            data: Data to pass to the augmenter.
+            callback: Function to call with the augmenter's result.
+            undo_callback: Function to call with the augmenter's result if it becomes disabled.
+
         """
-        return self.handler.do_augment_hook(self.__class__.__name__, target, data, callback)
+        return self.handler.do_augment_hook(self.__class__.__name__, target, data, callback, undo_callback)
 
     def debug(self, msg):
         """Log a debug message."""

@@ -91,7 +91,7 @@ class AddrEncoder(BaseDock):
         pass
 
     @augmenter
-    def item_types(self, arg):
+    def item_types(self, *args):
         return [AddressItem, Hash160Item]
 
     @augmenter

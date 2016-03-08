@@ -187,7 +187,7 @@ class Variables(BaseDock):
         self.dataChanged.connect(self.hide_unused_category_names)
 
     @augmenter
-    def item_actions(self, args):
+    def item_actions(self, *args):
         # Since we know that the Item Types has been instantiated now, add variable types for known item_types
         # and connect to itemTypesChanged.
         for i in sorted(item_types, key = lambda item_type: item_type.name):

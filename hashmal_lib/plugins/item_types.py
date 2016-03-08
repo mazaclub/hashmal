@@ -197,8 +197,8 @@ class ItemsPlugin(BasePluginUI):
         super(ItemsPlugin, self).__init__(*args)
         self.item_types_object = ItemTypesObject()
         self.itemTypesChanged = self.item_types_object.itemTypesChanged
-        self.augment('item_types', callback=self.on_item_types_augmented)
-        self.augment('item_actions', callback=self.on_item_actions_augmented)
+        self.augment('item_types', callback=self.on_item_types_augmented, undo_callback=self.undo_item_types_augmented)
+        self.augment('item_actions', callback=self.on_item_actions_augmented, undo_callback=self.undo_item_actions_augmented)
 
     def on_item_types_augmented(self, data):
         try:
@@ -212,6 +212,18 @@ class ItemsPlugin(BasePluginUI):
 
         self.itemTypesChanged.emit(item_types)
 
+    def undo_item_types_augmented(self, data):
+        try:
+            for i in data:
+                if issubclass(i, Item):
+                    item_types.remove(i)
+        except Exception:
+            # data is not an iterable.
+            if issubclass(data, Item):
+                item_types.remove(data)
+
+        self.itemTypesChanged.emit(item_types)
+
     def on_item_actions_augmented(self, data):
         if isinstance(data, ItemAction):
             item_actions.append(data)
@@ -221,3 +233,11 @@ class ItemsPlugin(BasePluginUI):
             if isinstance(i, ItemAction):
                 item_actions.append(i)
 
+    def undo_item_actions_augmented(self, data):
+        if isinstance(data, ItemAction):
+            item_actions.remove(data)
+            return
+        # If iterable, iterate.
+        for i in data:
+            if isinstance(i, ItemAction):
+                item_actions.remove(i)

@@ -205,6 +205,8 @@ class Variables(BaseDock):
         self.data = OrderedDict(self.option('data', {}))
         self.auto_save = self.option('auto_save', False)
         self.filters = variable_types.keys()
+        # Item types that aren't added by any other plugin.
+        self.builtin_item_types = variable_types.keys()
 
     def create_layout(self):
         self.model = VarsModel(self.data)
@@ -436,14 +438,19 @@ class Variables(BaseDock):
         self.hide_unused_category_names()
 
     def on_item_types_changed(self, new_item_types):
-        changed = False
-        for i in new_item_types:
-            if i.name in variable_types.keys():
-                continue
-            changed = True
-            var_type = VariableType(i.name, lambda x, item=i: item.coerce_item(x) is not None)
-            variable_types.update({var_type.name: var_type})
-        if changed:
+        # See if there are new types.
+        new_types = filter(lambda i: i.name not in variable_types.keys(), new_item_types)
+        for item in new_types:
+            var_type = VariableType(item.name, lambda x, item=item: item.coerce_item(x) is not None)
+            variable_types[var_type.name] = var_type
+
+        # See if existing types have been removed.
+        item_type_names = [i.name for i in new_item_types]
+        removed_types = filter(lambda i: i not in item_type_names and i not in self.builtin_item_types, variable_types.keys())
+        for key in removed_types:
+            del variable_types[key]
+
+        if new_types or removed_types:
             self.on_var_types_changed()
 
     def on_option_changed(self, key):

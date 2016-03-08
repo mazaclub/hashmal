@@ -15,6 +15,7 @@ class ChainparamsComboBox(QComboBox):
         super(ChainparamsComboBox, self).__init__(parent)
         self.gui = main_window
         self.config = self.gui.config
+        self.reloading = False
 
         preset_names = [i.name for i in chainparams.get_presets()]
         self.addItems(preset_names)
@@ -30,9 +31,11 @@ class ChainparamsComboBox(QComboBox):
 
     def reload_presets(self):
         """Reload the chainparams presets."""
+        self.reloading = True
         self.clear()
         preset_names = [i.name for i in chainparams.get_presets()]
         self.addItems(preset_names)
+        self.reloading = False
         self.set_index()
 
     def set_index(self):
@@ -50,6 +53,9 @@ class ChainparamsComboBox(QComboBox):
         self.set_index()
 
     def change_params(self):
+        # Don't do anything if we're reloading the presets.
+        if self.reloading:
+            return
         # Don't do anything if this is called because we cleared the combobox.
         if self.currentIndex() < 0:
             return

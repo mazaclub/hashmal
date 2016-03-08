@@ -101,7 +101,7 @@ class Blockchain(BaseDock):
 
     def __init__(self, handler):
         super(Blockchain, self).__init__(handler)
-        self.augment('block_explorers', callback=self.on_explorers_augmented)
+        self.augment('block_explorers', callback=self.on_explorers_augmented, undo_callback=self.undo_explorers_augmented)
         self.data_group.button(0).setChecked(True)
 
     def get_cache_data(self, key, default=None):
@@ -324,16 +324,8 @@ class Blockchain(BaseDock):
         self.explorer_combo.setCurrentIndex(index)
         self.explorer_combo.currentIndexChanged.emit(index)
 
-    def on_explorers_augmented(self, data):
-        """Update combo boxes after augmentation."""
-        try:
-            for chain_name, explorers_list in data.items():
-                if not self.known_explorers.get(chain_name):
-                    self.known_explorers[chain_name] = []
-                self.known_explorers[chain_name].extend(explorers_list)
-        except Exception:
-            return
-
+    def update_after_augmentation(self):
+        """Update widgets and internal state after augmentations."""
         chain = self.option('chain', 'Bitcoin')
         explorer_name = self.option('explorer', 'insight')
 
@@ -350,3 +342,29 @@ class Blockchain(BaseDock):
         self.chain_combo.setCurrentIndex(self.known_explorers.keys().index(self.chain))
         self.chain_combo.currentIndexChanged.connect(self.on_chain_combo_changed)
         self.set_chain(self.chain)
+
+    def on_explorers_augmented(self, data):
+        """Update combo boxes after augmentation."""
+        try:
+            for chain_name, explorers_list in data.items():
+                if not self.known_explorers.get(chain_name):
+                    self.known_explorers[chain_name] = []
+                self.known_explorers[chain_name].extend(explorers_list)
+        except Exception:
+            return
+
+        self.update_after_augmentation()
+
+    def undo_explorers_augmented(self, data):
+        try:
+            for chain_name, explorers_list in data.items():
+                for explorer in explorers_list:
+                    self.known_explorers[chain_name].remove(explorer)
+
+            for chain_name in self.known_explorers.keys():
+                if not self.known_explorers[chain_name]:
+                    del self.known_explorers[chain_name]
+        except Exception:
+            return
+
+        self.update_after_augmentation()

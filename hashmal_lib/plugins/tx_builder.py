@@ -34,7 +34,7 @@ class TxBuilder(BaseDock):
         super(TxBuilder, self).__init__(handler)
         self.raw_tx.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.raw_tx.customContextMenuRequested.connect(self.context_menu)
-        self.augment('transaction_builder_field_help', callback=self.on_tx_builder_field_augmented)
+        self.augment('transaction_builder_field_help', callback=self.on_tx_builder_field_augmented, undo_callback=self.undo_tx_builder_field_augmented)
 
     @augmenter
     def item_actions(self, *args):
@@ -47,6 +47,11 @@ class TxBuilder(BaseDock):
             # Create new chainparams preset dict.
             if not existing_dict:
                 builder_field_help[params_name] = params_dict
+
+    def undo_tx_builder_field_augmented(self, data):
+        global builder_field_help
+        for params_name in data.keys():
+            del builder_field_help[params_name]
 
     def init_data(self):
         self.tx = None

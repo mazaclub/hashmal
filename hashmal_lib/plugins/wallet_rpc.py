@@ -150,7 +150,7 @@ class WalletRPC(BaseDock):
     is_large = True
     def __init__(self, *args):
         super(WalletRPC, self).__init__(*args)
-        self.augment('rpc_methods', known_methods, callback=self.on_methods_augmented)
+        self.augment('rpc_methods', known_methods, callback=self.on_methods_augmented, undo_callback=self.undo_methods_augmented)
 
     def add_cache_data(self, key, value):
         return self.handler.gui.download_controller.add_cache_data(key, value)
@@ -420,12 +420,23 @@ class WalletRPC(BaseDock):
 
         menu.exec_(self.result_edit.mapToGlobal(position))
 
+    def update_after_augmentation(self):
+        self.method_edit.setCompleter()
+        completer = QCompleter(known_methods)
+        completer.setCompletionMode(QCompleter.InlineCompletion)
+        self.method_edit.setCompleter(completer)
+
     def on_methods_augmented(self, data):
         if type(data) is type(''):
             known_methods.append(data)
         else:
             known_methods.extend(data)
-        self.method_edit.setCompleter()
-        completer = QCompleter(known_methods)
-        completer.setCompletionMode(QCompleter.InlineCompletion)
-        self.method_edit.setCompleter(completer)
+        self.update_after_augmentation()
+
+    def undo_methods_augmented(self, data):
+        if type(data) is type(''):
+            known_methods.remove(data)
+        else:
+            for i in data:
+                known_methods.remove(i)
+        self.update_after_augmentation()

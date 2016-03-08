@@ -279,7 +279,7 @@ class ScriptGenerator(BaseDock):
 
     def __init__(self, handler):
         super(ScriptGenerator, self).__init__(handler)
-        self.augment('script_templates', callback=self.on_templates_augmented)
+        self.augment('script_templates', callback=self.on_templates_augmented, undo_callback=self.undo_templates_augmented)
         self.template_combo.currentIndexChanged.emit(0)
         self.widget().setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 
@@ -336,6 +336,8 @@ class ScriptGenerator(BaseDock):
         menu.exec_(self.script_output.viewport().mapToGlobal(pos))
 
     def change_template(self, index):
+        if index < 0:
+            return
         name = str(self.template_combo.currentText())
         template = known_templates[0]
         for i in known_templates:
@@ -370,8 +372,17 @@ class ScriptGenerator(BaseDock):
             script_type = str(self.template_combo.currentText())
             self.info('Generated %s script.' % script_type)
 
+    def update_after_augmentation(self):
+        current_template = str(self.template_combo.currentText())
+        self.template_combo.clear()
+        self.template_combo.addItems([i.name for i in known_templates])
+        # Try to set the template back to what it was if it still exists.
+        try:
+            self.template_combo.setCurrentIndex([i.name for i in known_templates].index(current_template))
+        except Exception:
+            pass
+
     def on_templates_augmented(self, data):
-        global known_templates
         if isinstance(data, ScriptTemplate):
             known_templates.append(data)
         else:
@@ -380,5 +391,16 @@ class ScriptGenerator(BaseDock):
             except Exception:
                 return
 
-        self.template_combo.clear()
-        self.template_combo.addItems([i.name for i in known_templates])
+        self.update_after_augmentation()
+
+    def undo_templates_augmented(self, data):
+        if isinstance(data, ScriptTemplate):
+            known_templates.remove(data)
+        else:
+            try:
+                for i in data:
+                    known_templates.remove(i)
+            except Exception:
+                return
+
+        self.update_after_augmentation()

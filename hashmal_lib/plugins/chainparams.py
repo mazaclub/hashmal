@@ -98,12 +98,20 @@ class ChainParams(BasePluginUI):
         super(ChainParams, self).__init__(*args)
         self.chainparams_object = ChainParamsObject()
         self.paramsPresetsChanged = self.chainparams_object.paramsPresetsChanged
-        self.augment('chainparams_presets', callback=self.on_chainparams_augmented)
-        self.augment('transaction_field_help', callback=self.on_tx_field_help_augmented)
+        self.augment('chainparams_presets', callback=self.on_chainparams_augmented, undo_callback=self.undo_chainparams_augmented)
+        self.augment('transaction_field_help', callback=self.on_tx_field_help_augmented, undo_callback=self.undo_tx_field_help_augmented)
 
     def add_params_preset(self, preset):
         try:
             chainparams.add_preset(preset)
+            self.paramsPresetsChanged.emit()
+        except Exception as e:
+            self.error(str(e))
+
+    def remove_params_preset(self, preset):
+        try:
+            chainparams.remove_preset(preset)
+            self.paramsPresetsChanged.emit()
         except Exception as e:
             self.error(str(e))
 
@@ -117,6 +125,16 @@ class ChainParams(BasePluginUI):
         except Exception:
             self.add_params_preset(data)
 
+    def undo_chainparams_augmented(self, data):
+        # Assume data is iterable.
+        try:
+            for i in data:
+                self.remove_params_preset(i)
+            return
+        # data is not an iterable.
+        except Exception:
+            self.remove_params_preset(data)
+
     def on_tx_field_help_augmented(self, data):
         global transaction_field_help
         for params_name, params_dict in data.items():
@@ -125,3 +143,8 @@ class ChainParams(BasePluginUI):
             if not existing_dict:
                 transaction_field_help[params_name] = params_dict
                 continue
+
+    def undo_tx_field_help_augmented(self, data):
+        global transaction_field_help
+        for params_name in data.keys():
+            del transaction_field_help[params_name]

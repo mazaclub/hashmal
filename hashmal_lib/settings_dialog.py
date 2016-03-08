@@ -63,6 +63,9 @@ class ChainparamsComboBox(QComboBox):
         # Don't do anything if nothing would really change.
         if new_name == chainparams.active_preset.name and new_name == self.config.get_option('chainparams', ''):
             return
+        self.set_chainparams(new_name)
+
+    def set_chainparams(self, new_name):
         chainparams.set_to_preset(new_name)
         self.config.set_option('chainparams', new_name)
         self.paramsChanged.emit()

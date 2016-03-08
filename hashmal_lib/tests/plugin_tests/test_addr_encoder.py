@@ -1,25 +1,14 @@
 import unittest
-import sys
-import __builtin__
 
-from PyQt4.QtGui import QApplication
 from PyQt4.QtTest import QTest
 from PyQt4.QtCore import Qt
 
-from hashmal_lib.core import chainparams
-from hashmal_lib.main_window import HashmalMain
 from hashmal_lib.plugins import addr_encoder
+from .gui_test import GuiTest
 
-__builtin__.use_local_modules = True
-
-chainparams.set_to_preset('Bitcoin')
-
-app = QApplication(sys.argv)
-
-class AddrEncoderTest(unittest.TestCase):
+class AddrEncoderTest(GuiTest):
     def setUp(self):
         super(AddrEncoderTest, self).setUp()
-        self.gui = HashmalMain(app)
         self.ui = self.gui.plugin_handler.get_plugin('Address Encoder').ui
 
     def test_encode_hex_bytes(self):

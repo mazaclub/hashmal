@@ -1,27 +1,15 @@
 import unittest
-import sys
-import __builtin__
 
-from PyQt4.QtGui import QApplication
 from PyQt4.QtTest import QTest
-from PyQt4.QtCore import Qt
 
-from hashmal_lib.core import chainparams
-from hashmal_lib.main_window import HashmalMain
 from hashmal_lib.plugins import variables
+from .gui_test import GuiTest
 
-__builtin__.use_local_modules = True
-
-chainparams.set_to_preset('Bitcoin')
-
-app = QApplication(sys.argv)
-
-class VariablesTest(unittest.TestCase):
+class VariablesTest(GuiTest):
     def setUp(self):
         super(VariablesTest, self).setUp()
-        self.gui = HashmalMain(app)
         self.ui = self.gui.plugin_handler.get_plugin('Variables').ui
-        chainparams.set_to_preset('Bitcoin')
+        self._set_chainparams('Bitcoin')
 
     def test_general_data_classification(self):
         test_items = [

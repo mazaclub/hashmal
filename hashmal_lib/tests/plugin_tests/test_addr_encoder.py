@@ -4,12 +4,15 @@ from PyQt4.QtTest import QTest
 from PyQt4.QtCore import Qt
 
 from hashmal_lib.plugins import addr_encoder
-from .gui_test import GuiTest
+from .gui_test import PluginTest
 
-class AddrEncoderTest(GuiTest):
+class AddrEncoderTest(PluginTest):
+    plugin_name = 'Address Encoder'
     def setUp(self):
         super(AddrEncoderTest, self).setUp()
-        self.ui = self.gui.plugin_handler.get_plugin('Address Encoder').ui
+        self.ui.address_line.clear()
+        self.ui.hash_line.clear()
+        self.ui.addr_version.setValue(0)
 
     def test_encode_hex_bytes(self):
         self.ui.hash_line.setText('00' * 20)

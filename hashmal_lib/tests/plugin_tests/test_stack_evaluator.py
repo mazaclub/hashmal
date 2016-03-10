@@ -5,17 +5,23 @@ from PyQt4.QtCore import Qt
 
 from hashmal_lib.core import chainparams, Script
 from hashmal_lib.plugins import stack
-from .gui_test import GuiTest
+from .gui_test import PluginTest
 
 
 chainparams.set_to_preset('Bitcoin')
 
-class StackEvalTest(GuiTest):
+class StackEvalTest(PluginTest):
+    plugin_name = 'Stack Evaluator'
     # A valid P2SH transaction from Bitcon's unit tests.
     valid_p2sh_tx = '01000000010001000000000000000000000000000000000000000000000000000000000000000000006e493046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a0123210338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebfacffffffff010000000000000000015100000000'
     def setUp(self):
         super(StackEvalTest, self).setUp()
-        self.ui = self.gui.plugin_handler.get_plugin('Stack Evaluator').ui
+        self.ui.tx_script.clear()
+        self.ui.execution_widget.clear()
+        self.ui.tx_edit.clear()
+        self.ui.input_idx.setValue(0)
+        self.ui.block_height_edit.clear()
+        self.ui.block_time_edit.clear()
 
     def test_script_passed(self):
         script_hex = Script.from_human('0x01').get_hex()

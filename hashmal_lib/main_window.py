@@ -101,6 +101,9 @@ class HashmalMain(QMainWindow):
         if self.qt_settings.value('quickTipsOnStart', defaultValue=QtCore.QVariant(True)).toBool():
             QtCore.QTimer.singleShot(500, self.do_quick_tips)
 
+        # When testing, we don't confirm discarding unsaved changes on exit.
+        self.testing_mode = False
+
     def sizeHint(self):
         return QtCore.QSize(800, 500)
 
@@ -160,6 +163,8 @@ class HashmalMain(QMainWindow):
         self.style().polish(self.statusBar())
 
     def log_message(self, plugin_name, msg, level):
+        if self.testing_mode:
+            return
         message = '[%s] -> %s' % (plugin_name, msg)
         logging.log(level, message)
         self.show_status_message(message, True if level == logging.ERROR else False)
@@ -186,6 +191,9 @@ class HashmalMain(QMainWindow):
         self.changes_saved = saved
 
     def closeEvent(self, event):
+        if self.testing_mode:
+            event.accept()
+            return
         # Save layout if configured to.
         if self.qt_settings.value('saveLayoutOnExit', defaultValue=QtCore.QVariant(False)).toBool():
             self.qt_settings.setValue('toolLayout/default', self.saveState())

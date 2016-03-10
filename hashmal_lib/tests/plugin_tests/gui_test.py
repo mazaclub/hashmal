@@ -15,10 +15,22 @@ app = QApplication(sys.argv)
 
 class GuiTest(unittest.TestCase):
     """Base class for Qt tests."""
-    def setUp(self):
-        super(GuiTest, self).setUp()
-        self.gui = HashmalMain(app)
+    @classmethod
+    def setUpClass(cls):
+        cls.gui = HashmalMain(app)
+        cls.gui.testing_mode = True
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.gui.close()
 
     def _set_chainparams(self, name):
         self.gui.settings_dialog.params_combo.set_chainparams(name)
 
+class PluginTest(GuiTest):
+    """Base class for plugin tests."""
+    plugin_name = ''
+    @classmethod
+    def setUpClass(cls):
+        super(PluginTest, cls).setUpClass()
+        cls.ui = cls.gui.plugin_handler.get_plugin(cls.plugin_name).ui

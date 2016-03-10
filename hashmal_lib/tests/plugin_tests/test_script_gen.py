@@ -8,7 +8,7 @@ from bitcoin.core import b2lx
 
 from hashmal_lib.core import chainparams, Script
 from hashmal_lib.plugins import script_gen
-from .gui_test import GuiTest
+from .gui_test import PluginTest
 
 
 chainparams.set_to_preset('Bitcoin')
@@ -44,10 +44,12 @@ class ScriptGenTest(ScriptGenBaseTest):
         scr = Script.from_human('OP_0 0x304402200a156e3e5617cc1d795dfe0c02a5c7dab3941820f194eabd6107f81f25e0519102204d8c585635e03c9137b239893701dc280e25b162011e6474d0c9297d2650b46901 0x51210208b5b58fd9bf58f1d71682887182e7abd428756264442eec230dd021c193f8d9210245af4f2b1ae21c9310a3211f8d5debb296175e20b3a14b173ff30428e03d502d52ae')
         self.assertTrue(script_gen.is_template_script(scr, self.templates['Pay-To-Script-Hash Multisig Signature Script']))
 
-class ScriptGenGUITest(ScriptGenBaseTest, GuiTest):
+class ScriptGenGUITest(ScriptGenBaseTest, PluginTest):
+    plugin_name = 'Script Generator'
     def setUp(self):
         super(ScriptGenGUITest, self).setUp()
-        self.ui = self.gui.plugin_handler.get_plugin('Script Generator').ui
+        self.ui.template_combo.setCurrentIndex(0)
+        self.ui.template_widget.clear_fields()
 
     def _set_widget_values(self, template, templates_vars):
         self.ui.template_combo.setCurrentIndex(self.templates.values().index(template))

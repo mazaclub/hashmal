@@ -3,12 +3,14 @@ import unittest
 from PyQt4.QtTest import QTest
 
 from hashmal_lib.plugins import variables
-from .gui_test import GuiTest
+from .gui_test import PluginTest
 
-class VariablesTest(GuiTest):
+class VariablesTest(PluginTest):
+    plugin_name = 'Variables'
     def setUp(self):
         super(VariablesTest, self).setUp()
-        self.ui = self.gui.plugin_handler.get_plugin('Variables').ui
+        self.ui.new_var_key.clear()
+        self.ui.new_var_value.clear()
         self._set_chainparams('Bitcoin')
 
     def test_general_data_classification(self):
@@ -28,6 +30,8 @@ class VariablesTest(GuiTest):
 
     def test_address_classification(self):
         """Test classification of items added by Address Encoder."""
+        if not self.gui.plugin_handler.get_plugin('Address Encoder').ui.is_enabled:
+            self.skipTest('The Address Encoder plugin is not enabled.')
         test_items = [
             ('1111111111111111111114oLvT2', ['Address']),
             ('M7uAERuQW2AotfyLDyewFGcLUDtAYu9v5V', ['Address']),
@@ -41,6 +45,8 @@ class VariablesTest(GuiTest):
 
     def test_script_template_classification(self):
         """Test classification of items added by Script Generator."""
+        if not self.gui.plugin_handler.get_plugin('Script Generator').ui.is_enabled:
+            self.skipTest('The Script Generator plugin is not enabled.')
         test_items = [
             ('OP_RETURN 0x01', ['Script Matching Template']),
             ('OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG', ['Script Matching Template']),

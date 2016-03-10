@@ -367,6 +367,12 @@ class PluginDetails(QWidget):
         self.plugin_is_enabled.setEnabled(not plugin.name in required_plugins)
         self.plugin_is_favorite.setEnabled(plugin.has_gui)
 
+        # Set tooltips.
+        tooltip = self.manager.model.data(self.manager.model.index(index.row(), 1), Qt.ToolTipRole).toString()
+        self.category_label.setToolTip(tooltip)
+        tooltip = 'This plugin has a GUI' if self.has_gui.isChecked() else 'This plugin has no GUI'
+        self.has_gui.setToolTip(tooltip)
+
 class OptionsWidget(QWidget):
     """Plugin view options."""
     def __init__(self, plugin_manager, parent=None):

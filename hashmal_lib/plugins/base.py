@@ -153,7 +153,6 @@ class BaseDock(BasePluginUI, QDockWidget):
             data this class can retrieve.
     """
     needsFocus = QtCore.pyqtSignal()
-    needsUpdate = QtCore.pyqtSignal()
 
     # If True, dock will be placed on the bottom by default.
     # Otherwise, dock will be placed on the right.
@@ -168,7 +167,6 @@ class BaseDock(BasePluginUI, QDockWidget):
         my_layout = self.create_layout()
         self.main_widget = QWidget()
         self.main_widget.setLayout(my_layout)
-        self.needsUpdate.connect(self.refresh_data)
         self.toggleViewAction().triggered.connect(self.visibility_toggled)
         self.setWidget(self.main_widget)
 
@@ -187,10 +185,6 @@ class BaseDock(BasePluginUI, QDockWidget):
         Subclasses should override this to return their layout.
         """
         return QVBoxLayout()
-
-    def refresh_data(self):
-        """Synchronize. Called when needsUpdate is emitted."""
-        pass
 
     def visibility_toggled(self):
         """Called when toggleViewAction() is triggered so this dock can get focus."""

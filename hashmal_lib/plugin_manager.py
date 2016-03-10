@@ -4,7 +4,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from hashmal_lib.plugins.base import Category
-from gui_utils import Separator, required_plugins, default_plugins
+from gui_utils import Separator, required_plugins, default_plugins, hashmal_builtin_plugins
 
 class PluginsModel(QAbstractTableModel):
     def __init__(self, gui, parent=None):
@@ -161,6 +161,7 @@ class PluginsProxyModel(QSortFilterProxyModel):
         super(PluginsProxyModel, self).__init__(parent)
         self.name_filter = QRegExp()
         self.hide_core_plugins = True
+        self.hide_builtin_plugins = False
         self.hide_gui_plugins = False
         self.hide_nongui_plugins = False
 
@@ -170,6 +171,10 @@ class PluginsProxyModel(QSortFilterProxyModel):
 
     def set_hide_core_plugins(self, do_hide):
         self.hide_core_plugins = do_hide
+        self.invalidateFilter()
+
+    def set_hide_builtin_plugins(self, do_hide):
+        self.hide_builtin_plugins = do_hide
         self.invalidateFilter()
 
     def set_hide_gui_plugins(self, do_hide):
@@ -185,6 +190,10 @@ class PluginsProxyModel(QSortFilterProxyModel):
 
         if self.hide_core_plugins:
             if plugin.category == Category.Core:
+                return False
+        if self.hide_builtin_plugins:
+            builtin_plugin_names = [i[0] for i in hashmal_builtin_plugins]
+            if plugin.name in builtin_plugin_names:
                 return False
         if self.hide_gui_plugins and plugin.has_gui:
             return False
@@ -386,8 +395,14 @@ class OptionsWidget(QWidget):
         self.hide_core_plugins.setChecked(self.option('hide_core_plugins', True))
         self.hide_core_plugins.stateChanged.connect(self.change_hide_core_plugins)
 
+        self.hide_builtin_plugins = QCheckBox('Hide built-in plugins')
+        self.hide_builtin_plugins.setToolTip('Hide plugins that are included with Hashmal')
+        self.hide_builtin_plugins.setChecked(self.option('hide_builtin_plugins', False))
+        self.hide_builtin_plugins.stateChanged.connect(self.change_hide_builtin_plugins)
+
         general_vbox = QVBoxLayout()
         general_vbox.addWidget(self.hide_core_plugins)
+        general_vbox.addWidget(self.hide_builtin_plugins)
         general_group = self.make_section('General', general_vbox)
 
         # Graphical plugins
@@ -431,6 +446,11 @@ class OptionsWidget(QWidget):
         do_hide = True if state == Qt.Checked else False
         self.set_option('hide_core_plugins', do_hide)
         self.proxy_model.set_hide_core_plugins(do_hide)
+
+    def change_hide_builtin_plugins(self, state):
+        do_hide = True if state == Qt.Checked else False
+        self.set_option('hide_builtin_plugins', do_hide)
+        self.proxy_model.set_hide_builtin_plugins(do_hide)
 
     def change_hide_gui_plugins(self):
         do_hide = self.hide_gui_plugins.isChecked()

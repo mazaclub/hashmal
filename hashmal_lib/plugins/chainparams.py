@@ -5,8 +5,7 @@ from hashmal_lib.core import chainparams
 from base import Plugin, BasePluginUI, Category
 
 def make_plugin():
-    p = Plugin(ChainParams)
-    p.has_gui = False
+    p = Plugin(ChainParams, category=Category.Core, has_gui=False)
     p.get_field_help = get_field_help
     return p
 
@@ -92,7 +91,6 @@ class ChainParams(BasePluginUI):
     """For augmentation purposes, we use this plugin to help with chainparams presets."""
     tool_name = 'Chainparams'
     description = 'Chainparams allows plugins to add chainparams presets for Hashmal to use.'
-    category = Category.Core
 
     def __init__(self, *args):
         super(ChainParams, self).__init__(*args)

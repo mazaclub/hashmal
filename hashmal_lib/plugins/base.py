@@ -10,7 +10,7 @@ PluginCategory = namedtuple('PluginCategory', ('name', 'description'))
 class Category(object):
     """Plugin category.
 
-    Use one of the below class attributes for a dock's category attribute
+    Use one of the below class attributes for a plugin's category attribute
     e.g. 'category = Category.Script'.
     """
     Core = PluginCategory('Core', 'Core Hashmal functionality implemented as a plugin.')
@@ -53,13 +53,14 @@ class Plugin(object):
     A module's make_plugin() function should return
     an instance of this class.
     """
-    def __init__(self, ui_class):
+    def __init__(self, ui_class, category=Category.General, has_gui=True):
         self.ui_class = ui_class
         self.ui = None
         # name is set when the entry point is loaded.
         self.name = ''
         # If False, plugin has no dedicated GUI.
-        self.has_gui = True
+        self.has_gui = has_gui
+        self.category = category
 
     def instantiate_ui(self, plugin_handler):
         instance = self.ui_class(plugin_handler)
@@ -75,7 +76,6 @@ class BasePluginUI(object):
     """Base class for plugin user interfaces."""
     tool_name = ''
     description = ''
-    category = Category.General
 
     def __init__(self, handler):
         self.handler = handler

@@ -51,7 +51,7 @@ class PluginHandler(QWidget):
         for plugin in self.loaded_plugins:
             if not plugin.has_gui:
                 continue
-            _categories[plugin.ui.category[0]].append(plugin)
+            _categories[plugin.category.name].append(plugin)
 
         shortcuts = add_shortcuts(_categories.keys())
         categories = OrderedDict()
@@ -72,10 +72,10 @@ class PluginHandler(QWidget):
         plugin_instance.name = tool_name if tool_name else name
         plugin_instance.instantiate_ui(self)
         # Only required plugins can be Core plugins.
-        if plugin_instance.ui.category == Category.Core and tool_name not in required_plugins:
+        if plugin_instance.category == Category.Core and tool_name not in required_plugins:
             return
         # Don't load plugins with unknown category metadata.
-        if plugin_instance.ui.category not in Category.categories():
+        if plugin_instance.category not in Category.categories():
             return
 
         self.loaded_plugins.append(plugin_instance)

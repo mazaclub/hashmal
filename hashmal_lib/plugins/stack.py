@@ -11,7 +11,7 @@ from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
 
 def make_plugin():
-    return Plugin(StackEval)
+    return Plugin(StackEval, category=Category.Script)
 
 class ScriptExecutionDelegate(QStyledItemDelegate):
     """Delegate for drawing script execution views."""
@@ -47,7 +47,6 @@ class StackEval(BaseDock):
             '"Be warned that there are highly likely to be consensus bugs in this code; it is unlikely to match Satoshi Bitcoin exactly. Think carefully before using this module."'
     ])
     is_large = True
-    category = Category.Script
 
     def __init__(self, handler):
         super(StackEval, self).__init__(handler)

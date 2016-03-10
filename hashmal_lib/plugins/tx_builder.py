@@ -21,14 +21,13 @@ from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
 
 def make_plugin():
-    return Plugin(TxBuilder)
+    return Plugin(TxBuilder, category=Category.Tx)
 
 class TxBuilder(BaseDock):
 
     tool_name = 'Transaction Builder'
     description = 'Transaction Builder helps you create transactions.'
     is_large = True
-    category = Category.Tx
 
     def __init__(self, handler):
         super(TxBuilder, self).__init__(handler)

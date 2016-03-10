@@ -177,8 +177,7 @@ item_types.append(BlockHeaderItem)
 
 
 def make_plugin():
-    p = Plugin(ItemsPlugin)
-    p.has_gui = False
+    p = Plugin(ItemsPlugin, category=Category.Core, has_gui=False)
     p.instantiate_item = instantiate_item
     p.get_item_actions = get_actions
     return p
@@ -191,7 +190,6 @@ class ItemsPlugin(BasePluginUI):
     """For augmentation purposes, we use a plugin to help with item types."""
     tool_name = 'Item Types'
     description = 'Helps handle data that is of a certain type.'
-    category = Category.Core
 
     def __init__(self, *args):
         super(ItemsPlugin, self).__init__(*args)

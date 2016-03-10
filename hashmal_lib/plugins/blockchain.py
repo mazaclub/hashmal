@@ -11,7 +11,7 @@ from hashmal_lib.downloader import Downloader
 from base import BaseDock, Plugin, Category
 
 def make_plugin():
-    return Plugin(Blockchain)
+    return Plugin(Blockchain, category=Category.Data)
 
 known_data_types = OrderedDict()
 known_data_types.update({'Transaction': 'raw_tx'})
@@ -97,7 +97,6 @@ class Blockchain(BaseDock):
     tool_name = 'Blockchain'
     description = 'Blockchain allows you to download data from block explorers.'
     is_large = True
-    category = Category.Data
 
     def __init__(self, handler):
         super(Blockchain, self).__init__(handler)

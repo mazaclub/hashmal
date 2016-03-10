@@ -13,7 +13,7 @@ from hashmal_lib.widgets.block import BlockWidget
 from hashmal_lib.core import BlockHeader, Block
 
 def make_plugin():
-    return Plugin(BlockAnalyzer)
+    return Plugin(BlockAnalyzer, category=Category.Block)
 
 def deserialize_block_or_header(raw):
     """Deserialize hex-encoded block/block header.
@@ -39,7 +39,6 @@ class BlockAnalyzer(BaseDock):
 
     tool_name = 'Block Analyzer'
     description = 'Deserializes raw blocks.'
-    category = Category.Block
     is_large = True
 
     def init_data(self):

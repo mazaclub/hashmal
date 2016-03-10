@@ -9,7 +9,7 @@ from hashmal_lib.gui_utils import floated_buttons, HBox
 from hashmal_lib.core.utils import is_hex
 
 def make_plugin():
-    return Plugin(Variables)
+    return Plugin(Variables, category=Category.Core)
 
 VariableType = namedtuple('VariableType', ('name', 'classify'))
 """Variable type.
@@ -175,7 +175,6 @@ class Variables(BaseDock):
 
     tool_name = 'Variables'
     description = 'Variables records data for later access.'
-    category = Category.Core
 
     dataChanged = QtCore.pyqtSignal()
     def __init__(self, handler):

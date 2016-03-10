@@ -14,7 +14,7 @@ from hashmal_lib.core.utils import is_hex, format_hex_string
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 
 def make_plugin():
-    return Plugin(ScriptGenerator)
+    return Plugin(ScriptGenerator, category=Category.Script)
 
 ScriptTemplate = namedtuple('ScriptTemplate', ('name', 'text', 'variables'))
 """Template for a script.
@@ -275,7 +275,6 @@ class ScriptGenerator(BaseDock):
 
     tool_name = 'Script Generator'
     description = 'Generates scripts from templates.'
-    category = Category.Script
 
     def __init__(self, handler):
         super(ScriptGenerator, self).__init__(handler)

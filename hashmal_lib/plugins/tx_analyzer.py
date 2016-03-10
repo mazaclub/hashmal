@@ -12,7 +12,7 @@ from hashmal_lib.core.script import Script
 from hashmal_lib.core.transaction import Transaction, sig_hash_name
 
 def make_plugin():
-    return Plugin(TxAnalyzer)
+    return Plugin(TxAnalyzer, category=Category.Tx)
 
 class InputsStatusModel(QAbstractTableModel):
     def __init__(self, parent=None):
@@ -100,7 +100,6 @@ class TxAnalyzer(BaseDock):
     tool_name = 'Transaction Analyzer'
     description = 'Deserializes transactions and verifies their inputs.'
     is_large = True
-    category = Category.Tx
 
     TAB_DESERIALIZE = 0
     TAB_VERIFY = 1

@@ -8,7 +8,7 @@ from hashmal_lib.gui_utils import monospace_font, Separator
 from item_types import Item, ItemAction
 
 def make_plugin():
-    return Plugin(AddrEncoder)
+    return Plugin(AddrEncoder, category=Category.Key)
 
 class Hash160Item(Item):
     name = 'Hash160'
@@ -81,7 +81,6 @@ class AddrEncoder(BaseDock):
             'Address Encoder encodes/decodes addresses with version bytes (blockchain identifiers).',
             'Addresses are decoded into their 20-byte RIPEMD-160 hashes.'
     ])
-    category = Category.Key
 
     def __init__(self, handler):
         super(AddrEncoder, self).__init__(handler)

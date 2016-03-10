@@ -15,7 +15,7 @@ known_methods = [
 ]
 
 def make_plugin():
-    return Plugin(WalletRPC)
+    return Plugin(WalletRPC, category=Category.Data)
 
 class RPCProfile(object):
     user = 'rpcUser'
@@ -146,7 +146,6 @@ class RPCDownloader(Downloader):
 class WalletRPC(BaseDock):
     tool_name = 'Wallet RPC'
     description = 'Wallet RPC allows you to communicate with a full client to retrieve blockchain data.'
-    category = Category.Data
     is_large = True
     def __init__(self, *args):
         super(WalletRPC, self).__init__(*args)

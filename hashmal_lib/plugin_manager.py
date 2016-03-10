@@ -56,11 +56,10 @@ class PluginsModel(QAbstractTableModel):
             if role in [Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole]:
                 data = plugin.name
         elif col == 1:
-            category_name, category_desc = plugin.ui.category
             if role in [Qt.DisplayRole, Qt.EditRole]:
-                data = category_name
+                data = plugin.category.name
             elif role in [Qt.ToolTipRole]:
-                data = category_desc
+                data = plugin.category.description
         elif col == 2:
             is_enabled = plugin.name in self.enabled_plugins
             if role in [Qt.DisplayRole]:
@@ -185,7 +184,7 @@ class PluginsProxyModel(QSortFilterProxyModel):
         plugin = self.sourceModel().plugin_for_row(source_row)
 
         if self.hide_core_plugins:
-            if plugin.ui.category == Category.Core:
+            if plugin.category == Category.Core:
                 return False
         if self.hide_gui_plugins and plugin.has_gui:
             return False

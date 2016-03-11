@@ -30,6 +30,8 @@ class PluginHandler(QWidget):
         self.waiting_augmentations = []
         # Augmentations collection.
         self.augmentations = Augmentations()
+        # Menus for plugin categories.
+        self.category_menus = []
 
     def get_plugin(self, plugin_name):
         for plugin in self.loaded_plugins:
@@ -54,6 +56,7 @@ class PluginHandler(QWidget):
             _categories[plugin.category.name].append(plugin)
 
         shortcuts = add_shortcuts(_categories.keys())
+        # Dict with keys that have ampersands for keyboard shortcuts.
         categories = OrderedDict()
         for k, v in zip(shortcuts, _categories.values()):
             categories[k] = v
@@ -62,8 +65,25 @@ class PluginHandler(QWidget):
             if len(plugins) == 0:
                 continue
             category_menu = menu.addMenu(i)
+            self.category_menus.append(category_menu)
             for plugin in sorted(plugins, key = lambda x: x.name):
                 category_menu.addAction(plugin.ui.toggleViewAction())
+
+        self.hide_unused_category_menus()
+
+    def hide_unused_category_menus(self):
+        """Hide the menus for categories that have no enabled plugins."""
+        # {category_name: is_in_use, ...}
+        active_categories = dict((i.name, False) for i in Category.categories())
+        # Determine which categories are in use.
+        for plugin in self.loaded_plugins:
+            if not plugin.has_gui or not plugin.ui.is_enabled:
+                continue
+            active_categories[plugin.category.name] = True
+
+        for menu in self.category_menus:
+            category_name = str(menu.title()).replace('&','')
+            menu.menuAction().setVisible(active_categories[category_name])
 
     def load_plugin(self, plugin_maker, name):
         plugin_instance = plugin_maker()
@@ -134,6 +154,7 @@ class PluginHandler(QWidget):
                 i.is_enabled = False
                 self.undo_augment(i)
         self.assign_dock_shortcuts()
+        self.hide_unused_category_menus()
 
     def bring_to_front(self, dock):
         """Activate a dock by ensuring it is visible and raising it."""

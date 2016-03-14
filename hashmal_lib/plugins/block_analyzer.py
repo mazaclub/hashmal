@@ -9,8 +9,8 @@ from bitcoin.core.serialize import VarIntSerializer
 from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
 from hashmal_lib.gui_utils import Separator
-from hashmal_lib.widgets.block import BlockWidget
-from hashmal_lib.core.block import BlockHeader, Block, deserialize_block_or_header
+from hashmal_lib.widgets.block import BlockWidget, RawBlockEdit
+from hashmal_lib.core.block import BlockHeader, Block
 
 def make_plugin():
     return Plugin(BlockAnalyzer, category=Category.Block)
@@ -39,10 +39,9 @@ class BlockAnalyzer(BaseDock):
         self.block_widget = BlockWidget()
         self.block_widget.header_widget.view.selectionModel().selectionChanged.connect(self.on_header_selection)
         self.block_widget.txs_widget.view.selectionModel().selectionChanged.connect(self.on_tx_selection)
-        self.raw_block_edit = QPlainTextEdit()
+        self.raw_block_edit = RawBlockEdit(self.handler)
         self.raw_block_edit.setWhatsThis('Enter a serialized raw block or block header here. If you have a raw block or header stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically after pressing the space key.')
-        self.raw_block_edit.textChanged.connect(self.check_raw_block)
-        self.handler.substitute_variables(self.raw_block_edit)
+        self.raw_block_edit.blockChanged.connect(self.check_raw_block)
         self.raw_block_edit.setTabChangesFocus(True)
         self.setFocusProxy(self.raw_block_edit)
 
@@ -67,10 +66,8 @@ class BlockAnalyzer(BaseDock):
 
     def check_raw_block(self):
         txt = str(self.raw_block_edit.toPlainText())
-        # Variable substitution
-        if txt.startswith('$'):
-            return
-        self.block, self.header = deserialize_block_or_header(txt)
+        self.block = self.raw_block_edit.block
+        self.header = self.raw_block_edit.header
         show_invalid_msg = True if self.header is None and txt else False
         self.raw_block_invalid.setVisible(show_invalid_msg)
 

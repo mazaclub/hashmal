@@ -4,7 +4,7 @@ from PyQt4.QtCore import *
 from bitcoin.core import CBlockHeader, b2x, b2lx
 
 from hashmal_lib.gui_utils import monospace_font, field_info
-from hashmal_lib.core import BlockHeader, Block
+from hashmal_lib.core.block import BlockHeader, Block, deserialize_block_or_header
 from hashmal_lib import config
 
 class BlockHeaderModel(QAbstractTableModel):
@@ -196,3 +196,22 @@ class BlockWidget(QWidget):
         self.header_widget.set_block_header(block_header)
         self.txs_widget.set_block(block)
 
+class RawBlockEdit(QPlainTextEdit):
+    """Text editor for raw blocks and headers."""
+    blockChanged = pyqtSignal()
+
+    def __init__(self, handler=None, parent=None):
+        super(RawBlockEdit, self).__init__(parent)
+        self.header = self.block = None
+        self.setFont(monospace_font)
+        if handler:
+            handler.substitute_variables(self)
+        self.textChanged.connect(self.check_raw_block)
+
+    def check_raw_block(self):
+        text = str(self.toPlainText())
+        # Variable substitution.
+        if text.startswith('$'):
+            return
+        self.block, self.header = deserialize_block_or_header(text)
+        self.blockChanged.emit()

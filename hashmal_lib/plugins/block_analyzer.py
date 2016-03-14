@@ -10,30 +10,10 @@ from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
 from hashmal_lib.gui_utils import Separator
 from hashmal_lib.widgets.block import BlockWidget
-from hashmal_lib.core import BlockHeader, Block
+from hashmal_lib.core.block import BlockHeader, Block, deserialize_block_or_header
 
 def make_plugin():
     return Plugin(BlockAnalyzer, category=Category.Block)
-
-def deserialize_block_or_header(raw):
-    """Deserialize hex-encoded block/block header.
-
-    Returns:
-        Two-tuple of (block, block_header)
-    """
-    try:
-        raw = x(raw)
-        if len(raw) == BlockHeader.header_length():
-            block_header = BlockHeader.deserialize(raw)
-            return (None, block_header)
-        else:
-            # We don't use block.get_header() in case the header is
-            # correct but the rest of the block isn't.
-            block_header = BlockHeader.deserialize(raw[0:BlockHeader.header_length()])
-            block = Block.deserialize(raw)
-            return (block, block_header)
-    except Exception as e:
-        return (None, None)
 
 class BlockAnalyzer(BaseDock):
 

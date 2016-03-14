@@ -1,9 +1,30 @@
 import struct
 
-from bitcoin.core import __make_mutable, b2x, CBlockHeader
+from bitcoin.core import __make_mutable, x, b2x, CBlockHeader
 from bitcoin.core.serialize import ser_read, Hash, BytesSerializer, VectorSerializer
 
 from transaction import Transaction
+
+def deserialize_block_or_header(raw):
+    """Deserialize hex-encoded block/block header.
+
+    Returns:
+        Two-tuple of (block, block_header)
+    """
+    try:
+        raw = x(raw)
+        if len(raw) == BlockHeader.header_length():
+            block_header = BlockHeader.deserialize(raw)
+            return (None, block_header)
+        else:
+            # We don't use block.get_header() in case the header is
+            # correct but the rest of the block isn't.
+            block_header = BlockHeader.deserialize(raw[0:BlockHeader.header_length()])
+            block = Block.deserialize(raw)
+            return (block, block_header)
+    except Exception as e:
+        return (None, None)
+
 
 block_header_fields = [
     ('nVersion', b'<i', 4, 1),

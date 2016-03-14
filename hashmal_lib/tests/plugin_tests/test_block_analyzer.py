@@ -4,6 +4,7 @@ from PyQt4.QtTest import QTest
 
 from bitcoin.core import b2lx
 from hashmal_lib.core import chainparams
+from hashmal_lib.core.block import deserialize_block_or_header
 from hashmal_lib.plugins import block_analyzer
 from .gui_test import PluginTest
 
@@ -16,7 +17,7 @@ class BlockAnalyzerTest(unittest.TestCase):
         chainparams.set_to_preset('Bitcoin')
 
     def test_deserialize_genesis_block_header(self):
-        blk, header = block_analyzer.deserialize_block_or_header(btc_genesis_header)
+        blk, header = deserialize_block_or_header(btc_genesis_header)
         self.assertEqual(1, header.nVersion)
         self.assertEqual(b'\x00'*32, header.hashPrevBlock)
         self.assertEqual('4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b', b2lx(header.hashMerkleRoot))
@@ -27,7 +28,7 @@ class BlockAnalyzerTest(unittest.TestCase):
         self.assertIs(None, blk)
 
     def test_deserialize_genesis_block(self):
-        blk, header = block_analyzer.deserialize_block_or_header(btc_genesis)
+        blk, header = deserialize_block_or_header(btc_genesis)
         self.assertEqual(1, header.nVersion)
         self.assertEqual(b'\x00'*32, header.hashPrevBlock)
         self.assertEqual('4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b', b2lx(header.hashMerkleRoot))

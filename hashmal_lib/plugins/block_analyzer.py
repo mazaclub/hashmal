@@ -92,13 +92,6 @@ class BlockAnalyzer(BaseDock):
 
         menu.exec_(self.block_widget.txs_widget.view.viewport().mapToGlobal(position))
 
-    def select_block_text(self, start, length):
-        """Select an area of the raw block textedit."""
-        cursor = QTextCursor(self.raw_block_edit.document())
-        cursor.setPosition(start)
-        cursor.setPosition(start + length, QTextCursor.KeepAnchor)
-        self.raw_block_edit.setTextCursor(cursor)
-
     def on_header_selection(self, selected, deselected):
         if not self.header or not len(selected.indexes()):
             return
@@ -107,7 +100,8 @@ class BlockAnalyzer(BaseDock):
         header = [i[2] * 2 for i in self.header.fields]
 
         start = sum(header[0:row])
-        self.select_block_text(start, header[row])
+        self.raw_block_edit.select_block_text(start, header[row])
+        self.block_widget.txs_widget.view.selectionModel().clearSelection()
 
     def on_tx_selection(self, selected, deselected):
         if not self.block or not len(selected.indexes()):
@@ -125,7 +119,7 @@ class BlockAnalyzer(BaseDock):
         start += len(_buf.getvalue()) * 2
 
         length = len(self.block.vtx[row].serialize()) * 2
-        self.select_block_text(start, length)
+        self.raw_block_edit.select_block_text(start, length)
 
     def on_option_changed(self, key):
         if key == 'chainparams':

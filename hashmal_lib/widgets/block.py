@@ -206,12 +206,47 @@ class RawBlockEdit(QPlainTextEdit):
         self.setFont(monospace_font)
         if handler:
             handler.substitute_variables(self)
+        # Whether the last change was just a formatting change.
+        self.is_format_change = False
         self.textChanged.connect(self.check_raw_block)
+        self.blockChanged.connect(self.clear_formatting)
 
     def check_raw_block(self):
+        if self.is_format_change:
+            return
         text = str(self.toPlainText())
         # Variable substitution.
         if text.startswith('$'):
             return
         self.block, self.header = deserialize_block_or_header(text)
         self.blockChanged.emit()
+
+    def clear_formatting(self):
+        """Clear the formatting on this editor."""
+        self.is_format_change = True
+        cursor = self.textCursor()
+        pos = cursor.position()
+        # Clear existing formatting.
+        cursor.movePosition(QTextCursor.Start)
+        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        cursor.setCharFormat(QTextCharFormat())
+        cursor.setPosition(pos)
+        self.setTextCursor(cursor)
+        self.is_format_change = False
+
+    def select_block_text(self, start, length):
+        """Select an area of the raw block textedit."""
+        self.clear_formatting()
+        highlight = QTextCharFormat()
+        highlight.setBackground(QColor('yellow'))
+
+        self.is_format_change = True
+        cursor = self.textCursor()
+        # Apply highlight.
+        cursor.setPosition(start)
+        cursor.setPosition(start + length, QTextCursor.KeepAnchor)
+        cursor.setCharFormat(highlight)
+
+        cursor.movePosition(QTextCursor.Start)
+        self.setTextCursor(cursor)
+        self.is_format_change = False

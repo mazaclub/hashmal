@@ -10,7 +10,7 @@ from PyQt4.QtGui import *
 from PyQt4 import QtCore
 from PyQt4.QtCore import *
 
-from hashmal_lib.gui_utils import HBox, floated_buttons, RawRole, ReadOnlyCheckBox, field_info, Amount, OutputAmountEdit
+from hashmal_lib.gui_utils import HBox, floated_buttons, RawRole, ReadOnlyCheckBox, field_info, Amount, OutputAmountEdit, monospace_font
 from hashmal_lib.core import chainparams
 from hashmal_lib.core.script import Script
 from hashmal_lib.core.transaction import Transaction, OutPoint, TxIn, TxOut
@@ -822,3 +822,29 @@ class TxWidget(QWidget):
             total_input_value += value
         fee = total_input_value - total_output_value
         self.tx_properties.set_fee(fee)
+
+class RawTxEdit(QPlainTextEdit):
+    """Text editor for raw transactions."""
+    txChanged = pyqtSignal()
+
+    def __init__(self, handler=None, parent=None):
+        super(RawTxEdit, self).__init__(parent)
+        self.tx = None
+        self.setFont(monospace_font)
+        if handler:
+            handler.substitute_variables(self)
+        self.textChanged.connect(self.check_raw_tx)
+
+    def check_raw_tx(self):
+        text = str(self.toPlainText())
+        # Variable substitution.
+        if text.startswith('$'):
+            return
+        tx = None
+        try:
+            tx = Transaction.deserialize(x(text))
+        except Exception:
+            pass
+
+        self.tx = tx
+        self.txChanged.emit()

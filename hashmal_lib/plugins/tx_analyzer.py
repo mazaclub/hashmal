@@ -7,7 +7,7 @@ from PyQt4.QtCore import *
 from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
-from hashmal_lib.widgets.tx import TxWidget
+from hashmal_lib.widgets.tx import TxWidget, RawTxEdit
 from hashmal_lib.core.script import Script
 from hashmal_lib.core.transaction import Transaction, sig_hash_name
 
@@ -120,14 +120,12 @@ class TxAnalyzer(BaseDock):
         self.tx = None
 
     def create_layout(self):
-        self.raw_tx_edit = QPlainTextEdit()
+        self.raw_tx_edit = RawTxEdit(self.handler)
         self.raw_tx_edit.setWhatsThis('Enter a serialized transaction here. If you have a raw transaction stored in the Variables tool, you can enter the variable name preceded by a "$", and the variable value will be substituted automatically after pressing the space key.')
         self.raw_tx_edit.setTabChangesFocus(True)
-        self.raw_tx_edit.setFont(monospace_font)
         self.raw_tx_edit.setContextMenuPolicy(Qt.CustomContextMenu)
         self.raw_tx_edit.customContextMenuRequested.connect(self.context_menu)
-        self.raw_tx_edit.textChanged.connect(self.check_raw_tx)
-        self.handler.substitute_variables(self.raw_tx_edit)
+        self.raw_tx_edit.txChanged.connect(self.check_raw_tx)
         self.setFocusProxy(self.raw_tx_edit)
 
         self.raw_tx_invalid = QLabel('Cannot parse transaction.')
@@ -253,15 +251,8 @@ class TxAnalyzer(BaseDock):
 
     def check_raw_tx(self):
         txt = str(self.raw_tx_edit.toPlainText())
-        # Variable substitution
-        if txt.startswith('$'):
-            return
-        tx = None
-        valid = True
-        try:
-            tx = Transaction.deserialize(txt.decode('hex'))
-        except Exception:
-            valid = False
+        tx = self.raw_tx_edit.tx
+        valid = True if tx else False
 
         self.tx = tx
         self.inputs_box.setEnabled(valid)
@@ -361,5 +352,5 @@ class TxAnalyzer(BaseDock):
 
     def on_option_changed(self, key):
         if key == 'chainparams':
-            self.check_raw_tx()
+            self.raw_tx_edit.textChanged.emit()
 

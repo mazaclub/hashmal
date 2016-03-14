@@ -35,6 +35,9 @@ class HashmalMain(QMainWindow):
         self.dock_orders = defaultdict(list)
         self.setCorner(QtCore.Qt.BottomRightCorner, QtCore.Qt.RightDockWidgetArea)
 
+        # When testing, we don't confirm discarding unsaved changes on exit.
+        self.testing_mode = False
+
         self.config = Config()
         self.init_logger()
         self.config.optionChanged.connect(self.on_option_changed)
@@ -100,9 +103,6 @@ class HashmalMain(QMainWindow):
 
         if self.qt_settings.value('quickTipsOnStart', defaultValue=QtCore.QVariant(True)).toBool():
             QtCore.QTimer.singleShot(500, self.do_quick_tips)
-
-        # When testing, we don't confirm discarding unsaved changes on exit.
-        self.testing_mode = False
 
     def sizeHint(self):
         return QtCore.QSize(800, 500)

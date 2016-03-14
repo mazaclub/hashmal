@@ -8,6 +8,7 @@ from bitcoin.core.script import (FindAndDelete, SIGHASH_ALL, SIGHASH_NONE,
 import block
 import transaction
 import opcodes
+from serialize import Field
 import stack
 
 active_preset = None
@@ -121,39 +122,39 @@ class ParamsPreset(object):
 
 
 _bitcoin_header_fields = [
-    ('nVersion', b'<i', 4, 1),
-    ('hashPrevBlock', 'hash', 32, b'\x00'*32),
-    ('hashMerkleRoot', 'hash', 32, b'\x00'*32),
-    ('nTime', b'<I', 4, 0),
-    ('nBits', b'<I', 4, 0),
-    ('nNonce', b'<I', 4, 0)
+    Field('nVersion', b'<i', 4, 1),
+    Field('hashPrevBlock', 'hash', 32, b'\x00'*32),
+    Field('hashMerkleRoot', 'hash', 32, b'\x00'*32),
+    Field('nTime', b'<I', 4, 0),
+    Field('nBits', b'<I', 4, 0),
+    Field('nNonce', b'<I', 4, 0)
 ]
 
 _bitcoin_block_fields = [
-    ('vtx', 'vectortx', None, None)
+    Field('vtx', 'vectortx', None, None)
 ]
 
 _bitcoin_tx_fields=[
-    ('nVersion', b'<i', 4, 1),
-    ('vin', 'inputs', None, None),
-    ('vout', 'outputs', None, None),
-    ('nLockTime', b'<I', 4, 0)
+    Field('nVersion', b'<i', 4, 1),
+    Field('vin', 'inputs', None, None),
+    Field('vout', 'outputs', None, None),
+    Field('nLockTime', b'<I', 4, 0)
 ]
 
 _bitcoin_prevout_fields = [
-    ('hash', 'hash', 32, b'\x00'*32),
-    ('n', b'<I', 4, 0xffffffff)
+    Field('hash', 'hash', 32, b'\x00'*32),
+    Field('n', b'<I', 4, 0xffffffff)
 ]
 
 _bitcoin_txin_fields = [
-    ('prevout', 'prevout', None, None),
-    ('scriptSig', 'script', None, None),
-    ('nSequence', b'<I', 4, 0xffffffff)
+    Field('prevout', 'prevout', None, None),
+    Field('scriptSig', 'script', None, None),
+    Field('nSequence', b'<I', 4, 0xffffffff)
 ]
 
 _bitcoin_txout_fields = [
-    ('nValue', b'<q', 8, -1),
-    ('scriptPubKey', 'script', None, None)
+    Field('nValue', b'<q', 8, -1),
+    Field('scriptPubKey', 'script', None, None)
 ]
 
 
@@ -165,33 +166,33 @@ BitcoinPreset = ParamsPreset(
 
 ClamsPreset = ParamsPreset(
         name='Clams',
-        tx_fields=[('nVersion', b'<i', 4, 1),
-            ('Timestamp', b'<i', 4, 0),
-            ('vin', 'inputs', None, None),
-            ('vout', 'outputs', None, None),
-            ('nLockTime', b'<I', 4, 0),
-            ('ClamSpeech', 'bytes', None, b'')],
+        tx_fields=[Field('nVersion', b'<i', 4, 1),
+            Field('Timestamp', b'<i', 4, 0),
+            Field('vin', 'inputs', None, None),
+            Field('vout', 'outputs', None, None),
+            Field('nLockTime', b'<I', 4, 0),
+            Field('ClamSpeech', 'bytes', None, b'')],
         tx_serializer = transaction.ClamsTxSerializer,
-        block_fields = list(_bitcoin_block_fields) + [('blockSig', 'bytes', None, None)],
+        block_fields = list(_bitcoin_block_fields) + [Field('blockSig', 'bytes', None, None)],
         opcode_overrides=[(0xb0, 'OP_CHECKLOCKTIMEVERIFY', opcodes.clams_checklocktimeverify)]
 )
 
 FreicoinPreset = ParamsPreset(
         name='Freicoin',
-        tx_fields=[('nVersion', b'<i', 4, 1),
-            ('vin', 'inputs', None, None),
-            ('vout', 'outputs', None, None),
-            ('nLockTime', b'<I', 4, 0),
-            ('RefHeight', b'<i', 4, 0)]
+        tx_fields=[Field('nVersion', b'<i', 4, 1),
+            Field('vin', 'inputs', None, None),
+            Field('vout', 'outputs', None, None),
+            Field('nLockTime', b'<I', 4, 0),
+            Field('RefHeight', b'<i', 4, 0)]
 )
 
 PeercoinPreset = ParamsPreset(
         name='Peercoin',
-        tx_fields=[('nVersion', b'<i', 4, 1),
-            ('Timestamp', b'<i', 4, 0),
-            ('vin', 'inputs', None, None),
-            ('vout', 'outputs', None, None),
-            ('nLockTime', b'<I', 4, 0)]
+        tx_fields=[Field('nVersion', b'<i', 4, 1),
+            Field('Timestamp', b'<i', 4, 0),
+            Field('vin', 'inputs', None, None),
+            Field('vout', 'outputs', None, None),
+            Field('nLockTime', b'<I', 4, 0)]
 )
 
 presets_list = [

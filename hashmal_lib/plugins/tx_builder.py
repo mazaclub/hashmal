@@ -280,7 +280,7 @@ class TxBuilder(BaseDock):
         tx.nLockTime = self.locktime_edit.get_amount()
 
         for name, w in self.tx_field_widgets:
-            if not name in [field[0] for field in tx.fields]:
+            if not name in [field.attr for field in tx.fields]:
                 continue
             value = str(w.text())
             default = getattr(tx, name)
@@ -305,26 +305,25 @@ class TxBuilder(BaseDock):
         """Show or hide tx field widgets."""
         tx_fields = chainparams.get_tx_fields()
         for field in tx_fields:
-            name = field[0]
+            name = field.attr
             if name in ['nVersion', 'vin', 'vout', 'nLockTime']:
                 continue
 
-            default_value = field[3]
             if name not in [j[0] for j in self.tx_field_widgets]:
                 widget = QLineEdit()
-                if isinstance(default_value, int):
+                if isinstance(field.default_value, int):
                     # Special case for timestamp fields.
                     if name == 'Timestamp':
                         widget = TimestampWidget()
                         widget.timestamp_raw.setReadOnly(False)
                     else:
                         widget = AmountEdit()
-                widget.setText(str(default_value))
+                widget.setText(str(field.default_value))
                 label = QLabel(''.join([name, ':']))
                 self.tx_field_widgets.append((name, widget))
                 self.tx_fields_layout.addRow(label, widget)
 
-        tx_field_names = [i[0] for i in tx_fields]
+        tx_field_names = [i.attr for i in tx_fields]
         for name, w in self.tx_field_widgets:
             l = self.tx_fields_layout.labelForField(w)
             if name in tx_field_names:

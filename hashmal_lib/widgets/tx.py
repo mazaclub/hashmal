@@ -32,9 +32,9 @@ class InputsModel(QAbstractTableModel):
 
     def get_outpoint(self, txinput):
         """Get the outpoint of a TxIn."""
-        for attr, fmt, _, _ in txinput.fields:
-            if fmt == 'prevout':
-                return getattr(txinput, attr)
+        for field in txinput.fields:
+            if field.fmt == 'prevout':
+                return getattr(txinput, field.attr)
 
     def outpoint_fields(self):
         """Get the fields of OutPoints."""
@@ -59,8 +59,7 @@ class InputsModel(QAbstractTableModel):
 
         txin_fields = list(fields)
         for field in fields:
-            _, fmt, _, _ = field
-            if fmt == 'prevout':
+            if field.fmt == 'prevout':
                 txin_fields.remove(field)
         return txin_fields
 
@@ -133,9 +132,9 @@ class InputsModel(QAbstractTableModel):
 
     def set_tx(self, tx):
         """Reset the model to reflect tx."""
-        for attr, fmt, _, _ in tx.fields:
-            if fmt == 'inputs':
-                return self.set_vin(getattr(tx, attr))
+        for field in tx.fields:
+            if field.fmt == 'inputs':
+                return self.set_vin(getattr(tx, field.attr))
 
     def set_vin(self, vin):
         """Reset the model to reflect vin."""
@@ -222,16 +221,14 @@ class InputsTree(QWidget):
     def _previous_tx_index(self):
         idx = 0
         for i, field in enumerate(self.model.outpoint_fields()):
-            _, fmt, _, _ = field
-            if fmt == 'hash':
+            if field.fmt == 'hash':
                 idx = i
         return idx
 
     def _script_index(self):
         idx = 0
         for i, field in enumerate(self.model.input_fields(with_prevout=False)):
-            _, fmt, _, _ = field
-            if fmt == 'script':
+            if field.fmt == 'script':
                 idx = i
         return idx + len(self.model.outpoint_fields())
 
@@ -362,9 +359,9 @@ class OutputsModel(QAbstractTableModel):
 
     def set_tx(self, tx):
         """Reset the model to reflect tx."""
-        for attr, fmt, _, _ in tx.fields:
-            if fmt == 'outputs':
-                return self.set_vout(getattr(tx, attr))
+        for field in tx.fields:
+            if field.fmt == 'outputs':
+                return self.set_vout(getattr(tx, field.attr))
 
     def set_vout(self, vout):
         """Reset the model to reflect vout."""
@@ -451,16 +448,14 @@ class OutputsTree(QWidget):
     def _amount_index(self):
         idx = 0
         for i, field in enumerate(self.model.output_fields()):
-            _, fmt, _, _ = field
-            if fmt == 'amount':
+            if field.fmt == 'amount':
                 idx = i
         return idx
 
     def _script_index(self):
         idx = 0
         for i, field in enumerate(self.model.output_fields()):
-            _, fmt, _, _ = field
-            if fmt == 'script':
+            if field.fmt == 'script':
                 idx = i
         return idx
 
@@ -706,7 +701,7 @@ class TxWidget(QWidget):
             # We already handle these four.
             if name in ['nVersion', 'vin', 'vout', 'nLockTime']:
                 continue
-            if not name in [field[0] for field in tx.fields]:
+            if not name in [field.attr for field in tx.fields]:
                 continue
             value = getattr(tx, name)
             w.setText(str(value))
@@ -737,7 +732,7 @@ class TxWidget(QWidget):
         """Add widgets and adjust visibility for tx field widgets."""
         tx_fields = chainparams.get_tx_fields()
         for i, field in enumerate(tx_fields):
-            name = field[0]
+            name = field.attr
             # Create a new widget for the tx field.
             if name not in self.field_widgets.keys():
                 widget = QLineEdit()
@@ -757,7 +752,7 @@ class TxWidget(QWidget):
                 l.show()
 
         # Hide unnecessary widgets
-        tx_field_names = [i[0] for i in tx_fields]
+        tx_field_names = [i.attr for i in tx_fields]
         for name, w in self.field_widgets.items():
             if name not in tx_field_names:
                 l = self.tx_fields_layout.labelForField(w)

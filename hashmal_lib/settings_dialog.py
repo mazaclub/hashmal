@@ -368,8 +368,8 @@ class SettingsDialog(QDialog):
         self.params_combo.paramsChanged.connect(self.change_chainparams)
 
         self.format_list = QListWidget()
-        for name, _, _, _ in chainparams.get_tx_fields():
-            self.format_list.addItem(name)
+        for field in chainparams.get_tx_fields():
+            self.format_list.addItem(field.attr)
 
         form.addRow(desc_label)
         form.addRow('Params:', self.params_combo)
@@ -386,8 +386,8 @@ class SettingsDialog(QDialog):
 
     def change_chainparams(self):
         self.format_list.clear()
-        for name, _, _, _ in chainparams.get_tx_fields():
-            self.format_list.addItem(name)
+        for field in chainparams.get_tx_fields():
+            self.format_list.addItem(field.attr)
 
     def on_option_changed(self, key):
         if key not in ['amount_format', 'data_retriever']:

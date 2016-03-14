@@ -97,7 +97,7 @@ class BlockAnalyzer(BaseDock):
             return
         index = selected.indexes()[0]
         row = index.row()
-        header = [i[2] * 2 for i in self.header.fields]
+        header = [i.num_bytes * 2 for i in self.header.fields]
 
         start = sum(header[0:row])
         self.raw_block_edit.select_block_text(start, header[row])

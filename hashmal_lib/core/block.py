@@ -3,6 +3,7 @@ import struct
 from bitcoin.core import __make_mutable, x, b2x, CBlockHeader
 from bitcoin.core.serialize import ser_read, Hash, BytesSerializer, VectorSerializer
 
+from serialize import Field
 from transaction import Transaction
 
 def deserialize_block_or_header(raw):
@@ -27,12 +28,12 @@ def deserialize_block_or_header(raw):
 
 
 block_header_fields = [
-    ('nVersion', b'<i', 4, 1),
-    ('hashPrevBlock', 'hash', 32, b'\x00'*32),
-    ('hashMerkleRoot', 'hash', 32, b'\x00'*32),
-    ('nTime', b'<I', 4, 0),
-    ('nBits', b'<I', 4, 0),
-    ('nNonce', b'<I', 4, 0)
+    Field('nVersion', b'<i', 4, 1),
+    Field('hashPrevBlock', 'hash', 32, b'\x00'*32),
+    Field('hashMerkleRoot', 'hash', 32, b'\x00'*32),
+    Field('nTime', b'<I', 4, 0),
+    Field('nBits', b'<I', 4, 0),
+    Field('nNonce', b'<I', 4, 0)
 ]
 """Fields of block header.
 
@@ -41,7 +42,7 @@ or a preset via chainparams.set_to_preset().
 """
 
 block_fields = [
-    ('vtx', 'vectortx', None, None)
+    Field('vtx', 'vectortx', None, None)
 ]
 
 @__make_mutable
@@ -67,7 +68,7 @@ class BlockHeader(CBlockHeader):
     @classmethod
     def header_length(cls):
         """Returns the expected length of block headers."""
-        return sum([i[2] for i in block_header_fields])
+        return sum([i.num_bytes for i in block_header_fields])
 
     @classmethod
     def from_header(cls, header):
@@ -75,11 +76,9 @@ class BlockHeader(CBlockHeader):
         if header.__class__ is BlockHeader:
             # In case from_header() is called after chainparams changes,
             # ensure the other header gets the new fields.
-            for attr, _, _, default in block_header_fields:
-                try:
-                    getattr(header, attr)
-                except AttributeError:
-                    setattr(header, attr, default)
+            for field in block_header_fields:
+                if not hasattr(header, field.attr):
+                    setattr(header, field.attr, field.default_value)
             return header
         elif header.__class__ is CBlockHeader:
             kwargs = dict((i, getattr(header, i)) for i in ['nVersion','hashPrevBlock','hashMerkleRoot','nTime','nBits','nNonce'])
@@ -94,30 +93,28 @@ class BlockHeader(CBlockHeader):
         if fields is None:
             fields = list(block_header_fields)
         self.fields = fields
-        for name, _, _, default in self.fields:
-            try:
-                getattr(self, name)
-            except AttributeError:
-                setattr(self, name, default)
+        for field in self.fields:
+            if not hasattr(self, field.attr):
+                setattr(self, field.attr, field.default_value)
 
     @classmethod
     def stream_deserialize(cls, f):
         self = cls()
         if not hasattr(self, 'fields'):
             setattr(self, 'fields', list(block_header_fields))
-        for attr, fmt, num_bytes, _ in self.fields:
-            if fmt not in ['bytes', 'hash']:
-                setattr(self, attr, struct.unpack(fmt, ser_read(f, num_bytes))[0])
+        for field in self.fields:
+            if field.fmt not in ['bytes', 'hash']:
+                setattr(self, field.attr, struct.unpack(field.fmt, ser_read(f, field.num_bytes))[0])
             else:
-                setattr(self, attr, ser_read(f, num_bytes))
+                setattr(self, field.attr, ser_read(f, field.num_bytes))
         return self
 
     def stream_serialize(self, f):
-        for attr, fmt, num_bytes, _ in self.fields:
-            if fmt not in ['bytes', 'hash']:
-                f.write(struct.pack(fmt, getattr(self, attr)))
+        for field in self.fields:
+            if field.fmt not in ['bytes', 'hash']:
+                f.write(struct.pack(field.fmt, getattr(self, field.attr)))
             else:
-                f.write(getattr(self, attr))
+                f.write(getattr(self, field.attr))
 
     def as_hex(self):
         return b2x(self.serialize())
@@ -171,11 +168,9 @@ class Block(BlockHeader):
         if blk.__class__ is Block:
             # In case from_block() is called after chainparams changes,
             # ensure the other block gets the new fields.
-            for attr, _, _, default in block_header_fields:
-                try:
-                    getattr(blk, attr)
-                except AttributeError:
-                    setattr(blk, attr, default)
+            for field in block_header_fields:
+                if not hasattr(blk, field.attr):
+                    setattr(blk, field.attr, field.default_value)
             return blk
         elif blk.__class__ is CBlock:
             kwargs = dict((i, getattr(blk, i)) for i in ['nVersion','hashPrevBlock','hashMerkleRoot','nTime','nBits','nNonce'])
@@ -210,8 +205,8 @@ class Block(BlockHeader):
         Returned header is a new object.
         """
         d = {}
-        for attr, _, _, _ in self.fields:
-            d[attr] = getattr(self, attr)
+        for field in self.fields:
+            d[field.attr] = getattr(self, field.attr)
         return BlockHeader(**d)
 
     def GetHash(self):
@@ -226,30 +221,30 @@ class Block(BlockHeader):
         if fields is None:
             fields = list(block_fields)
         self.block_fields = fields
-        for name, _, _, default in self.block_fields:
-            if not hasattr(self, name):
-                setattr(self, name, default)
+        for field in self.block_fields:
+            if not hasattr(self, field.attr):
+                setattr(self, field.attr, field.default_value)
 
     @classmethod
     def stream_deserialize(cls, f):
         self = super(Block, cls).stream_deserialize(f)
-        for attr, fmt, num_bytes, _ in self.block_fields:
-            if fmt not in ['bytes', 'vectortx']:
-                setattr(self, attr, struct.unpack(fmt, ser_read(f, num_bytes))[0])
-            elif fmt == 'bytes':
-                setattr(self, attr, BytesSerializer.stream_deserialize(f))
-            elif fmt == 'vectortx':
-                setattr(self, attr, VectorSerializer.stream_deserialize(Transaction, f))
+        for field in self.block_fields:
+            if field.fmt not in ['bytes', 'vectortx']:
+                setattr(self, field.attr, struct.unpack(field.fmt, ser_read(f, field.num_bytes))[0])
+            elif field.fmt == 'bytes':
+                setattr(self, field.attr, BytesSerializer.stream_deserialize(f))
+            elif field.fmt == 'vectortx':
+                setattr(self, field.attr, VectorSerializer.stream_deserialize(Transaction, f))
 
         setattr(self, 'vMerkleTree', tuple(Block.build_merkle_tree_from_txs(getattr(self, 'vtx'))))
         return self
 
     def stream_serialize(self, f):
         super(Block, self).stream_serialize(f)
-        for attr, fmt, num_bytes, _ in self.block_fields:
-            if fmt not in ['bytes', 'vectortx']:
-                f.write(struct.pack(fmt, getattr(self, attr)))
-            elif fmt == 'bytes':
-                BytesSerializer.stream_serialize(getattr(self, attr), f)
-            elif fmt == 'vectortx':
-                VectorSerializer.stream_serialize(Transaction, getattr(self, attr), f)
+        for field in self.block_fields:
+            if field.fmt not in ['bytes', 'vectortx']:
+                f.write(struct.pack(field.fmt, getattr(self, field.attr)))
+            elif field.fmt == 'bytes':
+                BytesSerializer.stream_serialize(getattr(self, field.attr), f)
+            elif field.fmt == 'vectortx':
+                VectorSerializer.stream_serialize(Transaction, getattr(self, field.attr), f)

@@ -171,7 +171,7 @@ def _field_info_for_struct_format(fmt):
 
 def field_info(field):
     """Get GUI-relevant info for a data field."""
-    attr, fmt, num_bytes, default = field
+    attr, fmt, num_bytes, default = field.attr, field.fmt, field.num_bytes, field.default_value
     cls, qvariant_method = str, 'toString'
 
     field_fmt = fmt

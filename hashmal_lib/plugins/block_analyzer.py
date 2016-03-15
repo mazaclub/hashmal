@@ -3,7 +3,7 @@ from io import BytesIO
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from bitcoin.core import x, b2x
+from bitcoin.core import x, b2x, b2lx
 from bitcoin.core.serialize import VarIntSerializer
 
 from base import BaseDock, Plugin, Category, augmenter
@@ -98,9 +98,12 @@ class BlockAnalyzer(BaseDock):
         index = selected.indexes()[0]
         row = index.row()
         header = [i.num_bytes * 2 for i in self.header.fields]
-
         start = sum(header[0:row])
-        self.raw_block_edit.select_block_text(start, header[row])
+
+        model = self.block_widget.header_widget.model
+        tooltip = model.headerData(row, Qt.Vertical) + ': ' + model.data(model.index(row, 0))
+
+        self.raw_block_edit.select_block_text(start, header[row], tooltip)
         self.block_widget.txs_widget.view.selectionModel().clearSelection()
 
     def on_tx_selection(self, selected, deselected):
@@ -119,7 +122,7 @@ class BlockAnalyzer(BaseDock):
         start += len(_buf.getvalue()) * 2
 
         length = len(self.block.vtx[row].serialize()) * 2
-        self.raw_block_edit.select_block_text(start, length)
+        self.raw_block_edit.select_block_text(start, length, b2lx(self.block.vtx[row].GetHash()))
 
     def on_option_changed(self, key):
         if key == 'chainparams':

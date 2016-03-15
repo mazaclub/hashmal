@@ -234,11 +234,13 @@ class RawBlockEdit(QPlainTextEdit):
         self.setTextCursor(cursor)
         self.is_format_change = False
 
-    def select_block_text(self, start, length):
+    def select_block_text(self, start, length, tooltip=None):
         """Select an area of the raw block textedit."""
         self.clear_formatting()
         highlight = QTextCharFormat()
         highlight.setBackground(QColor('yellow'))
+        if tooltip:
+            highlight.setToolTip(tooltip)
 
         self.is_format_change = True
         cursor = self.textCursor()

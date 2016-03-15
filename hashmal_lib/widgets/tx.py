@@ -104,7 +104,7 @@ class InputsModel(QAbstractTableModel):
 
         info = field_info(field)
         data = info.format_data(getattr(txin_object, info.attr), role)
-        if info.fmt == 'amount':
+        if info.is_coin_amount():
             if role not in [Qt.EditRole, RawRole]:
                 data = Amount(data).get_str()
 
@@ -303,7 +303,7 @@ class OutputsModel(QAbstractTableModel):
         fields = self.output_fields()
         for field in fields:
             info = field_info(field)
-            if info.fmt == 'amount':
+            if info.is_coin_amount():
                 return info.attr
 
     def rowCount(self, parent=QModelIndex()):
@@ -336,7 +336,7 @@ class OutputsModel(QAbstractTableModel):
         field = self.output_fields()[index.column()]
         info = field_info(field)
         data = info.format_data(getattr(tx_out, info.attr), role)
-        if info.fmt == 'amount':
+        if info.is_coin_amount():
             if role not in [Qt.EditRole, RawRole]:
                 data = Amount(data).get_str()
 
@@ -448,7 +448,7 @@ class OutputsTree(QWidget):
     def _amount_index(self):
         idx = 0
         for i, field in enumerate(self.model.output_fields()):
-            if field.fmt == 'amount':
+            if field.is_coin_amount():
                 idx = i
         return idx
 

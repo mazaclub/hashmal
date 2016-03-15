@@ -369,7 +369,7 @@ class BaseEditor(QWidget):
             return ScriptEditor(main_window), 'humanText'
         elif info.fmt == 'hash':
             return QLineEdit(), None
-        elif info.fmt == 'amount':
+        elif info.is_coin_amount():
             return OutputAmountEdit(), 'satoshis'
         elif info.cls == int:
             return AmountEdit(), 'amount'

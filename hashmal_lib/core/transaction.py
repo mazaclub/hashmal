@@ -5,7 +5,7 @@ from bitcoin.core.serialize import ser_read, BytesSerializer, VectorSerializer, 
 from bitcoin.core.script import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
 
 from script import Script
-from serialize import Field
+from serialize import *
 
 transaction_fields = [
     Field('nVersion', b'<i', 4, 1),
@@ -31,7 +31,7 @@ transaction_input_fields = [
 ]
 
 transaction_output_fields = [
-    Field('nValue', b'<q', 8, -1),
+    Field('nValue', b'<q', 8, -1, metadata=(FIELD_COIN,)),
     Field('scriptPubKey', 'script', None, None)
 ]
 

@@ -83,13 +83,19 @@ def get_label_for_attr(name):
 
 class FieldInfo(object):
     """GUI-relevant field info for a data field."""
-    def __init__(self, attr, fmt, num_bytes, default, cls, qvariant_method):
-        self.attr = attr
-        self.fmt = fmt
-        self.num_bytes = num_bytes
-        self.default = default
+    def __init__(self, field, cls, qvariant_method):
+        self.attr = field.attr
+        self.fmt = field.fmt
+        self.num_bytes = field.num_bytes
+        self.default = field.default_value
+        self.metadata = field.metadata
+        self._field = field
         self.cls = cls
         self.qvariant_method = qvariant_method
+
+    def is_coin_amount(self):
+        """Get whether this field represents an amount of coins."""
+        return self._field.is_coin_amount()
 
     def get_view_header(self):
         """Get the header label for a view."""
@@ -171,17 +177,12 @@ def _field_info_for_struct_format(fmt):
 
 def field_info(field):
     """Get GUI-relevant info for a data field."""
-    attr, fmt, num_bytes, default = field.attr, field.fmt, field.num_bytes, field.default_value
     cls, qvariant_method = str, 'toString'
 
-    field_fmt = fmt
-    if 'value' in attr.lower():
-        field_fmt = 'amount'
+    if field.fmt.startswith(('<', '>')) and len(field.fmt) == 2:
+        cls, qvariant_method = _field_info_for_struct_format(field.fmt)
 
-    if fmt.startswith(('<', '>')) and len(fmt) == 2:
-        cls, qvariant_method = _field_info_for_struct_format(fmt)
-
-    return FieldInfo(attr, field_fmt, num_bytes, default, cls, qvariant_method)
+    return FieldInfo(field, cls, qvariant_method)
 
 def HBox(*widgets):
     """Create an HBoxLayout with the widgets passed."""

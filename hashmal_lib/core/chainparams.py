@@ -8,7 +8,7 @@ from bitcoin.core.script import (FindAndDelete, SIGHASH_ALL, SIGHASH_NONE,
 import block
 import transaction
 import opcodes
-from serialize import Field
+from serialize import *
 import stack
 
 active_preset = None
@@ -153,7 +153,7 @@ _bitcoin_txin_fields = [
 ]
 
 _bitcoin_txout_fields = [
-    Field('nValue', b'<q', 8, -1),
+    Field('nValue', b'<q', 8, -1, metadata=(FIELD_COIN,)),
     Field('scriptPubKey', 'script', None, None)
 ]
 

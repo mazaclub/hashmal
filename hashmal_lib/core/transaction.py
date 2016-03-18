@@ -169,118 +169,132 @@ class TransactionSerializer(object):
         kwargs = {}
         for field in tx.fields:
             if field.fmt == 'inputs':
-                self.deserialize_inputs(tx, kwargs, field.attr, field.fmt, field.num_bytes, f)
+                self.deserialize_inputs(kwargs, f)
             elif field.fmt == 'outputs':
-                self.deserialize_outputs(tx, kwargs, field.attr, field.fmt, field.num_bytes, f)
+                self.deserialize_outputs(kwargs, f)
             else:
-                self.deserialize_field(tx, kwargs, field.attr, field.fmt, field.num_bytes, f)
+                self.deserialize_field(kwargs, field, f)
         return kwargs
 
     def stream_serialize(self, tx, f):
         for field in tx.fields:
             if field.fmt == 'inputs':
-                self.serialize_inputs(tx, field.attr, field.fmt, field.num_bytes, f)
+                self.serialize_inputs(tx, f)
             elif field.fmt == 'outputs':
-                self.serialize_outputs(tx, field.attr, field.fmt, field.num_bytes, f)
+                self.serialize_outputs(tx, f)
             else:
-                self.serialize_field(tx, field.attr, field.fmt, field.num_bytes, f)
+                self.serialize_field(tx, field, f)
 
-    def struct_deserialize(self, kwargs, attr, fmt, num_bytes, f):
+    def struct_deserialize(self, field, f):
+        """Deserialize a field using struct.unpack()."""
         pos = f.tell()
         try:
-            kwargs[attr] = struct_deserialize(fmt, num_bytes, f)
-            return True
+            return struct_deserialize(field.fmt, field.num_bytes, f), True
         except Exception as e:
             f.seek(pos)
-            return False
+            return None, False
 
-    def struct_serialize(self, obj, attr, fmt, num_bytes, f):
+    def struct_serialize(self, obj, field, f):
+        """Serialize a field using struct.pack()."""
         pos = f.tell()
         try:
-            struct_serialize(getattr(obj, attr), fmt, f)
+            struct_serialize(getattr(obj, field.attr), field.fmt, f)
             return True
         except Exception:
             f.seek(pos)
             return False
 
-    def deserialize_outpoint(self, tx, kwargs, attr, fmt, num_bytes, f):
-        fields = list(transaction_previous_outpoint_fields)
-        for field in fields:
-            if self.struct_deserialize(kwargs, field.attr, field.fmt, field.num_bytes, f):
-                continue
-            if field.fmt == 'hash':
-                kwargs[field.attr] = ser_read(f, field.num_bytes)
+    def deserialize_outpoint(self, kwargs, f):
+        """Deserialize an outpoint."""
+        for field in transaction_previous_outpoint_fields:
+            self.deserialize_field(kwargs, field, f)
 
-    def deserialize_inputs(self, tx, kwargs, attr, fmt, num_bytes, f):
+    def serialize_outpoint(self, outpoint, f):
+        """Serialize an outpoint."""
+        for field in outpoint.fields:
+            self.serialize_field(outpoint, field, f)
+
+    def deserialize_input(self, f):
+        """Deserialize an input."""
+        txin_kwargs = {}
+        for field in transaction_input_fields:
+            if field.fmt == 'prevout':
+                prevout_kwargs = {}
+                self.deserialize_outpoint(prevout_kwargs, f)
+                txin_kwargs[field.attr] = OutPoint(kwfields=prevout_kwargs)
+            else:
+                self.deserialize_field(txin_kwargs, field, f)
+        return TxIn(kwfields=txin_kwargs)
+
+    def serialize_input(self, txin, f):
+        """Serialize an input."""
+        for field in txin.fields:
+            if field.fmt == 'prevout':
+                self.serialize_outpoint(getattr(txin, field.attr), f)
+            else:
+                self.serialize_field(txin, field, f)
+
+    def deserialize_inputs(self, kwargs, f):
+        """Deserialize transaction inputs."""
         n = VarIntSerializer.stream_deserialize(f)
         r = []
-        fields = list(transaction_input_fields)
         for i in range(n):
-            txin_kwargs = {}
-            for field in fields:
-                if self.struct_deserialize(txin_kwargs, field.attr, field.fmt, field.num_bytes, f):
-                    continue
-                if field.fmt == 'prevout':
-                    prevout_kwargs = {}
-                    self.deserialize_outpoint(tx, prevout_kwargs, field.attr, field.fmt, field.num_bytes, f)
-                    txin_kwargs[field.attr] = OutPoint(kwfields=prevout_kwargs)
-                elif field.fmt == 'script':
-                    txin_kwargs[field.attr] = Script(BytesSerializer.stream_deserialize(f))
-            r.append(TxIn(kwfields=txin_kwargs))
+            r.append(self.deserialize_input(f))
         kwargs['vin'] = r
 
-    def deserialize_outputs(self, tx, kwargs, attr, fmt, num_bytes, f):
-        n = VarIntSerializer.stream_deserialize(f)
-        r = []
-        fields = list(transaction_output_fields)
-        for i in range(n):
-            txout_kwargs = {}
-            for field in fields:
-                if self.struct_deserialize(txout_kwargs, field.attr, field.fmt, field.num_bytes, f):
-                    continue
-                if field.fmt == 'script':
-                    txout_kwargs[field.attr] = Script(BytesSerializer.stream_deserialize(f))
-            r.append(TxOut(kwfields=txout_kwargs))
-        kwargs['vout'] = r
-
-    def serialize_outpoint(self, outpoint, fmt, num_bytes, f):
-        for field in outpoint.fields:
-            if self.struct_serialize(outpoint, field.attr, field.fmt, field.num_bytes, f):
-                continue
-            if field.fmt == 'hash':
-                f.write(getattr(outpoint, field.attr))
-
-    def serialize_inputs(self, tx, attr, fmt, num_bytes, f):
+    def serialize_inputs(self, tx, f):
+        """Serialize transaction inputs."""
         VarIntSerializer.stream_serialize(len(tx.vin), f)
         for txin in tx.vin:
-            for field in txin.fields:
-                if self.struct_serialize(txin, field.attr, field.fmt, field.num_bytes, f):
-                    continue
-                if field.fmt == 'prevout':
-                    self.serialize_outpoint(getattr(txin, field.attr), field.fmt, field.num_bytes, f)
-                elif field.fmt == 'script':
-                    BytesSerializer.stream_serialize(getattr(txin, field.attr), f)
+            self.serialize_input(txin, f)
 
-    def serialize_outputs(self, tx, attr, fmt, num_bytes, f):
+    def deserialize_output(self, f):
+        """Deserialize an output."""
+        txout_kwargs = {}
+        for field in transaction_output_fields:
+            self.deserialize_field(txout_kwargs, field, f)
+
+        return TxOut(kwfields=txout_kwargs)
+
+    def serialize_output(self, txout, f):
+        """Serialize an output."""
+        for field in txout.fields:
+            self.serialize_field(txout, field, f)
+
+    def deserialize_outputs(self, kwargs, f):
+        """Deserialize transaction outputs."""
+        n = VarIntSerializer.stream_deserialize(f)
+        r = []
+        for i in range(n):
+            r.append(self.deserialize_output(f))
+        kwargs['vout'] = r
+
+    def serialize_outputs(self, tx, f):
+        """Serialize transaction outputs."""
         VarIntSerializer.stream_serialize(len(tx.vout), f)
         for txout in tx.vout:
-            for field in txout.fields:
-                if self.struct_serialize(txout, field.attr, field.fmt, field.num_bytes, f):
-                    continue
-                if field.fmt == 'script':
-                    BytesSerializer.stream_serialize(getattr(txout, field.attr), f)
+            self.serialize_output(txout, f)
 
-    def deserialize_field(self, tx, kwargs, attr, fmt, num_bytes, f):
-        if self.struct_deserialize(kwargs, attr, fmt, num_bytes, f):
-            return
-        elif fmt == 'bytes':
-            kwargs[attr] = BytesSerializer.stream_deserialize(f)
+    def deserialize_field(self, kwargs, field, f):
+        """Deserialize a field."""
+        value, ok = self.struct_deserialize(field, f)
+        if ok:
+            kwargs[field.attr] = value
+        elif field.fmt == 'bytes':
+            kwargs[field.attr] = BytesSerializer.stream_deserialize(f)
+        elif field.fmt == 'hash':
+            kwargs[field.attr] = ser_read(f, field.num_bytes)
+        elif field.fmt == 'script':
+            kwargs[field.attr] = Script(BytesSerializer.stream_deserialize(f))
 
-    def serialize_field(self, tx, attr, fmt, num_bytes, f):
-        if self.struct_serialize(tx, attr, fmt, num_bytes, f):
+    def serialize_field(self, obj, field, f):
+        """Serialize a field."""
+        if self.struct_serialize(obj, field, f):
             return
-        elif fmt == 'bytes':
-            BytesSerializer.stream_serialize(getattr(tx, attr), f)
+        elif field.fmt in ['bytes', 'script']:
+            BytesSerializer.stream_serialize(getattr(obj, field.attr), f)
+        elif field.fmt == 'hash':
+            f.write(getattr(obj, field.attr))
 
 class Transaction(CMutableTransaction):
     """Cryptocurrency transaction.
@@ -367,15 +381,15 @@ class ClamsTxSerializer(TransactionSerializer):
 
     Required because transaction serialization depends on transaction version.
     """
-    def deserialize_field(self, tx, kwargs, attr, fmt, num_bytes, f):
-        if attr != 'ClamSpeech':
-            return super(ClamsTxSerializer, self).deserialize_field(tx, kwargs, attr, fmt, num_bytes, f)
+    def deserialize_field(self, kwargs, field, f):
+        if field.attr != 'ClamSpeech':
+            return super(ClamsTxSerializer, self).deserialize_field(kwargs, field, f)
         if kwargs['nVersion'] > 1:
-            return super(ClamsTxSerializer, self).deserialize_field(tx, kwargs, attr, fmt, num_bytes, f)
+            return super(ClamsTxSerializer, self).deserialize_field(kwargs, field, f)
 
-    def serialize_field(self, tx, attr, fmt, num_bytes, f):
-        if attr != 'ClamSpeech':
-            return super(ClamsTxSerializer, self).serialize_field(tx, attr, fmt, num_bytes, f)
-        if tx.nVersion > 1:
-            return super(ClamsTxSerializer, self).serialize_field(tx, attr, fmt, num_bytes, f)
+    def serialize_field(self, obj, field, f):
+        if field.attr != 'ClamSpeech':
+            return super(ClamsTxSerializer, self).serialize_field(obj, field, f)
+        if obj.nVersion > 1:
+            return super(ClamsTxSerializer, self).serialize_field(obj, field, f)
 

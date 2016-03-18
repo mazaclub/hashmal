@@ -259,7 +259,7 @@ class TransactionSerializer(object):
     def serialize_inputs(self, tx, f):
         """Serialize transaction inputs."""
         VarIntSerializer.stream_serialize(len(tx.vin), f)
-        yield f.tell(), None
+        yield f.tell(), None, tx.__class__.__name__
         for txin in tx.vin:
             for i in self.serialize_input(txin, f):
                 yield i
@@ -288,7 +288,7 @@ class TransactionSerializer(object):
     def serialize_outputs(self, tx, f):
         """Serialize transaction outputs."""
         VarIntSerializer.stream_serialize(len(tx.vout), f)
-        yield f.tell(), None
+        yield f.tell(), None, tx.__class__.__name__
         for txout in tx.vout:
             for i in self.serialize_output(txout, f):
                 yield i
@@ -313,7 +313,7 @@ class TransactionSerializer(object):
             BytesSerializer.stream_serialize(getattr(obj, field.attr), f)
         elif field.fmt == 'hash':
             f.write(getattr(obj, field.attr))
-        return f.tell(), field
+        return (f.tell(), field, obj.__class__.__name__)
 
 class Transaction(CMutableTransaction):
     """Cryptocurrency transaction.

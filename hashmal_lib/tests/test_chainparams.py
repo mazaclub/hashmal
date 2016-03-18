@@ -121,27 +121,27 @@ class TransactionTest(unittest.TestCase):
     def test_serialization_iter(self):
         tx = Transaction.deserialize(maza_raw_tx)
         expected = [
-            (4, 'nVersion'), # Tx version.
-            (5, None),      # 2 inputs.
-            (37, 'hash'),   # Input 1 hash.
-            (41, 'n'),      # Input 1 index.
-            (148, 'scriptSig'), # Input 1 script.
-            (152, 'nSequence'), # Input 1 sequence.
-            (184, 'hash'),  # Input 2 hash.
-            (188, 'n'),     # Input 2 index.
-            (296, 'scriptSig'), # Input 2 script.
-            (300, 'nSequence'), # Input 2 sequence.
-            (301, None),    # 2 outputs.
-            (309, 'nValue'),    # Output 1 value.
-            (335, 'scriptPubKey'),  # Output 1 script.
-            (343, 'nValue'),    # Output 2 value.
-            (369, 'scriptPubKey'),  # Output 2 script.
-            (373, 'nLockTime'), # Tx locktime.
+            (4, 'nVersion', 'Transaction'), # Tx version.
+            (5, None, 'Transaction'),   # 2 inputs.
+            (37, 'hash', 'OutPoint'),   # Input 1 hash.
+            (41, 'n', 'OutPoint'),      # Input 1 index.
+            (148, 'scriptSig', 'TxIn'), # Input 1 script.
+            (152, 'nSequence', 'TxIn'), # Input 1 sequence.
+            (184, 'hash', 'OutPoint'),  # Input 2 hash.
+            (188, 'n', 'OutPoint'),     # Input 2 index.
+            (296, 'scriptSig', 'TxIn'), # Input 2 script.
+            (300, 'nSequence', 'TxIn'), # Input 2 sequence.
+            (301, None, 'Transaction'), # 2 outputs.
+            (309, 'nValue', 'TxOut'),   # Output 1 value.
+            (335, 'scriptPubKey', 'TxOut'),  # Output 1 script.
+            (343, 'nValue', 'TxOut'),   # Output 2 value.
+            (369, 'scriptPubKey', 'TxOut'),  # Output 2 script.
+            (373, 'nLockTime', 'Transaction'), # Tx locktime.
         ]
         steps = []
         for i in tx.serialization_iter():
             steps.append(i)
-        results = [(step[0], step[1].attr if step[1] else None) for step in steps]
+        results = map(lambda step: (step[0], step[1].attr if step[1] else None, step[2]), steps)
         self.assertEqual(expected, results)
 
 

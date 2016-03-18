@@ -1,4 +1,5 @@
 import struct
+from io import BytesIO
 
 from bitcoin.core import CMutableTransaction, CMutableTxIn, CMutableTxOut, CMutableOutPoint, b2x
 from bitcoin.core.serialize import ser_read, BytesSerializer, VectorSerializer, VarIntSerializer
@@ -177,13 +178,25 @@ class TransactionSerializer(object):
         return kwargs
 
     def stream_serialize(self, tx, f):
+        for i in self.serialization_iter(tx, f):
+            pass
+
+    def serialization_iter(self, tx, f):
+        """Returns a generator that serializes tx.
+
+        After each write, the length of f and the field that was written
+        are yielded. If a variable-length integer is written, None is yielded
+        instead of a field.
+        """
         for field in tx.fields:
             if field.fmt == 'inputs':
-                self.serialize_inputs(tx, f)
+                for i in self.serialize_inputs(tx, f):
+                    yield i
             elif field.fmt == 'outputs':
-                self.serialize_outputs(tx, f)
+                for i in self.serialize_outputs(tx, f):
+                    yield i
             else:
-                self.serialize_field(tx, field, f)
+                yield self.serialize_field(tx, field, f)
 
     def struct_deserialize(self, field, f):
         """Deserialize a field using struct.unpack()."""
@@ -212,7 +225,7 @@ class TransactionSerializer(object):
     def serialize_outpoint(self, outpoint, f):
         """Serialize an outpoint."""
         for field in outpoint.fields:
-            self.serialize_field(outpoint, field, f)
+            yield self.serialize_field(outpoint, field, f)
 
     def deserialize_input(self, f):
         """Deserialize an input."""
@@ -230,9 +243,10 @@ class TransactionSerializer(object):
         """Serialize an input."""
         for field in txin.fields:
             if field.fmt == 'prevout':
-                self.serialize_outpoint(getattr(txin, field.attr), f)
+                for i in self.serialize_outpoint(getattr(txin, field.attr), f):
+                    yield i
             else:
-                self.serialize_field(txin, field, f)
+                yield self.serialize_field(txin, field, f)
 
     def deserialize_inputs(self, kwargs, f):
         """Deserialize transaction inputs."""
@@ -245,8 +259,10 @@ class TransactionSerializer(object):
     def serialize_inputs(self, tx, f):
         """Serialize transaction inputs."""
         VarIntSerializer.stream_serialize(len(tx.vin), f)
+        yield f.tell(), None
         for txin in tx.vin:
-            self.serialize_input(txin, f)
+            for i in self.serialize_input(txin, f):
+                yield i
 
     def deserialize_output(self, f):
         """Deserialize an output."""
@@ -259,7 +275,7 @@ class TransactionSerializer(object):
     def serialize_output(self, txout, f):
         """Serialize an output."""
         for field in txout.fields:
-            self.serialize_field(txout, field, f)
+            yield self.serialize_field(txout, field, f)
 
     def deserialize_outputs(self, kwargs, f):
         """Deserialize transaction outputs."""
@@ -272,8 +288,10 @@ class TransactionSerializer(object):
     def serialize_outputs(self, tx, f):
         """Serialize transaction outputs."""
         VarIntSerializer.stream_serialize(len(tx.vout), f)
+        yield f.tell(), None
         for txout in tx.vout:
-            self.serialize_output(txout, f)
+            for i in self.serialize_output(txout, f):
+                yield i
 
     def deserialize_field(self, kwargs, field, f):
         """Deserialize a field."""
@@ -290,11 +308,12 @@ class TransactionSerializer(object):
     def serialize_field(self, obj, field, f):
         """Serialize a field."""
         if self.struct_serialize(obj, field, f):
-            return
+            pass
         elif field.fmt in ['bytes', 'script']:
             BytesSerializer.stream_serialize(getattr(obj, field.attr), f)
         elif field.fmt == 'hash':
             f.write(getattr(obj, field.attr))
+        return f.tell(), field
 
 class Transaction(CMutableTransaction):
     """Cryptocurrency transaction.
@@ -348,6 +367,11 @@ class Transaction(CMutableTransaction):
 
     def stream_serialize(self, f):
         self.serializer_class().stream_serialize(self, f)
+
+    def serialization_iter(self, f=None):
+        if f is None:
+            f = BytesIO()
+        return self.serializer_class().serialization_iter(self, f)
 
     @classmethod
     def from_tx(cls, tx):

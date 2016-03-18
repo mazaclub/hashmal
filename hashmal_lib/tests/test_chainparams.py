@@ -118,6 +118,32 @@ class TransactionTest(unittest.TestCase):
         tx = Transaction.deserialize(maza_raw_tx)
         self.assertEqual(maza_raw_tx.encode('hex'), tx.as_hex())
 
+    def test_serialization_iter(self):
+        tx = Transaction.deserialize(maza_raw_tx)
+        expected = [
+            (4, 'nVersion'), # Tx version.
+            (5, None),      # 2 inputs.
+            (37, 'hash'),   # Input 1 hash.
+            (41, 'n'),      # Input 1 index.
+            (148, 'scriptSig'), # Input 1 script.
+            (152, 'nSequence'), # Input 1 sequence.
+            (184, 'hash'),  # Input 2 hash.
+            (188, 'n'),     # Input 2 index.
+            (296, 'scriptSig'), # Input 2 script.
+            (300, 'nSequence'), # Input 2 sequence.
+            (301, None),    # 2 outputs.
+            (309, 'nValue'),    # Output 1 value.
+            (335, 'scriptPubKey'),  # Output 1 script.
+            (343, 'nValue'),    # Output 2 value.
+            (369, 'scriptPubKey'),  # Output 2 script.
+            (373, 'nLockTime'), # Tx locktime.
+        ]
+        steps = []
+        for i in tx.serialization_iter():
+            steps.append(i)
+        results = [(step[0], step[1].attr if step[1] else None) for step in steps]
+        self.assertEqual(expected, results)
+
 
 bitcoin_raw_header = '0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a29ab5f49ffff001d1dac2b7c'.decode('hex')
 

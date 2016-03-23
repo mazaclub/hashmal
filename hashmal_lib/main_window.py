@@ -21,6 +21,13 @@ from toolbar import ToolBar
 
 known_script_formats = ['Human', 'Hex']
 
+def tab_bar_to_list(tabbar):
+    """Get a list of tab texts from a QTabBar."""
+    res = []
+    for c in range(tabbar.count()):
+        res.append(str(tabbar.tabText(c)))
+    return res
+
 class HashmalMain(QMainWindow):
     # Signals
     # Emitted when the list of user's layouts changes.
@@ -31,8 +38,8 @@ class HashmalMain(QMainWindow):
         self.app = app
         self.app.setStyleSheet(hashmal_style())
         self.changes_saved = True
-        # {Qt.DockWidgetArea: [dock0, dock1, ...], ...}
-        self.dock_orders = defaultdict(list)
+        # The last dock widget that was shown/selected.
+        self.last_active_dock = None
         self.setCorner(QtCore.Qt.BottomRightCorner, QtCore.Qt.RightDockWidgetArea)
 
         # When testing, we don't confirm discarding unsaved changes on exit.
@@ -318,30 +325,91 @@ class HashmalMain(QMainWindow):
         move_right_dock.triggered.connect(self.move_one_dock)
         self.addAction(move_right_dock)
 
+    def tab_bar_for_area(self, dock_area, text=None):
+        """Get the tab bar for a QDockWidgetArea.
+
+        If text is specified, only the tab bar with text as one of its tab texts
+        can be returned. (More than one tab bar can be present in a QDockWidgetArea.)
+        """
+        tab_children = filter(lambda i: i.parent().__class__.__name__ == 'HashmalMain', self.findChildren(QTabBar))
+        for w in tab_children:
+            if not w.count():
+                continue
+            tabs = tab_bar_to_list(w)
+            if text and text not in tabs:
+                continue
+            p = self.plugin_handler.get_plugin(tabs[0])
+            area = self.dockWidgetArea(p.ui)
+            if dock_area == area:
+                return w
+
+    def get_area_docks(self, dock, only_visible=True, require_same_tab_bar=True):
+        """Get the docks that occupy the area dock occupies.
+
+        Args:
+            - only_visible (bool): Whether or not only docks that are visible will be returned.
+            - require_same_tab_bar (bool): Whether to require that the tab bar used to list docks
+                is the same one that dock is in.
+
+        """
+        dock_area = self.dockWidgetArea(dock)
+        result = []
+        text = None
+        if require_same_tab_bar:
+            text = dock.tool_name
+        tab_bar = self.tab_bar_for_area(dock_area, text=text)
+        if not tab_bar:
+            return result
+
+        for plugin_name in tab_bar_to_list(tab_bar):
+            result.append(self.plugin_handler.get_plugin(plugin_name).ui)
+        if only_visible:
+            result = filter(lambda i: i.isVisible(), result)
+        return result
+
+    def on_dock_visibility_changed(self, dock, is_visible):
+        if is_visible:
+            self.last_active_dock = dock
+
     def move_one_dock(self, reverse=False):
         """Move focus to the next or previous dock."""
-        w = get_active_dock()
+        w = self.get_active_dock()
         if not w: return
-        docks = filter(lambda dock: dock.isVisible(), self.dock_orders[self.dockWidgetArea(w)])
+        if w.isFloating():
+            return
+
+        docks = self.get_area_docks(w)
+        if not docks:
+            return
         index = docks.index(w)
         if reverse:
-            if index == 0:
-                index = len(docks)
-            docks[index - 1].needsFocus.emit()
+            index -= 1
         else:
-            if index >= len(docks) - 1:
-                index = -1
-            docks[index + 1].needsFocus.emit()
+            index += 1
+            if index > len(docks) - 1:
+                index = 0
 
-    def tabifyDockWidget(self, bottom, top):
-        """Overloaded method for purposes of remembering dock positions."""
-        docks = self.dock_orders[self.dockWidgetArea(bottom)]
-        area = self.dockWidgetArea(bottom)
-        if len(docks) == 0:
-            docks.append(bottom)
-        super(HashmalMain, self).tabifyDockWidget(bottom, top)
-        idx = docks.index(bottom)
-        docks.insert(idx + 1, top)
+        docks[index].needsFocus.emit()
+
+    def get_active_dock(self):
+        """Get the dock widget that currently has focus."""
+        return self.last_active_dock
+
+    def hide_current_dock(self):
+        w = self.get_active_dock()
+        if not w: return
+
+        new_index = 0
+        docks = self.get_area_docks(w, require_same_tab_bar=False)
+        if w in docks:
+            new_index = docks.index(w)
+            docks.remove(w)
+            new_index = min(new_index, len(docks) - 1)
+
+        w.toggleViewAction().trigger()
+
+        if docks:
+            docks[new_index].needsFocus.emit()
 
     def createPopupMenu(self):
         menu = QMenu(self)
@@ -381,22 +449,6 @@ class HashmalMain(QMainWindow):
     def do_quick_tips(self):
         QuickTips(self).exec_()
 
-    def hide_current_dock(self):
-        w = get_active_dock()
-        if not w: return
-        docks = filter(lambda dock: dock.isVisible(), self.tabifiedDockWidgets(w))
-        w.toggleViewAction().trigger()
-        if docks:
-            docks[0].needsFocus.emit()
-
     def on_option_changed(self, key):
         if key == 'log_level':
             self.change_log_level(self.config.get_option('log_level', 'INFO'))
-
-def get_active_dock():
-    """Get the dock widget that currently has focus."""
-    w = QApplication.focusWidget()
-    while w and w.__class__:
-        if issubclass(w.__class__, BaseDock):
-            return w
-        w = w.parentWidget()

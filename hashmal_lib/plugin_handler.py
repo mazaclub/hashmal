@@ -163,14 +163,17 @@ class PluginHandler(QWidget):
         dock.setVisible(True)
         dock.raise_()
         dock.setFocus()
+        dock.visibilityChanged.emit(True)
 
     def set_dock_signals(self, dock, do_connect):
         """Connect or disconnect Qt signals to/from a dock."""
         if do_connect:
             dock.needsFocus.connect(partial(self.bring_to_front, dock))
+            dock.visibilityChanged.connect(lambda is_visible, dock=dock: self.gui.on_dock_visibility_changed(dock, is_visible))
         else:
             try:
                 dock.needsFocus.disconnect()
+                dock.visibilityChanged.disconnect()
             except TypeError:
                 pass
 

@@ -85,6 +85,7 @@ class FavoritesSelector(QWidget):
 
     def refresh_favorites(self):
         self.favorites = sorted(self.config.get_option('favorite_plugins', []))
+        self.favorites = filter(lambda plugin: self.gui.plugin_handler.plugin_is_enabled(plugin), self.favorites)
         self.combo.clear()
         self.combo.addItem('Select...')
         self.combo.addItems(self.favorites)
@@ -104,5 +105,5 @@ class FavoritesSelector(QWidget):
         self.combo.setCurrentIndex(0)
 
     def on_option_changed(self, key):
-        if key == 'favorite_plugins':
+        if key in ['enabled_plugins', 'favorite_plugins']:
             self.refresh_favorites()

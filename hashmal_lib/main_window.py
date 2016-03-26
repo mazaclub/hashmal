@@ -187,14 +187,16 @@ class HashmalMain(QMainWindow):
 
     def on_text_changed(self):
         s = str(self.script_editor.toPlainText())
-        saved = False
-        if s == self.last_saved and self.filename:
-            saved = True
+        words = ['Hashmal']
 
-        title = ''.join(['Hashmal - ', self.filename])
-        if not saved:
-            title = ''.join([title, ' *'])
-        self.setWindowTitle(title)
+        if self.filename:
+            words.extend(['-', self.filename])
+        saved = True
+        if s != self.last_saved:
+            words.append('*')
+            saved = False
+
+        self.setWindowTitle(' '.join(words))
         self.changes_saved = saved
 
     def closeEvent(self, event):

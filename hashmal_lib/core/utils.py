@@ -2,6 +2,7 @@ from bitcoin.core.script import CScriptOp
 
 def format_hex_string(x, with_prefix=True):
     """Ensure hex-encoded value has an even length."""
+    x = x.replace('L', '')
     if not is_hex(x):
         return
     # Add '0x' prefix

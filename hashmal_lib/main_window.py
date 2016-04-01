@@ -104,8 +104,7 @@ class HashmalMain(QMainWindow):
         self.statusBar().setVisible(True)
         self.statusBar().messageChanged.connect(self.change_status_bar)
 
-        self.restoreState(self.qt_settings.value('toolLayout/default/state').toByteArray())
-        self.restoreGeometry(self.qt_settings.value('toolLayout/default/geometry').toByteArray())
+        self.load_layout('default')
         self.script_editor.setFocus()
 
         if self.qt_settings.value('quickTipsOnStart', defaultValue=QtCore.QVariant(True)).toBool():
@@ -129,6 +128,19 @@ class HashmalMain(QMainWindow):
             level_str = 'INFO'
         level = getattr(logging, level_str)
         logging.getLogger().setLevel(level)
+
+    def load_layout(self, name):
+        """Load a layout from QSettings."""
+        key = 'toolLayout/%s' % name
+        # There must be keys for the layout's state and geometry.
+        for required_suffix in ['/state', '/geometry']:
+            if not self.qt_settings.contains(key + required_suffix):
+                return
+
+        self.restoreState(self.qt_settings.value(key + '/state').toByteArray())
+        self.restoreGeometry(self.qt_settings.value(key + '/geometry').toByteArray())
+        # If there are visible plugins in the layout which are disabled, hide them.
+        self.plugin_handler.hide_disabled_plugins()
 
     def create_menubar(self):
         menubar = QMenuBar()

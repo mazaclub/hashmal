@@ -127,9 +127,9 @@ class LayoutChanger(QWidget):
             self.error('Cannot load nonexistent layout "%s".' % name)
             return
         LayoutChanger.current_layout = name
+        # Store main window position so loading a layout doesn't move it.
         pos = self.gui.pos()
-        self.gui.restoreState(self.qt_settings.value(key + '/state').toByteArray())
-        self.gui.restoreGeometry(self.qt_settings.value(key + '/geometry').toByteArray())
+        self.gui.load_layout(name)
         self.gui.move(pos)
         self.info('Loaded layout "%s".' % name)
         self.gui.layoutsChanged.emit()

@@ -140,6 +140,7 @@ class PluginHandler(QWidget):
         plugin.ui.is_enabled = is_enabled
         if plugin.has_gui:
             self.set_dock_signals(plugin.ui, is_enabled)
+            plugin.ui.setEnabled(is_enabled)
             if not is_enabled:
                 plugin.ui.setVisible(False)
 
@@ -167,15 +168,16 @@ class PluginHandler(QWidget):
 
     def set_dock_signals(self, dock, do_connect):
         """Connect or disconnect Qt signals to/from a dock."""
+        try:
+            dock.needsFocus.disconnect()
+            dock.visibilityChanged.disconnect()
+        except TypeError:
+            pass
+
         if do_connect:
             dock.needsFocus.connect(partial(self.bring_to_front, dock))
             dock.visibilityChanged.connect(lambda is_visible, dock=dock: self.gui.on_dock_visibility_changed(dock, is_visible))
-        else:
-            try:
-                dock.needsFocus.disconnect()
-                dock.visibilityChanged.disconnect()
-            except TypeError:
-                pass
+        dock.blockSignals(not do_connect)
 
     def assign_dock_shortcuts(self):
         """Assign shortcuts to visibility-toggling actions."""
@@ -323,6 +325,16 @@ class PluginHandler(QWidget):
 
         self.get_plugin('Variables').ui.setVisible(True)
         self.get_plugin('Stack Evaluator').ui.setVisible(True)
+
+    def hide_disabled_plugins(self):
+        """Hide plugins that are disabled.
+
+        Only needed after a layout containing disabled plugins is loaded.
+        """
+        for plugin in self.loaded_plugins:
+            if not plugin.has_gui or plugin.ui.is_enabled:
+                continue
+            plugin.ui.setVisible(False)
 
     def enable_required_plugins(self):
         """Ensure that all required plugins are enabled."""

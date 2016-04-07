@@ -2,6 +2,7 @@ import pyparsing
 from pyparsing import Word, QuotedString, OneOrMore, Combine
 import shlex
 
+from bitcoin.core import _bignum
 from bitcoin.core.script import CScript
 
 import opcodes
@@ -131,7 +132,11 @@ def transform_human(text, variables=None):
         if toks is None:
             return
         for i, t in enumerate(toks):
-            token = hex(int(t))
+            token = int(t)
+            if token == 0:
+                token = '0x00'
+            else:
+                token = _bignum.bn2vch(token).encode('hex')
             new_tok = format_hex_string(token)
             toks[i] = new_tok
         return toks
@@ -156,7 +161,7 @@ def transform_human(text, variables=None):
 
     # Hex, implicit (e.g. 'a') and explicit (e.g. '0x0a')
     explicit_hex = Combine(Word('0x') + Word(pyparsing.hexnums) + pyparsing.WordEnd())
-    decimal_number = Combine(pyparsing.WordStart() + OneOrMore(Word(pyparsing.nums)) + pyparsing.WordEnd())
+    decimal_number = Combine(pyparsing.WordStart() + pyparsing.Optional('-') + OneOrMore(Word(pyparsing.nums)) + pyparsing.WordEnd())
     explicit_hex.setParseAction(hex_to_formatted_hex)
     decimal_number.setParseAction(decimal_to_formatted_hex)
 

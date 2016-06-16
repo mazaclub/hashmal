@@ -32,18 +32,10 @@ class Script(CScript):
 
     @classmethod
     def from_human(cls, data):
-        hex_str = []
-        try:
-            d = shlex.split(data, posix=False)
-        except Exception:
-            d = data.split()
-        while 1:
-            if len(d) == 0:
-                break
-            word = d[0]
-            d = d[1:]
-            hex_str.append(Script.decode_human_word(word))
-        hex_str = ''.join(hex_str)
+        hex_str = compiler.human_to_hex(data)
+        hex_str = format_hex_string(hex_str, with_prefix=False)
+        if not hex_str:
+            return cls()
         return cls(hex_str.decode('hex'))
 
     def get_hex(self):

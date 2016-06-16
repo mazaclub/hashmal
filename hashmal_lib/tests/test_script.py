@@ -53,11 +53,11 @@ class ParsingTest(unittest.TestCase):
             'stringOne': '"1"',
         }
         human_tests = [
-            ('0x02 "test" 0x03', '010204746573740103'),
-            ('$numberOne 0x01', '01010101'),
-            ('0x10 $stringOne 0x11', '011001310111'),
+            ('0x02 "test" 0x03', '52047465737453'),
+            ('$numberOne 0x01', '5151'),
+            ('0x10 $stringOne 0x11', '6001310111'),
             # nonexistent variable
-            ('$one 0x05', '04246f6e650105')
+            ('$one 0x05', '04246f6e6555')
         ]
         for text, expected_hex in human_tests:
             txt, _ = transform_human(text, variables)
@@ -93,12 +93,12 @@ class ParsingTest(unittest.TestCase):
     def test_string_literal_transform_and_instantiate_script(self):
         str_tests = (
             ('"a"',         '"a"',              '0161'),
-            ('2 "2"',       '0x02 "2"',         '01020132'),
+            ('2 "2"',       '0x02 "2"',         '520132'),
             ('"1 2"',       '"1 2"',            '03312032'),
-            ('0 "1 2"',     '0x00 "1 2"',       '010003312032'),
-            ('0 "1 2" 3',   '0x00 "1 2" 0x03',  '0100033120320103'),
+            ('0 "1 2"',     '0x00 "1 2"',       '0003312032'),
+            ('0 "1 2" 3',   '0x00 "1 2" 0x03',  '000331203253'),
             ('"2 3 4"',     '"2 3 4"',          '053220332034'),
-            ('1 "2 3 4" 5', '0x01 "2 3 4" 0x05','01010532203320340105'),
+            ('1 "2 3 4" 5', '0x01 "2 3 4" 0x05','5105322033203455'),
         )
         for text, expected, expected_hex in str_tests:
             txt, _ = transform_human(text)

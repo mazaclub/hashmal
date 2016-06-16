@@ -23,13 +23,13 @@ class ScriptGenBaseTest(unittest.TestCase):
 
 class ScriptGenTest(ScriptGenBaseTest):
     def test_is_template_script(self):
-        scr = Script.from_human('OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG')
+        scr = Script.from_human('OP_DUP OP_HASH160 0xffffffffffffffffffffffffffffffffffffffff OP_EQUALVERIFY OP_CHECKSIG')
         self.assertTrue(script_gen.is_template_script(scr, self.templates['Pay-To-Public-Key-Hash Output']))
 
-        scr = Script.from_human('OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUAL OP_CHECKSIG')
+        scr = Script.from_human('OP_DUP OP_HASH160 0xffffffffffffffffffffffffffffffffffffffff OP_EQUAL OP_CHECKSIG')
         self.assertFalse(script_gen.is_template_script(scr, self.templates['Pay-To-Public-Key-Hash Output']))
 
-        scr = Script.from_human('OP_DUP OP_HASH160 0x00000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG')
+        scr = Script.from_human('OP_DUP OP_HASH160 0xffffffffffffffffffffffffffffffffffffff OP_EQUALVERIFY OP_CHECKSIG')
         self.assertFalse(script_gen.is_template_script(scr, self.templates['Pay-To-Public-Key-Hash Output']))
 
         scr = Script.from_human('0x03569988948d05ddf970d610bc52f0d47fb21ec307a35d3cbeba6d11accfcd3c6a OP_CHECKSIG')

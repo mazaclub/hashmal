@@ -1,5 +1,6 @@
 from collections import namedtuple
 import functools
+import __builtin__
 
 from bitcoin.base58 import CBase58Data
 from bitcoin.core.key import CPubKey
@@ -9,7 +10,7 @@ from PyQt4.QtCore import *
 
 from base import BaseDock, Plugin, Category, augmenter
 from item_types import Item, ItemAction
-from hashmal_lib.core import Script
+from hashmal_lib.core import Script, opcodes
 from hashmal_lib.core.utils import is_hex, format_hex_string
 from hashmal_lib.gui_utils import monospace_font, floated_buttons
 
@@ -42,6 +43,13 @@ def format_variable_value(value, var_type):
     """
     if not value:
         raise VariableError('Variable has no value.')
+
+    # Allow small int opcodes.
+    if value.startswith('OP_'):
+        try:
+            value = __builtin__.hex(int(opcodes.opcodes_by_name[value]))
+        except Exception:
+            pass
 
     if var_type == 'address':
         try:

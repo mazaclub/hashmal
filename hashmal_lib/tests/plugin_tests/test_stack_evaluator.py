@@ -41,9 +41,8 @@ class StackEvalTest(PluginTest):
     def test_basic_addition_script(self):
         script_hex = Script.from_human('0x01 0x02 OP_ADD').get_hex()
         expected_steps = [
-            ('0', 'PUSHDATA', 'OP_1', '01 was pushed to the stack.'),
-            ('1', 'PUSHDATA', 'OP_1 OP_2', '02 was pushed to the stack.'),
-            ('2', 'OP_ADD', 'OP_3', '3 (1 + 2) was pushed to the stack.'),
+            ('0', 'OP_2', 'OP_2', '02 was pushed to the stack.'),
+            ('1', 'OP_1ADD', 'OP_3', '02 += 1'),
         ]
 
         self.ui.tx_script.setPlainText(script_hex)
@@ -101,7 +100,7 @@ class StackEvalTest(PluginTest):
             # Push redeem script.
             ('1', 'PUSHDATA', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 0x210338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebfac', '210338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebfac was pushed to the stack.'),
             # Push of public key script.
-            ('2', 'PUSHDATA', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 0x210338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebfac OP_0', '00 was pushed to the stack.'),
+            ('2', 'OP_0', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 0x210338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebfac OP_0', '00 was pushed to the stack.'),
         ]
 
         self.ui.tx_edit.setPlainText(self.valid_p2sh_tx)

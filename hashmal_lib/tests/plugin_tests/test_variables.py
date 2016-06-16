@@ -35,8 +35,8 @@ class VariablesTest(PluginTest):
         test_items = [
             ('1111111111111111111114oLvT2', ['Address']),
             ('M7uAERuQW2AotfyLDyewFGcLUDtAYu9v5V', ['Address']),
-            ('0000000000000000000000000000000000000000', ['Hash160', 'Hex']),
-            ('0x0000000000000000000000000000000000000000', ['Hash160', 'Hex']),
+            ('ffffffffffffffffffffffffffffffffffffffff', ['Hash160', 'Hex']),
+            ('0xffffffffffffffffffffffffffffffffffffffff', ['Hash160', 'Hex']),
         ]
 
         for data, classification in test_items:
@@ -49,7 +49,7 @@ class VariablesTest(PluginTest):
             self.skipTest('The Script Generator plugin is not enabled.')
         test_items = [
             ('OP_RETURN 0x01', ['Script Matching Template']),
-            ('OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG', ['Script Matching Template']),
+            ('OP_DUP OP_HASH160 0xffffffffffffffffffffffffffffffffffffffff OP_EQUALVERIFY OP_CHECKSIG', ['Script Matching Template']),
         ]
 
         for data, classification in test_items:

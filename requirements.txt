@@ -1,3 +1,4 @@
 hexs>=1.1.0
 python-bitcoinlib
 pyparsing
+txsc

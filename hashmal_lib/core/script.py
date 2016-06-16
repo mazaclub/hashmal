@@ -5,6 +5,7 @@ import shlex
 from bitcoin.core import _bignum
 from bitcoin.core.script import CScript
 
+import compiler
 import opcodes
 from utils import is_hex, push_script, format_hex_string
 
@@ -84,16 +85,7 @@ class Script(CScript):
 
     def get_human(self):
         """Get the script as a human-readable string."""
-        s = []
-        iterator = self.human_iter()
-        while 1:
-            try:
-                s.append(next(iterator))
-            except StopIteration:
-                break
-            except Exception:
-                break
-        return ' '.join(s)
+        return compiler.hex_to_human(self.get_hex())
 
 
 def transform_human(text, variables=None):

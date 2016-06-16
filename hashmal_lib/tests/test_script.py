@@ -11,20 +11,20 @@ ScriptItem = namedtuple('ScriptItem', ('hex', 'human'))
 class ScriptTest(unittest.TestCase):
 
     def test_script_from_hex_to_human(self):
-        i = ScriptItem('6a0105', 'OP_RETURN 0x05')
+        i = ScriptItem('6a0105', 'OP_RETURN OP_5')
         s = Script(i.hex.decode('hex'))
         self.assertEqual(s.get_human(), i.human)
 
-        i = ScriptItem('6a01010131', 'OP_RETURN 0x01 "1"')
+        i = ScriptItem('6a01010131', 'OP_RETURN OP_1 "1"')
         s = Script(i.hex.decode('hex'))
         self.assertEqual(s.get_human(), i.human)
 
-        i = ScriptItem('76a914000000000000000000000000000000000000000088ac', 'OP_DUP OP_HASH160 0x0000000000000000000000000000000000000000 OP_EQUALVERIFY OP_CHECKSIG')
+        i = ScriptItem('76a91400000000000000000000000000000000000000ff88ac', 'OP_DUP OP_HASH160 0x00000000000000000000000000000000000000ff OP_EQUALVERIFY OP_CHECKSIG')
         s = Script(i.hex.decode('hex'))
         self.assertEqual(s.get_human(), i.human)
 
     def test_script_from_human_to_human_and_hex(self):
-        i = ScriptItem('0102010393', '0x02 0x03 OP_ADD')
+        i = ScriptItem('525393', 'OP_2 OP_3 OP_ADD')
         s = Script.from_human(i.human)
         self.assertEqual(s.get_hex(), i.hex)
         self.assertEqual(s.get_human(), i.human)
@@ -42,7 +42,7 @@ class ScriptTest(unittest.TestCase):
     def test_compatibility_with_cscript(self):
         cs = CScript(['01'.decode('hex'), OP_DUP, OP_HASH160])
         s = Script(cs)
-        self.assertEqual(s.get_human(), '0x01 OP_DUP OP_HASH160')
+        self.assertEqual(s.get_human(), 'OP_1 OP_DUP OP_HASH160')
 
 
 class ParsingTest(unittest.TestCase):

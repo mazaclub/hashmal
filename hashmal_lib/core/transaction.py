@@ -97,6 +97,14 @@ class OutPoint(CMutableOutPoint):
                 setattr(self, field.attr, field.default_value)
 
     @classmethod
+    def stream_deserialize(cls, f):
+        self = cls()
+        kwargs = self.serializer_class().deserialize_outpoint(f)
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+        return self
+
+    @classmethod
     def from_outpoint(cls, outpoint):
         kwfields = {}
         for field in transaction_previous_outpoint_fields:
@@ -104,6 +112,11 @@ class OutPoint(CMutableOutPoint):
                 kwfields[field.attr] = getattr(outpoint, field.attr)
 
         return cls(kwfields=kwfields)
+
+    def stream_serialize(self, f):
+        # Serializer is a generator.
+        for i in self.serializer_class().serialize_outpoint(self, f):
+            pass
 
 class TxIn(CMutableTxIn):
     """Transaction input.
@@ -126,6 +139,11 @@ class TxIn(CMutableTxIn):
                 setattr(self, field.attr, field.default_value)
 
     @classmethod
+    def stream_deserialize(cls, f):
+        self = cls()
+        return self.serializer_class().deserialize_input(f)
+
+    @classmethod
     def from_txin(cls, txin):
         kwfields = {}
         prevout = None
@@ -136,6 +154,11 @@ class TxIn(CMutableTxIn):
                 kwfields[field.attr] = getattr(txin, field.attr)
 
         return cls(prevout=prevout, kwfields=kwfields)
+
+    def stream_serialize(self, f):
+        # Serializer is a generator.
+        for i in self.serializer_class().serialize_input(self, f):
+            pass
 
 class TxOut(CMutableTxOut):
     """Transaction output.
@@ -156,6 +179,11 @@ class TxOut(CMutableTxOut):
                 setattr(self, field.attr, field.default_value)
 
     @classmethod
+    def stream_deserialize(cls, f):
+        self = cls()
+        return self.serializer_class().deserialize_output(f)
+
+    @classmethod
     def from_txout(cls, txout):
         kwfields = {}
         for field in transaction_output_fields:
@@ -163,6 +191,11 @@ class TxOut(CMutableTxOut):
                 kwfields[field.attr] = getattr(txout, field.attr)
 
         return cls(kwfields=kwfields)
+
+    def stream_serialize(self, f):
+        # Serializer is a generator.
+        for i in self.serializer_class().serialize_output(self, f):
+            pass
 
 class TransactionSerializer(object):
     """Default transaction serialization handler."""
@@ -217,10 +250,13 @@ class TransactionSerializer(object):
             f.seek(pos)
             return False
 
-    def deserialize_outpoint(self, kwargs, f):
+    def deserialize_outpoint(self, f):
         """Deserialize an outpoint."""
+        outpoint_kwargs = {}
         for field in transaction_previous_outpoint_fields:
-            self.deserialize_field(kwargs, field, f)
+            self.deserialize_field(outpoint_kwargs, field, f)
+
+        return OutPoint(kwfields=outpoint_kwargs)
 
     def serialize_outpoint(self, outpoint, f):
         """Serialize an outpoint."""
@@ -232,9 +268,7 @@ class TransactionSerializer(object):
         txin_kwargs = {}
         for field in transaction_input_fields:
             if field.fmt == 'prevout':
-                prevout_kwargs = {}
-                self.deserialize_outpoint(prevout_kwargs, f)
-                txin_kwargs[field.attr] = OutPoint(kwfields=prevout_kwargs)
+                txin_kwargs[field.attr] = self.deserialize_outpoint(f)
             else:
                 self.deserialize_field(txin_kwargs, field, f)
         return TxIn(kwfields=txin_kwargs)

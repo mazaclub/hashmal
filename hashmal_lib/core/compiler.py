@@ -138,7 +138,10 @@ compiler = ScriptCompiler()
 
 def compiler_options(d=None):
     """Create compiler options."""
-    options = {'optimization': 1}
+    options = {
+        'allow_invalid_comparisons': True,
+        'optimization': 1,
+    }
     if d:
         options.update(d)
     return options

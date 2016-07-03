@@ -110,3 +110,52 @@ def get_asm_context(text):
         token = lexer.token()
 
     return context_tips
+
+# These are human-friendly representations of HashmalHumanLexer lexer token types.
+txscript_match_types = {
+    'HEXSTR': 'Hex string',
+    'TYPENAME': 'Type name',
+    'STR': 'String literal',
+    'ASSUME': 'Keyword - Assumption',
+    'FUNC': 'Keyword - Function definition',
+    'LET': 'Keyword - Name definition',
+    'MUTABLE': 'Keyword - Mutable name',
+    'RETURN': 'Keyword - Return',
+    'PUSH': 'Keyword - Data push',
+    'VERIFY': 'Keyword - Verify',
+
+    'IF': 'Conditional',
+    'ELSE': 'Conditional',
+
+    'AND': 'Boolean operator',
+    'OR': 'Boolean operator',
+    'NOT': 'Boolean operator',
+}
+
+def get_txscript_context(text):
+    """Get context from TxScript input.
+
+    Returns:
+        A list of contextual information for tooltips, etc.
+    """
+    context_tips = []
+    lexer = ply.lex.lex(module=compiler.HashmalHumanLexer())
+    lexer.input(text)
+
+    token = lexer.token()
+    while token:
+        value = token.value
+        # A ParsedToken is used to preserve the original value.
+        if isinstance(value, compiler.ParsedToken):
+            value = value.input_value
+        match_type = txscript_match_types.get(token.type, token.type.capitalize())
+
+        start = token.lexpos
+        end = start + len(str(value))
+
+        tip = (start, end, value, match_type)
+
+        context_tips.append(tip)
+        token = lexer.token()
+
+    return context_tips

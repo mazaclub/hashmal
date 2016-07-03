@@ -1,7 +1,7 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from hashmal_lib.core.script import Script, get_asm_context
+from hashmal_lib.core.script import Script, get_asm_context, get_txscript_context
 from hashmal_lib.gui_utils import monospace_font
 
 class ScriptEdit(QTextEdit):
@@ -22,12 +22,18 @@ class ScriptEdit(QTextEdit):
 
     def on_text_changed(self):
         text = str(self.toPlainText())
-        # Get ASM context after every text change.
-        if self.current_format == 'ASM' and text:
-            try:
-                self.context = get_asm_context(text)
-            except Exception:
-                pass
+        if text:
+            # Get ASM context after every text change.
+            if self.current_format == 'ASM':
+                try:
+                    self.context = get_asm_context(text)
+                except Exception:
+                    pass
+            elif self.current_format == 'TxScript':
+                try:
+                    self.context = get_txscript_context(text)
+                except Exception:
+                    pass
         self.needs_compilation = True
 
     def compile_input(self):
@@ -61,9 +67,9 @@ class ScriptEdit(QTextEdit):
                 script = Script.from_asm(text)
             except Exception:
                 pass
-        # TODO: TxScript context.
         elif fmt == 'TxScript':
             try:
+                self.context = get_txscript_context(text)
                 script = Script.from_txscript(text)
             except Exception:
                 pass
@@ -133,6 +139,16 @@ class ScriptHighlighter(QSyntaxHighlighter):
                     fmt.setForeground( QColor(settings.value('color/variables', 'darkMagenta')) )
             elif match_type == 'String literal':
                 fmt.setForeground( QColor(settings.value('color/strings', 'gray')) )
+            elif match_type == 'Comment':
+                fmt.setForeground( QColor(settings.value('color/comments', 'gray')) )
+            elif match_type == 'Type name':
+                fmt.setForeground( QColor(settings.value('color/keywords', 'brown')) )
+            elif match_type.startswith('Keyword'):
+                fmt.setForeground( QColor(settings.value('color/keywords', 'maroon')) )
+            elif match_type.startswith('Conditional'):
+                fmt.setForeground( QColor(settings.value('color/conditionals', 'darkGreen')) )
+            elif match_type.startswith('Boolean operator'):
+                fmt.setForeground( QColor(settings.value('color/booleanoperators', 'darkCyan')) )
             self.setFormat(idx, length, fmt)
         return
 

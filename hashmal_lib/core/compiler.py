@@ -1,9 +1,13 @@
 """Integration with txsc."""
+import ast
+import ply
+
 import txsc
 from txsc.ir import formats, linear_nodes
 from txsc.language import Language
 from txsc.asm.asm_parser import ASMParser
 from txsc.asm.asm_language import ASMSourceVisitor, ASMTargetVisitor
+from txsc.txscript import lexer, script_parser, txscript_language
 from txsc.script_compiler import ScriptCompiler
 
 import opcodes
@@ -136,17 +140,67 @@ class HashmalASMTargetVisitor(ASMTargetVisitor):
 
 
 class HashmalASMLanguage(Language):
+    """Hashmal-compatible ASM script language."""
     name = 'hashmal-asm'
     source_visitor = HashmalASMSourceVisitor
     target_visitor = HashmalASMTargetVisitor
 
+
+# Human language.
+
+class HashmalHumanLexer(lexer.ScriptLexer):
+    tokens = lexer.ScriptLexer.tokens + ('VARIABLE',)
+
+    t_VARIABLE = r'\$[a-zA-Z0-9]+'
+
+class HashmalHumanParser(script_parser.ScriptParser):
+    tokens = HashmalHumanLexer.tokens
+    precedence = HashmalHumanLexer.precedence
+    def __init__(self, variables=None, **kwargs):
+        self.variables = variables if variables is not None else {}
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+        self.lexer = ply.lex.lex(module=HashmalHumanLexer())
+        self.parser = ply.yacc.yacc(module=self, debug=False)
+
+    def p_expr_variable(self, p):
+        '''expr : VARIABLE'''
+        name = p[1][1:]
+        value = self.variables.get(name)
+
+        if value is None:
+            result = ast.Str('"' + p[1] + '"')
+        else:
+            # Use ScriptParser to figure out what value is.
+            parser = script_parser.ScriptParser()
+            src = '%s;' % value
+            module = parser.parse(src)
+            result = module.body[0]
+
+        p[0] = result
+
+
+class HashmalHumanSourceVisitor(txscript_language.TxScriptSourceVisitor):
+    variables = None
+    def __init__(self, *args, **kwargs):
+        super(HashmalHumanSourceVisitor, self).__init__(*args, **kwargs)
+        self.parser = HashmalHumanParser(self.variables)
+
+class HashmalHumanLanguage(Language):
+    """Hashmal-compatible TxScript script language."""
+    name = 'hashmal-txscript'
+    source_visitor = HashmalHumanSourceVisitor
+    supports_symbol_table = True
+
 txsc.config.add_language(HashmalASMLanguage())
+txsc.config.add_language(HashmalHumanLanguage())
 
 compiler = ScriptCompiler()
 
 def set_variables_dict(variables):
     """Set the variables that will be substituted during compilation."""
     HashmalASMLanguage.source_visitor.variables = variables
+    HashmalHumanLanguage.source_visitor.variables = variables
 
 def compiler_options(d=None):
     """Create compiler options."""
@@ -164,8 +218,33 @@ def hex_to_asm(s):
     compiler.compile(s)
     return compiler.output()
 
+def hex_to_txscript(s):
+    """Compile hex to TxScript format."""
+    compiler.setup_options(compiler_options({'source_lang': 'btc', 'target_lang': 'hashmal-txscript'}))
+    compiler.compile(s)
+    return compiler.output()
+
 def asm_to_hex(s):
     """Compile ASM format to hex."""
     compiler.setup_options(compiler_options({'source_lang': 'hashmal-asm', 'target_lang': 'btc'}))
     compiler.compile(s)
     return compiler.output()
+
+def asm_to_txscript(s):
+    """Compile ASM format to TxScript."""
+    compiler.setup_options(compiler_options({'source_lang': 'hashmal-asm', 'target_lang': 'hashmal-txscript'}))
+    compiler.compile(s)
+    return compiler.output()
+
+def txscript_to_hex(s):
+    """Compile TxScript to hex."""
+    compiler.setup_options(compiler_options({'source_lang': 'hashmal-txscript', 'target_lang': 'btc'}))
+    compiler.compile(s)
+    return compiler.output()
+
+def txscript_to_asm(s):
+    """Compile TxScript to ASM format."""
+    compiler.setup_options(compiler_options({'source_lang': 'hashmal-txscript', 'target_lang': 'hashmal-asm'}))
+    compiler.compile(s)
+    return compiler.output()
+

@@ -101,3 +101,29 @@ class ScriptTest(unittest.TestCase):
         for text, expected in str_tests:
             s = Script.from_asm(text)
             self.assertEqual(expected, s.get_hex())
+
+class TxScriptTest(unittest.TestCase):
+    def setUp(self):
+        set_variables_dict({})
+
+    def test_txscript(self):
+        for text, expected in (
+            ('5 + 2;', 'OP_5 OP_2 OP_ADD',),
+            ('5 + 2; 6 + 3;', 'OP_5 OP_2 OP_ADD OP_6 OP_3 OP_ADD',),
+        ):
+            s = Script.from_txscript(text)
+            self.assertEqual(expected, s.get_asm())
+
+    def test_variable_substitution(self):
+        variables = {
+            'numberOne': '0x01',
+            'stringOne': '"1"',
+        }
+        set_variables_dict(variables)
+
+        for text, expected in (
+            ('$numberOne + 2;', 'OP_2 OP_1ADD',),
+            ('2 + $numberOne;', 'OP_2 OP_1ADD',),
+        ):
+            s = Script.from_txscript(text)
+            self.assertEqual(expected, s.get_asm())

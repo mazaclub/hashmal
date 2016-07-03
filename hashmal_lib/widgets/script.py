@@ -12,6 +12,7 @@ class ScriptEdit(QTextEdit):
     """
     def __init__(self, parent=None):
         super(ScriptEdit, self).__init__(parent)
+        self.needs_compilation = False
         self.current_format = 'ASM'
         self.script = Script()
         self.textChanged.connect(self.on_text_changed)
@@ -20,8 +21,11 @@ class ScriptEdit(QTextEdit):
         self.context = []
 
     def on_text_changed(self):
-        txt = str(self.toPlainText())
-        self.set_data(txt, self.current_format)
+        self.needs_compilation = True
+
+    def compile_input(self):
+        text = str(self.toPlainText())
+        self.set_data(text, self.current_format)
 
     def copy_hex(self):
         txt = self.get_data('Hex')
@@ -38,6 +42,7 @@ class ScriptEdit(QTextEdit):
 
     def set_data(self, text, fmt):
         script = None
+        self.context = []
         if fmt == 'Hex' and len(text) % 2 == 0:
             try:
                 script = Script(text.decode('hex'))
@@ -49,9 +54,19 @@ class ScriptEdit(QTextEdit):
                 script = Script.from_asm(text)
             except Exception:
                 pass
+        # TODO: TxScript context.
+        elif fmt == 'TxScript':
+            try:
+                script = Script.from_txscript(text)
+            except Exception:
+                pass
         self.script = script
 
     def get_data(self, fmt=None):
+        if self.needs_compilation:
+            self.compile_input()
+            self.needs_compilation = False
+
         if fmt is None:
             fmt = self.current_format
         if not self.script: return ''
@@ -59,6 +74,10 @@ class ScriptEdit(QTextEdit):
             return self.script.get_hex()
         elif fmt == 'ASM':
             return self.script.get_asm()
+        # TODO: Inform user that TxScript is not a target language.
+        elif fmt == 'TxScript':
+            pass
+        return ''
 
     def event(self, e):
         if e.type() == QEvent.ToolTip:

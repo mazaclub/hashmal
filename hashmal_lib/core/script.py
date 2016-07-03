@@ -21,7 +21,19 @@ class Script(CScript):
         hex_str = format_hex_string(hex_str, with_prefix=False)
         if not hex_str:
             return cls()
-        return cls(hex_str.decode('hex'))
+        return cls.from_hex(hex_str)
+
+    @classmethod
+    def from_txscript(cls, data):
+        hex_str = compiler.txscript_to_hex(data)
+        hex_str = format_hex_string(hex_str, with_prefix=False)
+        if not hex_str:
+            return cls()
+        return cls.from_hex(hex_str)
+
+    @classmethod
+    def from_hex(cls, data):
+        return cls(data.decode('hex'))
 
     def get_hex(self):
         """Get the script as a hex-encoded string."""

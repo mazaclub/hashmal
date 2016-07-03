@@ -19,7 +19,7 @@ from downloader import DownloadController
 from style import hashmal_style
 from toolbar import ToolBar
 
-known_script_formats = ['ASM', 'Hex']
+known_script_formats = ['ASM', 'Hex', 'TxScript']
 
 def tab_bar_to_list(tabbar):
     """Get a list of tab texts from a QTabBar."""

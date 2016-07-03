@@ -2,7 +2,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from hashmal_lib.core.script import Script, get_asm_context, get_txscript_context
-from hashmal_lib.gui_utils import monospace_font
+from hashmal_lib.gui_utils import monospace_font, settings_color
 
 class ScriptEdit(QTextEdit):
     """Script editor.
@@ -137,19 +137,19 @@ class ScriptHighlighter(QSyntaxHighlighter):
                 length += 1 # account for '$' prefix
                 var_name = str(text[idx+1: idx+length]).strip()
                 if self.gui.plugin_handler.get_plugin('Variables').ui.get_key(var_name):
-                    fmt.setForeground( QColor(settings.value('color/variables', 'darkMagenta')) )
+                    fmt.setForeground(settings_color(settings, 'variables'))
             elif match_type == 'String literal':
-                fmt.setForeground( QColor(settings.value('color/strings', 'gray')) )
+                fmt.setForeground(settings_color(settings, 'strings'))
             elif match_type == 'Comment':
-                fmt.setForeground( QColor(settings.value('color/comments', 'gray')) )
+                fmt.setForeground(settings_color(settings, 'comments'))
             elif match_type == 'Type name':
-                fmt.setForeground( QColor(settings.value('color/keywords', 'brown')) )
+                fmt.setForeground(settings_color(settings, 'typenames'))
             elif match_type.startswith('Keyword'):
-                fmt.setForeground( QColor(settings.value('color/keywords', 'maroon')) )
+                fmt.setForeground(settings_color(settings, 'keywords'))
             elif match_type.startswith('Conditional'):
-                fmt.setForeground( QColor(settings.value('color/conditionals', 'darkGreen')) )
+                fmt.setForeground(settings_color(settings, 'conditionals'))
             elif match_type.startswith('Boolean operator'):
-                fmt.setForeground( QColor(settings.value('color/booleanoperators', 'darkCyan')) )
+                fmt.setForeground(settings_color(settings, 'booleanoperators'))
             self.setFormat(idx, length, fmt)
         return
 

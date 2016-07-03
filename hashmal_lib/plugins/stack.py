@@ -5,7 +5,7 @@ from PyQt4.QtCore import *
 
 from hashmal_lib.core import Transaction, Script
 from hashmal_lib.core.stack import ScriptExecution, ExecutionData
-from hashmal_lib.gui_utils import monospace_font, floated_buttons, AmountEdit, HBox, ReadOnlyCheckBox
+from hashmal_lib.gui_utils import monospace_font, floated_buttons, settings_color, AmountEdit, HBox, ReadOnlyCheckBox
 from hashmal_lib.widgets import ScriptExecutionWidget
 from base import BaseDock, Plugin, Category, augmenter
 from item_types import ItemAction
@@ -31,11 +31,11 @@ class ScriptExecutionDelegate(QStyledItemDelegate):
 
                 # Variable name
                 if txt.startsWith('$'):
-                    color = QColor(QSettings().value('color/variables', 'darkMagenta'))
+                    color = settings_color(QSettings(), 'variables')
                     option.palette.setColor(QPalette.Text, color)
                 # String literal
                 elif txt.startsWith('"') and txt.endsWith('"'):
-                    color = QColor(QSettings().value('color/strings', 'gray'))
+                    color = settings_color(QSettings(), 'strings')
                     option.palette.setColor(QPalette.Text, color)
 
 class StackEval(BaseDock):

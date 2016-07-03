@@ -2,7 +2,7 @@ import decimal
 from decimal import Decimal
 
 from PyQt4 import QtGui
-from PyQt4.QtGui import QFont, QHBoxLayout, QFrame, QLineEdit, QHeaderView
+from PyQt4.QtGui import QColor, QFont, QHBoxLayout, QFrame, QLineEdit, QHeaderView
 from PyQt4 import QtCore
 
 from bitcoin.core import b2x, lx, b2lx
@@ -21,6 +21,29 @@ monospace_font.setPointSize(9)
 monospace_font.setStyleHint(QFont.TypeWriter)
 
 script_file_filter = 'Coinscripts (*.coinscript);;Text files (*.txt);;All files (*.*)'
+
+default_colors = {
+    'booleanoperators': 'darkCyan',
+    'comments': 'gray',
+    'conditionals': 'darkGreen',
+    'keywords': 'maroon',
+    'strings': 'gray',
+    'typenames': 'brown',
+    'variables': 'darkMagenta',
+}
+
+def settings_color(settings, color_key):
+    """Get the value (or default value) of color_key in settings.
+
+    Args:
+        settings (QSettings): A QSettings object to retrieve the value from.
+        color_key (str): The QSettings key for a color.
+
+    """
+    args = ['color/%s' % color_key]
+    if color_key in default_colors.keys():
+        args.append(default_colors[color_key])
+    return QColor(settings.value(*args))
 
 def get_label_for_attr(name):
     """Get a display-appropriate label for an attribute name."""

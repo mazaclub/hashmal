@@ -3,7 +3,7 @@ from PyQt4.QtCore import *
 import logging
 
 from hashmal_lib.core import chainparams
-from gui_utils import floated_buttons, Amount, monospace_font, Separator
+from gui_utils import floated_buttons, settings_color, Amount, monospace_font, Separator
 
 class ChainparamsComboBox(QComboBox):
     """ComboBox for selecting chainparams presets.
@@ -274,8 +274,8 @@ class SettingsDialog(QDialog):
         font_group = self._create_section('Font', font_form)
 
 
-        vars_color = ColorButton('variables', QColor('darkMagenta'))
-        strs_color = ColorButton('strings', QColor('gray'))
+        vars_color = ColorButton('variables')
+        strs_color = ColorButton('strings')
 
         colors_form = QFormLayout()
         colors_form.addRow('Variables:', floated_buttons([vars_color], True))
@@ -415,10 +415,10 @@ class SettingsDialog(QDialog):
 
 class ColorButton(QPushButton):
     """Represents a color visually."""
-    def __init__(self, name, default_color, parent=None):
+    def __init__(self, name, parent=None):
         super(ColorButton, self).__init__(parent)
         self.name = name
-        self.color = QColor(QSettings().value('color/' + name, default_color.name()))
+        self.color = settings_color(QSettings(), name)
         self.clicked.connect(self.show_color_dialog)
 
     def paintEvent(self, event):

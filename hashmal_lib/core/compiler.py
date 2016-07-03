@@ -124,7 +124,7 @@ class HashmalTargetVisitor(ASMTargetVisitor):
 
 
 class HashmalLanguage(Language):
-    name = 'hashmal'
+    name = 'hashmal-asm'
     source_visitor = HashmalSourceVisitor
     target_visitor = HashmalTargetVisitor
 
@@ -148,12 +148,12 @@ def compiler_options(d=None):
 
 def hex_to_human(s):
     """Compile hex to human-readable format."""
-    compiler.setup_options(compiler_options({'source_lang': 'btc', 'target_lang': 'hashmal'}))
+    compiler.setup_options(compiler_options({'source_lang': 'btc', 'target_lang': 'hashmal-asm'}))
     compiler.compile(s)
     return compiler.output()
 
 def human_to_hex(s):
     """Compile human-readable format to hex."""
-    compiler.setup_options(compiler_options({'source_lang': 'hashmal', 'target_lang': 'btc'}))
+    compiler.setup_options(compiler_options({'source_lang': 'hashmal-asm', 'target_lang': 'btc'}))
     compiler.compile(s)
     return compiler.output()

@@ -4,7 +4,7 @@ from collections import namedtuple
 from bitcoin.core.script import *
 
 from hashmal_lib.core.compiler import set_variables_dict
-from hashmal_lib.core.script import Script
+from hashmal_lib.core.script import Script, get_asm_context
 
 # Test item with hex and asm representations.
 ScriptItem = namedtuple('ScriptItem', ('hex', 'asm'))
@@ -127,3 +127,24 @@ class TxScriptTest(unittest.TestCase):
         ):
             s = Script.from_txscript(text)
             self.assertEqual(expected, s.get_asm())
+
+class ContextTest(unittest.TestCase):
+    def test_asm_context(self):
+        src = '5 OP_2 OP_ADD'
+        expected = [
+            (0, 1, '5', 'Opcode'),
+            (2, 6, 'OP_2', 'Opcode'),
+            (7, 13, 'OP_ADD', 'Opcode'),
+        ]
+        context_tips = get_asm_context(src)
+        self.assertEqual(expected, context_tips)
+
+    def test_variables(self):
+        src = '5 $myVar OP_ADD'
+        expected = [
+            (0, 1, '5', 'Opcode'),
+            (2, 8, '$myVar', 'Variable'),
+            (9, 15, 'OP_ADD', 'Opcode'),
+        ]
+        context_tips = get_asm_context(src)
+        self.assertEqual(expected, context_tips)

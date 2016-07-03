@@ -21,6 +21,13 @@ class ScriptEdit(QTextEdit):
         self.context = []
 
     def on_text_changed(self):
+        text = str(self.toPlainText())
+        # Get ASM context after every text change.
+        if self.current_format == 'ASM' and text:
+            try:
+                self.context = get_asm_context(text)
+            except Exception:
+                pass
         self.needs_compilation = True
 
     def compile_input(self):

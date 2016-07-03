@@ -1,9 +1,8 @@
-import pyparsing
-from pyparsing import Word, QuotedString, OneOrMore, Combine
 import shlex
 
 from bitcoin.core import _bignum
 from bitcoin.core.script import CScript
+import ply
 
 import compiler
 import opcodes
@@ -77,43 +76,37 @@ class Script(CScript):
         return compiler.hex_to_asm(self.get_hex())
 
 
+# These are human-friendly representations of lexer token types.
+asm_match_types = {
+    'PUSH': 'Data push',
+    'NAME': 'Variable',
+    'STR': 'String literal',
+}
+
 def get_asm_context(text):
     """Get context from ASM input.
 
     Returns:
         A list of contextual information for tooltips, etc.
     """
-    str_literal = QuotedString('"')
-    var_name = Combine(Word('$') + Word(pyparsing.alphas))
-
-    # Explicit opcode names.
-    op_names = [str(i) for i in opcodes.opcodes_by_name.keys()]
-    op_names_explicit = ' '.join(op_names)
-    op_names_implicit = ' '.join([i[3:] for i in op_names])
-
-    # Hex, implicit (e.g. 'a') and explicit (e.g. '0x0a')
-    explicit_hex = Combine(Word('0x') + Word(pyparsing.hexnums) + pyparsing.WordEnd())
-    decimal_number = Combine(pyparsing.WordStart() + pyparsing.Optional('-') + OneOrMore(Word(pyparsing.nums)) + pyparsing.WordEnd())
-
-    # Opcodes, implicit (e.g. 'ADD') and explicit (e.g. 'OP_ADD')
-    explicit_op = pyparsing.oneOf(op_names_explicit)
-    implicit_op = Combine(pyparsing.WordStart() + pyparsing.oneOf(op_names_implicit))
-
-    contexts = pyparsing.Optional(var_name('Variable') |
-                                  str_literal('String literal') |
-                                  explicit_op('Opcode') |
-                                  implicit_op('Opcode') |
-                                  explicit_hex('Hex') |
-                                  decimal_number('Decimal'))
-    matches = [(i[0].asDict(), i[1], i[2]) for i in contexts.scanString(text)]
     context_tips = []
-    for i in matches:
-        d = i[0]
-        if len(d.items()) == 0: continue
-        match_type, value = d.items()[0]
-        start = i[1]
-        end = i[2]
-        context_tips.append( (start, end, value, match_type) )
+    lexer = ply.lex.lex(module=compiler.HashmalASMSourceVisitor.instantiate_parser())
+    lexer.input(text)
+
+    token = lexer.token()
+    while token:
+        value = token.value
+        # A ParsedToken is used to preserve the original value.
+        if isinstance(value, compiler.ParsedToken):
+            value = value.input_value
+        match_type = asm_match_types.get(token.type, token.type.capitalize())
+
+        start = token.lexpos
+        end = start + len(value)
+
+        tip = (start, end, value, match_type)
+
+        context_tips.append(tip)
+        token = lexer.token()
 
     return context_tips
-

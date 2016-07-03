@@ -1,5 +1,6 @@
 """Integration with txsc."""
 import ast
+from collections import namedtuple
 import ply
 
 import txsc
@@ -21,6 +22,10 @@ def get_int(s):
         except ValueError:
             pass
 
+# This class allows the original input value of opcodes to be preserved.
+# (For calculating contextual information.)
+ParsedToken = namedtuple('ParsedToken', ('value', 'input_value'))
+
 class HashmalASMParser(ASMParser):
     tokens = ('OP', 'PUSH', 'OPCODE', 'NAME', 'STR',
               'DOUBLEQUOTE',)
@@ -39,10 +44,12 @@ class HashmalASMParser(ASMParser):
 
     def t_OP(self, t):
         r'(?!0x)[a-zA-Z0-9_]+'
+        original_value = t.value
         if t.value in self.opcode_names:
-            t.value = self.opcode_names_implicit[self.opcode_names.index(t.value)]
+            t.value = ParsedToken(self.opcode_names_implicit[self.opcode_names.index(t.value)], original_value)
             t.type = 'OPCODE'
         elif t.value in self.opcode_names_implicit:
+            t.value = ParsedToken(t.value, original_value)
             t.type = 'OPCODE'
         else:
             int_value = get_int(t.value)
@@ -74,7 +81,8 @@ class HashmalASMParser(ASMParser):
 
     def p_word_opcode(self, p):
         '''word : OPCODE'''
-        p[0] = p[1]
+        # p[1] is a ParsedToken instance.
+        p[0] = p[1].value
 
     def p_variable(self, p):
         '''word : NAME'''
@@ -94,10 +102,14 @@ class HashmalASMParser(ASMParser):
 
 class HashmalASMSourceVisitor(ASMSourceVisitor):
     variables = None
+    @classmethod
+    def instantiate_parser(cls):
+        return HashmalASMParser(cls.variables)
+
     def transform(self, source):
         if not source:
             return self.instructions
-        parser = HashmalASMParser(self.variables)
+        parser = self.instantiate_parser()
         if isinstance(source, list):
             source = '\n'.join(source)
         parsed = parser.parse_source(source)

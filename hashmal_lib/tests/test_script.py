@@ -3,55 +3,57 @@ from collections import namedtuple
 
 from bitcoin.core.script import *
 
-from hashmal_lib.core.script import Script, transform_human
+from hashmal_lib.core.compiler import HashmalLanguage
+from hashmal_lib.core.script import Script
 
-# Test item with hex and human representations.
-ScriptItem = namedtuple('ScriptItem', ('hex', 'human'))
+# Test item with hex and asm representations.
+ScriptItem = namedtuple('ScriptItem', ('hex', 'asm'))
 
 class ScriptTest(unittest.TestCase):
+    def setUp(self):
+        HashmalLanguage.set_variables_dict({})
 
-    def test_script_from_hex_to_human(self):
+    def test_script_from_hex_to_asm(self):
         i = ScriptItem('6a0105', 'OP_RETURN OP_5')
         s = Script(i.hex.decode('hex'))
-        self.assertEqual(s.get_human(), i.human)
+        self.assertEqual(s.get_asm(), i.asm)
 
         i = ScriptItem('6a01010131', 'OP_RETURN OP_1 "1"')
         s = Script(i.hex.decode('hex'))
-        self.assertEqual(s.get_human(), i.human)
+        self.assertEqual(s.get_asm(), i.asm)
 
         i = ScriptItem('76a91400000000000000000000000000000000000000ff88ac', 'OP_DUP OP_HASH160 0x00000000000000000000000000000000000000ff OP_EQUALVERIFY OP_CHECKSIG')
         s = Script(i.hex.decode('hex'))
-        self.assertEqual(s.get_human(), i.human)
+        self.assertEqual(s.get_asm(), i.asm)
 
-    def test_script_from_human_to_human_and_hex(self):
+    def test_script_from_asm_to_asm_and_hex(self):
         i = ScriptItem('525393', 'OP_2 OP_3 OP_ADD')
-        s = Script.from_human(i.human)
+        s = Script.from_asm(i.asm)
         self.assertEqual(s.get_hex(), i.hex)
-        self.assertEqual(s.get_human(), i.human)
+        self.assertEqual(s.get_asm(), i.asm)
 
         i = ScriptItem('0051', 'OP_0 OP_1')
-        s = Script.from_human(i.human)
+        s = Script.from_asm(i.asm)
         self.assertEqual(s.get_hex(), i.hex)
-        self.assertEqual(s.get_human(), i.human)
+        self.assertEqual(s.get_asm(), i.asm)
 
         i = ScriptItem('510474657374', 'OP_1 "test"')
-        s = Script.from_human(i.human)
+        s = Script.from_asm(i.asm)
         self.assertEqual(s.get_hex(), i.hex)
-        self.assertEqual(s.get_human(), i.human)
+        self.assertEqual(s.get_asm(), i.asm)
 
     def test_compatibility_with_cscript(self):
         cs = CScript(['01'.decode('hex'), OP_DUP, OP_HASH160])
         s = Script(cs)
-        self.assertEqual(s.get_human(), 'OP_1 OP_DUP OP_HASH160')
+        self.assertEqual(s.get_asm(), 'OP_1 OP_DUP OP_HASH160')
 
 
-class ParsingTest(unittest.TestCase):
-
-    def test_transform_human(self):
+    def test_asm_with_variables(self):
         variables = {
             'numberOne': '0x01',
             'stringOne': '"1"',
         }
+        HashmalLanguage.set_variables_dict(variables)
         human_tests = [
             ('0x02 "test" 0x03', '52047465737453'),
             ('$numberOne 0x01', '5151'),
@@ -60,48 +62,40 @@ class ParsingTest(unittest.TestCase):
             ('$one 0x05', '04246f6e6555')
         ]
         for text, expected_hex in human_tests:
-            txt, _ = transform_human(text, variables)
-            s = Script.from_human(txt)
+            s = Script.from_asm(text)
             self.assertEqual(s.get_hex(), expected_hex)
 
-    def test_hex_transform(self):
+    def test_number_parsing(self):
         hex_tests = [
-            ('5', '0x05'),
-            ('0x20', '0x20'),
-            ('1 2 0x89 3', '0x01 0x02 0x89 0x03'),
-            ('1 0x2 0x89 3', '0x01 0x02 0x89 0x03')
+            ('5', 'OP_5'),
+            ('0x90', '0x90'),
+            ('1 2 0x89 3', 'OP_1 OP_2 0x89 OP_3'),
+            ('1 0x2 0x89 3', 'OP_1 OP_2 0x89 OP_3')
         ]
         for text, expected in hex_tests:
-            result, _ = transform_human(text)
+            result = Script.from_asm(text).get_asm()
             self.assertEqual(expected, result)
 
-    def test_variable_transform(self):
-        variables = {'seven': '0x7'}
-        scr = '$seven 0x07 OP_EQUAL'
-        self.assertEqual('0x07 0x07 OP_EQUAL', transform_human(scr, variables)[0])
-
-    def test_opcode_transform(self):
+    def test_implicit_opcodes(self):
         ops_tests = [
             ('ADD', 'OP_ADD'),
-            ('0x2 0x5 DUP', '0x02 0x05 OP_DUP'),
-            ('1 2 ADD', '0x01 0x02 OP_ADD')
+            ('0x2 0x5 DUP', 'OP_2 OP_5 OP_DUP'),
+            ('2 3 ADD', 'OP_2 OP_3 OP_ADD')
         ]
         for text, expected in ops_tests:
-            result, _ = transform_human(text)
+            result = Script.from_asm(text).get_asm()
             self.assertEqual(expected, result)
 
-    def test_string_literal_transform_and_instantiate_script(self):
+    def test_string_literals(self):
         str_tests = (
-            ('"a"',         '"a"',              '0161'),
-            ('2 "2"',       '0x02 "2"',         '520132'),
-            ('"1 2"',       '"1 2"',            '03312032'),
-            ('0 "1 2"',     '0x00 "1 2"',       '0003312032'),
-            ('0 "1 2" 3',   '0x00 "1 2" 0x03',  '000331203253'),
-            ('"2 3 4"',     '"2 3 4"',          '053220332034'),
-            ('1 "2 3 4" 5', '0x01 "2 3 4" 0x05','5105322033203455'),
+            ('"a"',         '0161'),
+            ('2 "2"',       '520132'),
+            ('"1 2"',       '03312032'),
+            ('0 "1 2"',     '0003312032'),
+            ('0 "1 2" 3',   '000331203253'),
+            ('"2 3 4"',     '053220332034'),
+            ('1 "2 3 4" 5', '5105322033203455'),
         )
-        for text, expected, expected_hex in str_tests:
-            txt, _ = transform_human(text)
-            self.assertEqual(expected, txt)
-            s = Script.from_human(txt)
-            self.assertEqual(expected_hex, s.get_hex())
+        for text, expected in str_tests:
+            s = Script.from_asm(text)
+            self.assertEqual(expected, s.get_hex())

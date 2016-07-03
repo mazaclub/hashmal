@@ -82,7 +82,7 @@ def format_variable_value(value, var_type):
     elif var_type == 'script':
         if not is_hex(value):
             try:
-                scr = Script.from_human(value)
+                scr = Script.from_asm(value)
                 return format_hex_string(scr.get_hex(), with_prefix=True)
             except Exception:
                 raise VariableError('Cannot parse human-readable script.')
@@ -114,7 +114,7 @@ def template_to_script(template, variables):
 
 def is_template_script(script, template):
     """Returns whether script complies with template."""
-    iterator = script.human_iter()
+    iterator = script.asm_iter()
     text = template.text.split()
     index = 0
     used_variables = []
@@ -151,7 +151,7 @@ class ScriptTemplateItem(Item):
     def coerce_item(cls, data):
         if not isinstance(data, Script):
             try:
-                data = Script.from_human(data)
+                data = Script.from_asm(data)
             except Exception:
                 return None
         for i in known_templates:
@@ -163,7 +163,7 @@ class ScriptTemplateItem(Item):
         self.template = template
         # Populate variables dict.
         variables = {}
-        iterator = self.value.human_iter()
+        iterator = self.value.asm_iter()
         text = self.template.text.split()
         index = 0
         while 1:
@@ -184,7 +184,7 @@ class ScriptTemplateItem(Item):
             if self.template.variables[k] == 'script':
                 scr = Script(format_hex_string(v, with_prefix=False).decode('hex'))
                 label = ' '.join(['Copy', k])
-                self.add_copy_action(label, scr.get_human())
+                self.add_copy_action(label, scr.get_asm())
                 k = ' '.join([k, '(hex)'])
             label = ' '.join(['Copy', k])
             self.add_copy_action(label, v)

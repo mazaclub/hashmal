@@ -128,7 +128,7 @@ class FieldInfo(object):
             if role == RawRole:
                 data = s.get_hex()
             else:
-                data = s.get_human()
+                data = s.get_asm()
         # Hashes are presented as hex-encoded little-endian strings.
         elif self.fmt == 'hash':
             data = b2lx(value)
@@ -146,7 +146,7 @@ class FieldInfo(object):
         value = None
         method = getattr(qvariant, self.qvariant_method)
         if self.fmt == 'script':
-            value = Script.from_human(str(method()))
+            value = Script.from_asm(str(method()))
         # Switch endianness and decode hex.
         elif self.fmt == 'hash':
             value = lx(str(method()))

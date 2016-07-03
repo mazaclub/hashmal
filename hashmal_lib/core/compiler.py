@@ -146,14 +146,14 @@ def compiler_options(d=None):
         options.update(d)
     return options
 
-def hex_to_human(s):
-    """Compile hex to human-readable format."""
+def hex_to_asm(s):
+    """Compile hex to ASM format."""
     compiler.setup_options(compiler_options({'source_lang': 'btc', 'target_lang': 'hashmal-asm'}))
     compiler.compile(s)
     return compiler.output()
 
-def human_to_hex(s):
-    """Compile human-readable format to hex."""
+def asm_to_hex(s):
+    """Compile ASM format to hex."""
     compiler.setup_options(compiler_options({'source_lang': 'hashmal-asm', 'target_lang': 'btc'}))
     compiler.compile(s)
     return compiler.output()

@@ -1,15 +1,8 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from hashmal_lib.core.script import Script, transform_human
+from hashmal_lib.core.script import Script, get_asm_context
 from hashmal_lib.gui_utils import monospace_font
-
-def transform_human_script(text, main_window):
-    """Transform user input into something Script can read.
-
-    Main window is needed for tool integration."""
-    variables = main_window.plugin_handler.get_plugin('Variables').ui.data
-    return transform_human(text, variables)
 
 class ScriptEdit(QTextEdit):
     """Script editor.
@@ -19,7 +12,7 @@ class ScriptEdit(QTextEdit):
     """
     def __init__(self, parent=None):
         super(ScriptEdit, self).__init__(parent)
-        self.current_format = 'Human'
+        self.current_format = 'ASM'
         self.script = Script()
         self.textChanged.connect(self.on_text_changed)
         self.setFont(monospace_font)
@@ -50,9 +43,9 @@ class ScriptEdit(QTextEdit):
                 script = Script(text.decode('hex'))
             except Exception:
                 pass
-        elif fmt == 'Human':
-            txt, self.context = transform_human(text)
-            script = Script.from_human(txt)
+        elif fmt == 'ASM':
+            self.context = get_asm_context(text)
+            script = Script.from_asm(text)
         self.script = script
 
     def get_data(self, fmt=None):
@@ -61,8 +54,8 @@ class ScriptEdit(QTextEdit):
         if not self.script: return ''
         if fmt == 'Hex':
             return self.script.get_hex()
-        elif fmt == 'Human':
-            return self.script.get_human()
+        elif fmt == 'ASM':
+            return self.script.get_asm()
 
     def event(self, e):
         if e.type() == QEvent.ToolTip:
@@ -136,16 +129,16 @@ class ScriptEditor(ScriptEdit):
                 script = Script(text.decode('hex'))
             except Exception:
                 pass
-        elif fmt == 'Human':
-            txt, self.context = transform_human_script(text, self.gui)
-            script = Script.from_human(txt)
+        elif fmt == 'ASM':
+            self.context = get_asm_context(text)
+            script = Script.from_asm(text)
         self.script = script
 
     @pyqtProperty(str)
-    def humanText(self):
-        return self.get_data(fmt='Human')
+    def asmText(self):
+        return self.get_data(fmt='ASM')
 
-    @humanText.setter
-    def humanText(self, value):
+    @asmText.setter
+    def asmText(self, value):
         self.setText(str(value))
 

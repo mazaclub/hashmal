@@ -366,7 +366,7 @@ class BaseEditor(QWidget):
 
     def get_widget_for_field(self, info, main_window):
         if info.fmt == 'script':
-            return ScriptEditor(main_window), 'humanText'
+            return ScriptEditor(main_window), 'asmText'
         elif info.fmt == 'hash':
             return QLineEdit(), None
         elif info.is_coin_amount():
@@ -604,7 +604,7 @@ class SigHashModel(QAbstractTableModel):
         c = index.column()
         if c == 0:
             if self.utxo_script:
-                data = self.utxo_script.get_human()
+                data = self.utxo_script.get_asm()
         elif c == 1:
             if self.tx:
                 data = b2x(self.tx.serialize())
@@ -631,7 +631,7 @@ class SigHashModel(QAbstractTableModel):
 
         if c == 0:
             try:
-                self.utxo_script = Script.from_human(str(value.toString()))
+                self.utxo_script = Script.from_asm(str(value.toString()))
             except Exception:
                 return False
             self.dataChanged.emit(self.index(index.row(), c), self.index(index.row(), c))
@@ -732,7 +732,7 @@ class SigHashWidget(QWidget):
         for i in [self.sighash_name, self.sighash_explanation]:
             i.setReadOnly(True)
 
-        self.mapper.addMapping(self.utxo_script, 0, 'humanText')
+        self.mapper.addMapping(self.utxo_script, 0, 'asmText')
         self.mapper.addMapping(self.inIdx, 2)
         self.mapper.addMapping(self.sighash_type, 3)
         self.mapper.addMapping(self.anyone_can_pay, 4)
@@ -835,7 +835,7 @@ class SigHashWidget(QWidget):
 
         self.dock.deserialize_raw(b2x(txTo.serialize()))
         # Deserializing a tx clears the model, so re-populate.
-        self.model.set_fields(script=script.get_human(), inIdx=inIdx, hashType=hash_type)
+        self.model.set_fields(script=script.get_asm(), inIdx=inIdx, hashType=hash_type)
         self.set_result_message('Successfully set scriptSig for input %d (SigHash type: %s).' % (inIdx, sig_hash_name(hash_type)))
 
     def get_private_key(self):

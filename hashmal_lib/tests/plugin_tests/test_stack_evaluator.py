@@ -24,14 +24,14 @@ class StackEvalTest(PluginTest):
         self.ui.block_time_edit.clear()
 
     def test_script_passed(self):
-        script_hex = Script.from_human('0x01').get_hex()
+        script_hex = Script.from_asm('0x01').get_hex()
         self.ui.tx_script.setPlainText(script_hex)
         QTest.mouseClick(self.ui.do_button, Qt.LeftButton)
 
         self.assertTrue(self.ui.script_passed.isChecked())
         self.assertFalse(self.ui.script_verified.isChecked())
 
-        script_hex = Script.from_human('0x00').get_hex()
+        script_hex = Script.from_asm('0x00').get_hex()
         self.ui.tx_script.setPlainText(script_hex)
         QTest.mouseClick(self.ui.do_button, Qt.LeftButton)
 
@@ -39,7 +39,7 @@ class StackEvalTest(PluginTest):
         self.assertFalse(self.ui.script_verified.isChecked())
 
     def test_basic_addition_script(self):
-        script_hex = Script.from_human('0x01 0x02 OP_ADD').get_hex()
+        script_hex = Script.from_asm('0x01 0x02 OP_ADD').get_hex()
         expected_steps = [
             ('0', 'OP_2', 'OP_2', '02 was pushed to the stack.'),
             ('1', 'OP_1ADD', 'OP_3', '02 += 1'),
@@ -59,7 +59,7 @@ class StackEvalTest(PluginTest):
         self.assertFalse(self.ui.script_verified.isChecked())
 
     def test_verify_p2sh_script_with_valid_pubkey_script(self):
-        script_hex = Script.from_human('OP_HASH160 0x8febbed40483661de6958d957412f82deed8e2f7 OP_EQUAL').get_hex()
+        script_hex = Script.from_asm('OP_HASH160 0x8febbed40483661de6958d957412f82deed8e2f7 OP_EQUAL').get_hex()
         expected_steps = [
             # Push signature.
             ('0', 'PUSHDATA', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01', '3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 was pushed to the stack.'),
@@ -93,7 +93,7 @@ class StackEvalTest(PluginTest):
         self.assertTrue(self.ui.script_verified.isChecked())
 
     def test_verify_p2sh_script_with_invalid_pubkey_script(self):
-        script_hex = Script.from_human('0x00').get_hex()
+        script_hex = Script.from_asm('0x00').get_hex()
         expected_steps = [
             # Push signature.
             ('0', 'PUSHDATA', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01', '3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 was pushed to the stack.'),

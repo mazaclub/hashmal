@@ -36,7 +36,7 @@ class HashmalASMParser(ASMParser):
         return t
 
     def t_error(self, t):
-        print("Illegal character '%s'" % t.value)
+        raise Exception("Illegal character '%s'" % t.value)
 
 
     def p_error(self, p):

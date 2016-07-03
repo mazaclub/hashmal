@@ -44,8 +44,11 @@ class ScriptEdit(QTextEdit):
             except Exception:
                 pass
         elif fmt == 'ASM':
-            self.context = get_asm_context(text)
-            script = Script.from_asm(text)
+            try:
+                self.context = get_asm_context(text)
+                script = Script.from_asm(text)
+            except Exception:
+                pass
         self.script = script
 
     def get_data(self, fmt=None):
@@ -121,18 +124,6 @@ class ScriptEditor(ScriptEdit):
         menu = self.createStandardContextMenu()
         menu.addAction('Copy Hex', self.copy_hex)
         menu.exec_(e.globalPos())
-
-    def set_data(self, text, fmt):
-        script = None
-        if fmt == 'Hex' and len(text) % 2 == 0:
-            try:
-                script = Script(text.decode('hex'))
-            except Exception:
-                pass
-        elif fmt == 'ASM':
-            self.context = get_asm_context(text)
-            script = Script.from_asm(text)
-        self.script = script
 
     @pyqtProperty(str)
     def asmText(self):

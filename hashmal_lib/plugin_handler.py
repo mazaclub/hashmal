@@ -120,7 +120,7 @@ class PluginHandler(QWidget):
                 print('Required plugin "{}" not found.\nTry running setup.py.'.format(req))
                 sys.exit(1)
 
-        compiler.HashmalLanguage.set_variables_dict(self.get_plugin('Variables').ui.data)
+        compiler.set_variables_dict(self.get_plugin('Variables').ui.data)
         self.update_enabled_plugins()
         self.enable_required_plugins()
         self.plugins_loaded = True

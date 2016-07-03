@@ -88,7 +88,7 @@ class HashmalASMParser(ASMParser):
         p[0] = p[1]
 
 
-class HashmalSourceVisitor(ASMSourceVisitor):
+class HashmalASMSourceVisitor(ASMSourceVisitor):
     variables = None
     def transform(self, source):
         if not source:
@@ -117,16 +117,16 @@ class HashmalSourceVisitor(ASMSourceVisitor):
             else:
                 self.add_instruction(linear_nodes.Push(data=push))
             return
-        return super(HashmalSourceVisitor, self).process_value(value)
+        return super(HashmalASMSourceVisitor, self).process_value(value)
 
 
-class HashmalTargetVisitor(ASMTargetVisitor):
+class HashmalASMTargetVisitor(ASMTargetVisitor):
     def __init__(self, *args, **kwargs):
         kwargs['omit_op_prefixes'] = False
-        super(HashmalTargetVisitor, self).__init__(*args, **kwargs)
+        super(HashmalASMTargetVisitor, self).__init__(*args, **kwargs)
 
     def visit_Push(self, node):
-        length, data = super(HashmalTargetVisitor, self).visit_Push(node)
+        length, data = super(HashmalASMTargetVisitor, self).visit_Push(node)
         data = utils.format_hex_string(data, with_prefix=False).decode('hex')
         if all(ord(c) < 128 and ord(c) > 31 for c in data):
             s = ''.join(['"', data, '"'])
@@ -135,18 +135,18 @@ class HashmalTargetVisitor(ASMTargetVisitor):
         return s
 
 
-class HashmalLanguage(Language):
+class HashmalASMLanguage(Language):
     name = 'hashmal-asm'
-    source_visitor = HashmalSourceVisitor
-    target_visitor = HashmalTargetVisitor
+    source_visitor = HashmalASMSourceVisitor
+    target_visitor = HashmalASMTargetVisitor
 
-    @classmethod
-    def set_variables_dict(cls, variables):
-        cls.source_visitor.variables = variables
-
-txsc.config.add_language(HashmalLanguage())
+txsc.config.add_language(HashmalASMLanguage())
 
 compiler = ScriptCompiler()
+
+def set_variables_dict(variables):
+    """Set the variables that will be substituted during compilation."""
+    HashmalASMLanguage.source_visitor.variables = variables
 
 def compiler_options(d=None):
     """Create compiler options."""

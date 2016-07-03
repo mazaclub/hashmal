@@ -3,7 +3,7 @@ from collections import namedtuple
 
 from bitcoin.core.script import *
 
-from hashmal_lib.core.compiler import HashmalLanguage
+from hashmal_lib.core.compiler import set_variables_dict
 from hashmal_lib.core.script import Script
 
 # Test item with hex and asm representations.
@@ -11,7 +11,7 @@ ScriptItem = namedtuple('ScriptItem', ('hex', 'asm'))
 
 class ScriptTest(unittest.TestCase):
     def setUp(self):
-        HashmalLanguage.set_variables_dict({})
+        set_variables_dict({})
 
     def test_script_from_hex_to_asm(self):
         i = ScriptItem('6a0105', 'OP_RETURN OP_5')
@@ -53,15 +53,15 @@ class ScriptTest(unittest.TestCase):
             'numberOne': '0x01',
             'stringOne': '"1"',
         }
-        HashmalLanguage.set_variables_dict(variables)
-        human_tests = [
+        set_variables_dict(variables)
+        asm_tests = [
             ('0x02 "test" 0x03', '52047465737453'),
             ('$numberOne 0x01', '5151'),
             ('0x10 $stringOne 0x11', '6001310111'),
             # nonexistent variable
             ('$one 0x05', '04246f6e6555')
         ]
-        for text, expected_hex in human_tests:
+        for text, expected_hex in asm_tests:
             s = Script.from_asm(text)
             self.assertEqual(s.get_hex(), expected_hex)
 

@@ -68,9 +68,11 @@ class ScriptTest(unittest.TestCase):
     def test_number_parsing(self):
         hex_tests = [
             ('5', 'OP_5'),
+            ('0a', 'OP_10'),
             ('0x90', '0x90'),
             ('1 2 0x89 3', 'OP_1 OP_2 0x89 OP_3'),
-            ('1 0x2 0x89 3', 'OP_1 OP_2 0x89 OP_3')
+            ('1 0x2 0x89 3', 'OP_1 OP_2 0x89 OP_3'),
+            ('140', '0x8c'),
         ]
         for text, expected in hex_tests:
             result = Script.from_asm(text).get_asm()

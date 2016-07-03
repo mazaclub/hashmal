@@ -9,6 +9,14 @@ from txsc.script_compiler import ScriptCompiler
 import opcodes
 import utils
 
+def get_int(s):
+    """Get the int value of a decimal or hex string."""
+    for base in [10, 16]:
+        try:
+            return int(s, base)
+        except ValueError:
+            pass
+
 class HashmalASMParser(ASMParser):
     tokens = ('OP', 'PUSH', 'OPCODE', 'NAME', 'STR',
               'DOUBLEQUOTE',)
@@ -16,23 +24,27 @@ class HashmalASMParser(ASMParser):
     t_NAME = r'\$[a-zA-Z][a-zA-Z0-9_]*'
     t_DOUBLEQUOTE = r'\"'
     t_STR = r'\"[^\"]*\"'
+    t_PUSH = r'(0x)?[a-fA-F0-9]+'
 
 
     def __init__(self, variables=None):
         self.variables = variables if variables is not None else {}
+        self.opcode_names = [str(i) for i in opcodes.opcodes_by_name.keys()]
+        self.opcode_names_implicit = [i[3:] for i in self.opcode_names]
         super(HashmalASMParser, self).__init__()
 
     def t_OP(self, t):
-        r'[a-zA-Z0-9_]+'
-        op_names = [str(i) for i in opcodes.opcodes_by_name.keys()]
-        op_names_implicit = [i[3:] for i in op_names]
-        if t.value in op_names:
-            t.value = op_names_implicit[op_names.index(t.value)]
-
-        if t.value.startswith('0x'):
-            t.type = 'PUSH'
-        elif t.value in op_names_implicit:
+        r'(?!0x)[a-zA-Z0-9_]+'
+        if t.value in self.opcode_names:
+            t.value = self.opcode_names_implicit[self.opcode_names.index(t.value)]
             t.type = 'OPCODE'
+        elif t.value in self.opcode_names_implicit:
+            t.type = 'OPCODE'
+        else:
+            int_value = get_int(t.value)
+            if int_value is not None:
+                t.value = hex(int_value)
+                t.type = 'PUSH'
         return t
 
     def t_error(self, t):

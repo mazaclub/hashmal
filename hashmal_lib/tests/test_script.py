@@ -4,7 +4,7 @@ from collections import namedtuple
 from bitcoin.core.script import *
 
 from hashmal_lib.core.compiler import set_variables_dict
-from hashmal_lib.core.script import Script, get_asm_context
+from hashmal_lib.core.script import Script, get_asm_context, get_txscript_context
 
 # Test item with hex and asm representations.
 ScriptItem = namedtuple('ScriptItem', ('hex', 'asm'))
@@ -139,7 +139,7 @@ class ContextTest(unittest.TestCase):
         context_tips = get_asm_context(src)
         self.assertEqual(expected, context_tips)
 
-    def test_variables(self):
+    def test_asm_variables(self):
         src = '5 $myVar OP_ADD'
         expected = [
             (0, 1, '5', 'Opcode'),
@@ -147,4 +147,26 @@ class ContextTest(unittest.TestCase):
             (9, 15, 'OP_ADD', 'Opcode'),
         ]
         context_tips = get_asm_context(src)
+        self.assertEqual(expected, context_tips)
+
+    def test_txscript_context(self):
+        src = '5 + 2;'
+        expected = [
+            (0, 1, 5, 'Number'),
+            (2, 3, '+', 'Plus'),
+            (4, 5, 2, 'Number'),
+            (5, 6, ';', 'Semicolon'),
+        ]
+        context_tips = get_txscript_context(src)
+        self.assertEqual(expected, context_tips)
+
+    def test_txscript_variables(self):
+        src = '5 + $myVar;'
+        expected = [
+            (0, 1, 5, 'Number'),
+            (2, 3, '+', 'Plus'),
+            (4, 10, '$myVar', 'Variable'),
+            (10, 11, ';', 'Semicolon'),
+        ]
+        context_tips = get_txscript_context(src)
         self.assertEqual(expected, context_tips)

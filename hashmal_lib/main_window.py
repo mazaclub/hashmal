@@ -295,6 +295,7 @@ class HashmalMain(QMainWindow):
             self.script_editor.clear()
         self.last_saved = str(self.script_editor.toPlainText())
         self.on_text_changed()
+        self.script_editor.rehighlight()
 
 
     def create_script_editor(self):

@@ -12,6 +12,7 @@ class ScriptEdit(QTextEdit):
     """
     def __init__(self, parent=None):
         super(ScriptEdit, self).__init__(parent)
+        self.setTabStopWidth(40)
         self.needs_compilation = False
         self.current_format = 'ASM'
         self.script = Script()
@@ -166,6 +167,14 @@ class ScriptEditor(ScriptEdit):
         menu = self.createStandardContextMenu()
         menu.addAction('Copy Hex', self.copy_hex)
         menu.exec_(e.globalPos())
+
+    def rehighlight(self):
+        self.highlighter.rehighlight()
+
+    def insertFromMimeData(self, source):
+        """Rehighlight the script after pasting."""
+        super(ScriptEditor, self).insertFromMimeData(source)
+        self.rehighlight()
 
     @pyqtProperty(str)
     def asmText(self):

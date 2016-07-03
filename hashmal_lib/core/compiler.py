@@ -212,39 +212,35 @@ def compiler_options(d=None):
         options.update(d)
     return options
 
-def hex_to_asm(s):
-    """Compile hex to ASM format."""
-    compiler.setup_options(compiler_options({'source_lang': 'btc', 'target_lang': 'hashmal-asm'}))
+def compile_source(s, source_lang, target_lang):
+    """Compile source_lang to target_lang.
+
+    Use a specific function (e.g. hex_to_asm(s) for more safety.
+    """
+    compiler.setup_options(compiler_options({'source_lang': source_lang, 'target_lang': target_lang}))
     compiler.compile(s)
     return compiler.output()
+
+def hex_to_asm(s):
+    """Compile hex to ASM format."""
+    return compile_source(s, 'btc', 'hashmal-asm')
 
 def hex_to_txscript(s):
     """Compile hex to TxScript format."""
-    compiler.setup_options(compiler_options({'source_lang': 'btc', 'target_lang': 'hashmal-txscript'}))
-    compiler.compile(s)
-    return compiler.output()
+    return compile_source(s, 'btc', 'hashmal-txscript')
 
 def asm_to_hex(s):
     """Compile ASM format to hex."""
-    compiler.setup_options(compiler_options({'source_lang': 'hashmal-asm', 'target_lang': 'btc'}))
-    compiler.compile(s)
-    return compiler.output()
+    return compile_source(s, 'hashmal-asm', 'btc')
 
 def asm_to_txscript(s):
     """Compile ASM format to TxScript."""
-    compiler.setup_options(compiler_options({'source_lang': 'hashmal-asm', 'target_lang': 'hashmal-txscript'}))
-    compiler.compile(s)
-    return compiler.output()
+    return compile_source(s, 'hashmal-asm', 'hashmal-txscript')
 
 def txscript_to_hex(s):
     """Compile TxScript to hex."""
-    compiler.setup_options(compiler_options({'source_lang': 'hashmal-txscript', 'target_lang': 'btc'}))
-    compiler.compile(s)
-    return compiler.output()
+    return compile_source(s, 'hashmal-txscript', 'btc')
 
 def txscript_to_asm(s):
     """Compile TxScript to ASM format."""
-    compiler.setup_options(compiler_options({'source_lang': 'hashmal-txscript', 'target_lang': 'hashmal-asm'}))
-    compiler.compile(s)
-    return compiler.output()
-
+    return compile_source(s, 'hashmal-txscript', 'hashmal-asm')

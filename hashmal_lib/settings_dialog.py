@@ -3,7 +3,7 @@ from PyQt4.QtCore import *
 import logging
 
 from hashmal_lib.core import chainparams
-from gui_utils import floated_buttons, settings_color, Amount, monospace_font, Separator
+from gui_utils import floated_buttons, get_default_colors, settings_color, Amount, monospace_font, Separator
 
 class ChainparamsComboBox(QComboBox):
     """ComboBox for selecting chainparams presets.
@@ -266,7 +266,7 @@ class SettingsDialog(QDialog):
         editor_font_combo.currentIndexChanged.connect(change_font_family)
         editor_font_size.valueChanged.connect(change_font_size)
 
-        reset_font_button = QPushButton('Reset to Default')
+        reset_font_button = QPushButton('Reset Font to Default')
         reset_font_button.clicked.connect(reset_font)
 
         font_form = QFormLayout()
@@ -285,6 +285,20 @@ class SettingsDialog(QDialog):
         keywords_color = ColorButton('keywords', self)
         type_names_color = ColorButton('typenames', self)
 
+        color_buttons = [
+                vars_color, strs_color, bool_ops_color,
+                comments_color, conditionals_color, keywords_color, type_names_color,
+        ]
+        def reset_colors():
+            """Reset colors to default values."""
+            for color_key, color_value in get_default_colors():
+                self.qt_settings.setValue('color/%s' % color_key, color_value)
+            for color_button in color_buttons:
+                color_button.load_color(update=True)
+            self.colorsChanged.emit()
+        reset_colors_button = QPushButton('Reset Colors to Default')
+        reset_colors_button.clicked.connect(reset_colors)
+
         colors_form = QFormLayout()
         colors_form.addRow('Variables:', floated_buttons([vars_color], True))
         colors_form.addRow('String literals:', floated_buttons([strs_color], True))
@@ -294,6 +308,7 @@ class SettingsDialog(QDialog):
         colors_form.addRow('Conditionals (TxScript only):', floated_buttons([conditionals_color], True))
         colors_form.addRow('Keywords (TxScript only):', floated_buttons([keywords_color], True))
         colors_form.addRow('Type names (TxScript only):', floated_buttons([type_names_color], True))
+        colors_form.addRow(floated_buttons([reset_colors_button]))
         colors_group = self._create_section('Colors', colors_form)
 
         form.addRow(font_group)
@@ -433,8 +448,14 @@ class ColorButton(QPushButton):
         super(ColorButton, self).__init__(parent)
         self.name = name
         self.dialog = dialog
-        self.color = settings_color(QSettings(), name)
+        self.load_color()
         self.clicked.connect(self.show_color_dialog)
+
+    def load_color(self, update=False):
+        """Load the value of this button's color key and optionally update."""
+        self.color = settings_color(QSettings(), self.name)
+        if update:
+            self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)

@@ -32,6 +32,14 @@ default_colors = {
     'variables': 'darkMagenta',
 }
 
+def get_default_color(color_key):
+    """Get the default color for color_key."""
+    return default_colors.get(color_key)
+
+def get_default_colors():
+    """Get the default colors for all color keys."""
+    return default_colors.items()
+
 def settings_color(settings, color_key):
     """Get the value (or default value) of color_key in settings.
 

@@ -10,7 +10,7 @@ from hashmal_lib.core import chainparams
 from config import Config
 from plugin_handler import PluginHandler
 from settings_dialog import SettingsDialog
-from widgets.script import ScriptEditor
+from widgets.script import ScriptEditor, known_script_formats
 from help_widgets import QuickTips
 from gui_utils import script_file_filter, floated_buttons, monospace_font
 from plugin_manager import PluginManager
@@ -18,8 +18,6 @@ from plugins import BaseDock
 from downloader import DownloadController
 from style import hashmal_style
 from toolbar import ToolBar
-
-known_script_formats = ['ASM', 'Hex', 'TxScript']
 
 def tab_bar_to_list(tabbar):
     """Get a list of tab texts from a QTabBar."""
@@ -78,7 +76,7 @@ class HashmalMain(QMainWindow):
                 chainparams.set_to_preset(active_params)
                 self.config.optionChanged.emit('chainparams')
             except KeyError:
-                self.log_message('Core', 'Chainparams preset "%s" does not exist. Setting chainparams to Bitcoin.', logging.ERROR)
+                self.log_message('Core', 'Chainparams preset "%s" does not exist. Setting chainparams to Bitcoin.' % active_params, logging.ERROR)
                 self.config.set_option('chainparams', 'Bitcoin')
 
         # Filename of script being edited.
@@ -311,6 +309,17 @@ class HashmalMain(QMainWindow):
         self.script_editor.setWhatsThis('The script editor lets you write transaction scripts in a human-readable format. You can also write and edit scripts in their raw, hex-encoded format if you prefer.')
 
         self.format_combo.currentIndexChanged.connect(lambda index: self.script_editor.set_format(known_script_formats[index]))
+
+        # Load option for default script format.
+        fallback_format = 'ASM'
+        if fallback_format not in known_script_formats:
+            raise Exception('Hardcoded fallback script format "%s" is invalid' % fallback_format)
+        script_format = self.config.get_option('default_script_format', fallback_format)
+        if script_format not in known_script_formats:
+            self.log_message('Core', 'Script format "%s" does not exist. Setting default_script_format to %s.' % (script_format, fallback_format), logging.ERROR)
+            self.config.set_option('default_script_format', fallback_format)
+            script_format = fallback_format
+        self.format_combo.setCurrentIndex(known_script_formats.index(script_format))
 
         hbox = QHBoxLayout()
         hbox.addWidget(QLabel('Format: '))

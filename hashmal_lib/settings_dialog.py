@@ -4,6 +4,7 @@ import logging
 
 from hashmal_lib.core import chainparams
 from gui_utils import floated_buttons, get_default_colors, settings_color, Amount, monospace_font, Separator
+from widgets.script import known_script_formats
 
 class ChainparamsComboBox(QComboBox):
     """ComboBox for selecting chainparams presets.
@@ -336,6 +337,26 @@ class SettingsDialog(QDialog):
         amnt_format.setToolTip('Format that transaction amounts are shown in')
         amnt_format.setWhatsThis('Use this to change the format that coin amounts are shown in.')
 
+        # Default script format.
+
+        script_format = QComboBox()
+        script_format.addItems(known_script_formats)
+        current_format = self.config.get_option('default_script_format', 'ASM')
+
+        try:
+            script_format.setCurrentIndex(known_script_formats.index(current_format))
+        except ValueError:
+            script_format.setCurrentIndex(known_script_formats.index('ASM'))
+            self.warning('Invalid script format value: "%s". Defaulting to %s.' % (current_format, str(script_format.currentText())))
+
+        def set_script_format():
+            new_format = str(script_format.currentText())
+            self.config.set_option('default_script_format', new_format)
+
+        script_format.currentIndexChanged.connect(set_script_format)
+        script_format.setToolTip('Format that the script editor uses when Hashmal is started')
+        script_format.setWhatsThis('Use this to change the default script format.')
+
 
         self.data_retriever = data_retriever = QComboBox()
         retrievers = self.gui.plugin_handler.get_data_retrievers()
@@ -376,6 +397,7 @@ class SettingsDialog(QDialog):
 
 
         form.addRow('Amount format:', amnt_format)
+        form.addRow('Default script format:', script_format)
         form.addRow('Data retriever:', data_retriever)
         form.addRow('Log level:', self.log_level)
 

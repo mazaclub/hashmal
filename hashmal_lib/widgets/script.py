@@ -4,6 +4,8 @@ from PyQt4.QtCore import *
 from hashmal_lib.core.script import Script, get_asm_context, get_txscript_context
 from hashmal_lib.gui_utils import monospace_font, settings_color
 
+known_script_formats = ('ASM', 'Hex', 'TxScript',)
+
 class ScriptEdit(QTextEdit):
     """Script editor.
 

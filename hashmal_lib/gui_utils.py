@@ -23,14 +23,14 @@ monospace_font.setStyleHint(QFont.TypeWriter)
 script_file_filter = 'Coinscripts (*.coinscript);;Text files (*.txt);;All files (*.*)'
 
 default_colors = {
-    'booleanoperators': 'darkCyan',
+    'booleanoperators': 'green',
     'comments': 'gray',
-    'conditionals': 'darkGreen',
-    'keywords': 'maroon',
-    'numbers': 'sienna',
+    'conditionals': 'green',
+    'keywords': 'saddlebrown',
+    'numbers': 'maroon',
     'strings': 'royalblue',
-    'typenames': 'brown',
-    'variables': 'darkMagenta',
+    'typenames': 'saddlebrown',
+    'variables': 'goldenrod',
 }
 
 def get_default_color(color_key):

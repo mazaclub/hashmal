@@ -27,7 +27,7 @@ default_colors = {
     'comments': 'gray',
     'conditionals': 'darkGreen',
     'keywords': 'maroon',
-    'strings': 'gray',
+    'strings': 'royalblue',
     'typenames': 'brown',
     'variables': 'darkMagenta',
 }

@@ -220,7 +220,7 @@ class HashmalMain(QMainWindow):
             return
         # Save layout if configured to.
         if self.qt_settings.value('saveLayoutOnExit', defaultValue=QtCore.QVariant(False)).toBool():
-            self.qt_settings.setValue('toolLayout/default', self.saveState())
+            self.settings_dialog.layout_changer.save_layout(name='default')
 
         if self.close_script():
             logging.shutdown()

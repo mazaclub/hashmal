@@ -284,11 +284,13 @@ class SettingsDialog(QDialog):
         comments_color = ColorButton('comments', self)
         conditionals_color = ColorButton('conditionals', self)
         keywords_color = ColorButton('keywords', self)
+        numbers_color = ColorButton('numbers', self)
         type_names_color = ColorButton('typenames', self)
 
         color_buttons = [
                 vars_color, strs_color, bool_ops_color,
-                comments_color, conditionals_color, keywords_color, type_names_color,
+                comments_color, conditionals_color, keywords_color,
+                numbers_color, type_names_color,
         ]
         def reset_colors():
             """Reset colors to default values."""
@@ -308,6 +310,7 @@ class SettingsDialog(QDialog):
         colors_form.addRow('Comments (TxScript only):', floated_buttons([comments_color], True))
         colors_form.addRow('Conditionals (TxScript only):', floated_buttons([conditionals_color], True))
         colors_form.addRow('Keywords (TxScript only):', floated_buttons([keywords_color], True))
+        colors_form.addRow('Numbers (TxScript only):', floated_buttons([numbers_color], True))
         colors_form.addRow('Type names (TxScript only):', floated_buttons([type_names_color], True))
         colors_form.addRow(floated_buttons([reset_colors_button]))
         colors_group = self._create_section('Colors', colors_form)

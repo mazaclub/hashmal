@@ -146,6 +146,8 @@ class ScriptHighlighter(QSyntaxHighlighter):
                 fmt.setForeground(settings_color(settings, 'comments'))
             elif match_type == 'Type name':
                 fmt.setForeground(settings_color(settings, 'typenames'))
+            elif match_type == 'Number':
+                fmt.setForeground(settings_color(settings, 'numbers'))
             elif match_type.startswith('Keyword'):
                 fmt.setForeground(settings_color(settings, 'keywords'))
             elif match_type.startswith('Conditional'):

@@ -152,9 +152,9 @@ class ContextTest(unittest.TestCase):
     def test_txscript_context(self):
         src = '5 + 2;'
         expected = [
-            (0, 1, 5, 'Number'),
+            (0, 1, '5', 'Number'),
             (2, 3, '+', 'Plus'),
-            (4, 5, 2, 'Number'),
+            (4, 5, '2', 'Number'),
             (5, 6, ';', 'Semicolon'),
         ]
         context_tips = get_txscript_context(src)
@@ -163,7 +163,7 @@ class ContextTest(unittest.TestCase):
     def test_txscript_variables(self):
         src = '5 + $myVar;'
         expected = [
-            (0, 1, 5, 'Number'),
+            (0, 1, '5', 'Number'),
             (2, 3, '+', 'Plus'),
             (4, 10, '$myVar', 'Variable'),
             (10, 11, ';', 'Semicolon'),

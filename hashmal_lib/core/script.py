@@ -113,6 +113,8 @@ def get_asm_context(text):
 
 # These are human-friendly representations of HashmalHumanLexer lexer token types.
 txscript_match_types = {
+    'DECIMALNUMBER': 'Number',
+    'HEXNUMBER': 'Number',
     'HEXSTR': 'Hex string',
     'TYPENAME': 'Type name',
     'STR': 'String literal',

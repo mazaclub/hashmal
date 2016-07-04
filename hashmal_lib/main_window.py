@@ -96,6 +96,9 @@ class HashmalMain(QMainWindow):
         self.script_editor.setFont(font)
 
         self.settings_dialog = SettingsDialog(self)
+        # Connect the signal emitted when color settings change to
+        # the script editor's rehighlight() method.
+        self.settings_dialog.colorsChanged.connect(self.script_editor.rehighlight)
 
         self.create_menubar()
         self.create_toolbar()

@@ -166,6 +166,8 @@ class SettingsDialog(QDialog):
 
     Handles loading/saving window layouts as well.
     """
+    # Signal emitted when editor color settings are changed.
+    colorsChanged = pyqtSignal()
     def __init__(self, main_window):
         super(SettingsDialog, self).__init__(main_window)
         self.gui = main_window
@@ -274,12 +276,24 @@ class SettingsDialog(QDialog):
         font_group = self._create_section('Font', font_form)
 
 
-        vars_color = ColorButton('variables')
-        strs_color = ColorButton('strings')
+        vars_color = ColorButton('variables', self)
+        strs_color = ColorButton('strings', self)
+
+        bool_ops_color = ColorButton('booleanoperators', self)
+        comments_color = ColorButton('comments', self)
+        conditionals_color = ColorButton('conditionals', self)
+        keywords_color = ColorButton('keywords', self)
+        type_names_color = ColorButton('typenames', self)
 
         colors_form = QFormLayout()
         colors_form.addRow('Variables:', floated_buttons([vars_color], True))
         colors_form.addRow('String literals:', floated_buttons([strs_color], True))
+
+        colors_form.addRow('Boolean operators (TxScript only):', floated_buttons([bool_ops_color], True))
+        colors_form.addRow('Comments (TxScript only):', floated_buttons([comments_color], True))
+        colors_form.addRow('Conditionals (TxScript only):', floated_buttons([conditionals_color], True))
+        colors_form.addRow('Keywords (TxScript only):', floated_buttons([keywords_color], True))
+        colors_form.addRow('Type names (TxScript only):', floated_buttons([type_names_color], True))
         colors_group = self._create_section('Colors', colors_form)
 
         form.addRow(font_group)
@@ -415,9 +429,10 @@ class SettingsDialog(QDialog):
 
 class ColorButton(QPushButton):
     """Represents a color visually."""
-    def __init__(self, name, parent=None):
+    def __init__(self, name, dialog, parent=None):
         super(ColorButton, self).__init__(parent)
         self.name = name
+        self.dialog = dialog
         self.color = settings_color(QSettings(), name)
         self.clicked.connect(self.show_color_dialog)
 
@@ -430,3 +445,4 @@ class ColorButton(QPushButton):
         if not new_color.isValid(): return
         self.color = new_color
         QSettings().setValue('color/' + self.name, self.color.name())
+        self.dialog.colorsChanged.emit()

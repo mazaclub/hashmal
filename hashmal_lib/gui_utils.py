@@ -26,6 +26,7 @@ default_colors = {
     'booleanoperators': 'green',
     'comments': 'gray',
     'conditionals': 'green',
+    'hexstrings': 'crimson',
     'keywords': 'saddlebrown',
     'numbers': 'maroon',
     'strings': 'royalblue',

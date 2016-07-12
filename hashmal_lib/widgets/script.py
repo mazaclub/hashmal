@@ -142,6 +142,8 @@ class ScriptHighlighter(QSyntaxHighlighter):
                     fmt.setForeground(settings_color(settings, 'variables'))
             elif match_type == 'String literal':
                 fmt.setForeground(settings_color(settings, 'strings'))
+            elif match_type == 'Hex string':
+                fmt.setForeground(settings_color(settings, 'hexstrings'))
             elif match_type == 'Comment':
                 fmt.setForeground(settings_color(settings, 'comments'))
             elif match_type == 'Type name':

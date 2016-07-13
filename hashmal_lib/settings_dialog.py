@@ -156,10 +156,10 @@ class LayoutChanger(QWidget):
         self.layout_combo.setCurrentIndex(self.layout_names.indexOf(LayoutChanger.current_layout))
 
     def info(self, msg):
-        self.gui.log_message('Layouts', msg, logging.INFO)
+        self.gui.platform.log_message('Layouts', msg, logging.INFO)
 
     def error(self, msg):
-        self.gui.log_message('Layouts', msg, logging.ERROR)
+        self.gui.platform.log_message('Layouts', msg, logging.ERROR)
 
 
 class SettingsDialog(QDialog):
@@ -189,13 +189,13 @@ class SettingsDialog(QDialog):
         return groupbox
 
     def info(self, msg):
-        self.gui.log_message('Settings', msg, logging.INFO)
+        self.gui.platform.log_message('Settings', msg, logging.INFO)
 
     def warning(self, msg):
-        self.gui.log_message('Settings', msg, logging.WARNING)
+        self.gui.platform.log_message('Settings', msg, logging.WARNING)
 
     def error(self, msg):
-        self.gui.log_message('Settings', msg, logging.ERROR)
+        self.gui.platform.log_message('Settings', msg, logging.ERROR)
 
     def sizeHint(self):
         return QSize(375, 270)

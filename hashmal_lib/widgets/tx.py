@@ -762,7 +762,7 @@ class TxWidget(QWidget):
     def set_plugin_handler(self, plugin_handler):
         """Set the PluginHandler instance so metadata can be downloaded."""
         self.plugin_handler = plugin_handler
-        self.download_controller = plugin_handler.gui.download_controller
+        self.download_controller = plugin_handler.download_controller
         self.download_metadata()
 
     def download_metadata(self):

@@ -18,7 +18,7 @@ class GuiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.gui = HashmalMain(app)
-        cls.gui.testing_mode = True
+        cls.gui.platform.set_testing_mode(True)
 
     @classmethod
     def tearDownClass(cls):

@@ -6,16 +6,13 @@ import logging
 from PyQt4.QtGui import *
 from PyQt4 import QtCore
 
-from hashmal_lib.core import chainparams
-from config import Config
-from plugin_handler import PluginHandler
+from platform import HashmalPlatform
 from settings_dialog import SettingsDialog
 from widgets.script import ScriptEditor, known_script_formats
 from help_widgets import QuickTips
 from gui_utils import script_file_filter, floated_buttons, monospace_font
 from plugin_manager import PluginManager
 from plugins import BaseDock
-from downloader import DownloadController
 from style import hashmal_style
 from toolbar import ToolBar
 
@@ -40,44 +37,19 @@ class HashmalMain(QMainWindow):
         self.last_active_dock = None
         self.setCorner(QtCore.Qt.BottomRightCorner, QtCore.Qt.RightDockWidgetArea)
 
-        # When testing, we don't confirm discarding unsaved changes on exit.
-        self.testing_mode = False
-
-        self.config = Config()
-        self.init_logger()
-        self.config.optionChanged.connect(self.on_option_changed)
-
         QtCore.QCoreApplication.setOrganizationName('mazaclub')
         QtCore.QCoreApplication.setApplicationName('hashmal')
         self.qt_settings = QtCore.QSettings()
-
-        active_params = self.config.get_option('chainparams', 'Bitcoin')
-        # True if chainparams needs to be set after plugins load.
-        needs_params_change = False
-        # An exception is thrown if the last-active chainparams preset
-        # only exists due to a plugin that defines it.
-        try:
-            chainparams.set_to_preset(active_params)
-        except KeyError:
-            chainparams.set_to_preset('Bitcoin')
-            needs_params_change = True
-
-        self.download_controller = DownloadController(self.config)
-
         self.setDockNestingEnabled(True)
-        # Plugin Handler loads plugins and handles their dock widgets.
-        self.plugin_handler = PluginHandler(self)
-        self.plugin_handler.load_plugins()
+
+        # Initialize Hashmal platform.
+        self.platform = HashmalPlatform(self)
+        self.config.optionChanged.connect(self.platform.on_option_changed)
+
+        self.plugin_handler = self.platform.plugin_handler
+        self.platform.init_plugins()
         self.plugin_handler.do_default_layout()
 
-        # Attempt to load chainparams preset again if necessary.
-        if needs_params_change:
-            try:
-                chainparams.set_to_preset(active_params)
-                self.config.optionChanged.emit('chainparams')
-            except KeyError:
-                self.log_message('Core', 'Chainparams preset "%s" does not exist. Setting chainparams to Bitcoin.' % active_params, logging.ERROR)
-                self.config.set_option('chainparams', 'Bitcoin')
 
         # Filename of script being edited.
         self.filename = ''
@@ -113,22 +85,6 @@ class HashmalMain(QMainWindow):
 
     def sizeHint(self):
         return QtCore.QSize(800, 500)
-
-    def init_logger(self):
-        """Initialize logger."""
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S')
-        handler.setFormatter(formatter)
-        logger = logging.getLogger()
-        logger.addHandler(handler)
-        self.change_log_level(self.config.get_option('log_level', 'INFO'))
-
-    def change_log_level(self, level_str):
-        level_str = level_str.upper()
-        if level_str not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
-            level_str = 'INFO'
-        level = getattr(logging, level_str)
-        logging.getLogger().setLevel(level)
 
     def load_layout(self, name):
         """Load a layout from QSettings."""
@@ -182,16 +138,6 @@ class HashmalMain(QMainWindow):
             self.statusBar().setProperty('hasError', False)
         self.style().polish(self.statusBar())
 
-    def log_message(self, plugin_name, msg, level):
-        if self.testing_mode:
-            return
-        message = '[%s] -> %s' % (plugin_name, msg)
-        logging.log(level, message)
-        self.show_status_message(message, True if level == logging.ERROR else False)
-        log_plugin = self.plugin_handler.get_plugin('Log')
-        if log_plugin:
-            log_plugin.ui.add_log_message(time.time(), level, plugin_name, msg)
-
     def change_status_bar(self, new_msg):
         # Unset hasError if an error is removed.
         if not new_msg and self.statusBar().property('hasError'):
@@ -213,7 +159,7 @@ class HashmalMain(QMainWindow):
         self.changes_saved = saved
 
     def closeEvent(self, event):
-        if self.testing_mode:
+        if self.platform.testing_mode:
             event.accept()
             return
         # Save layout if configured to.
@@ -316,7 +262,7 @@ class HashmalMain(QMainWindow):
             raise Exception('Hardcoded fallback script format "%s" is invalid' % fallback_format)
         script_format = self.config.get_option('default_script_format', fallback_format)
         if script_format not in known_script_formats:
-            self.log_message('Core', 'Script format "%s" does not exist. Setting default_script_format to %s.' % (script_format, fallback_format), logging.ERROR)
+            self.platform.log_message('Core', 'Script format "%s" does not exist. Setting default_script_format to %s.' % (script_format, fallback_format), logging.ERROR)
             self.config.set_option('default_script_format', fallback_format)
             script_format = fallback_format
         self.format_combo.setCurrentIndex(known_script_formats.index(script_format))
@@ -475,7 +421,3 @@ class HashmalMain(QMainWindow):
 
     def do_quick_tips(self):
         QuickTips(self).exec_()
-
-    def on_option_changed(self, key):
-        if key == 'log_level':
-            self.change_log_level(self.config.get_option('log_level', 'INFO'))

@@ -104,10 +104,10 @@ class Blockchain(BaseDock):
         self.data_group.button(0).setChecked(True)
 
     def get_cache_data(self, key, default=None):
-        return self.handler.gui.download_controller.get_cache_data(key, default)
+        return self.handler.download_controller.get_cache_data(key, default)
 
     def add_cache_data(self, key, value):
-        return self.handler.gui.download_controller.add_cache_data(key, value)
+        return self.handler.download_controller.add_cache_data(key, value)
 
     def init_data(self):
         self.known_explorers = OrderedDict(known_explorers)

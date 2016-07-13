@@ -18,10 +18,12 @@ from augment import Augmentations
 class PluginHandler(QWidget):
     """Handles loading/unloading plugins and managing their UI widgets."""
     pluginsLoaded = pyqtSignal()
-    def __init__(self, main_window):
-        super(PluginHandler, self).__init__(main_window)
-        self.gui = main_window
-        self.config = main_window.config
+    def __init__(self, platform):
+        super(PluginHandler, self).__init__(platform.main_window)
+        self.platform = platform
+        self.download_controller = platform.download_controller
+        self.gui = platform.main_window
+        self.config = platform.config
         self.loaded_plugins = []
         self.config.optionChanged.connect(self.on_option_changed)
         # Whether the initial plugin loading is done.
@@ -182,7 +184,7 @@ class PluginHandler(QWidget):
 
     def assign_dock_shortcuts(self):
         """Assign shortcuts to visibility-toggling actions."""
-        favorites = self.gui.config.get_option('favorite_plugins', [])
+        favorites = self.config.get_option('favorite_plugins', [])
         for plugin in self.loaded_plugins:
             if not plugin.has_gui:
                 continue
@@ -286,7 +288,7 @@ class PluginHandler(QWidget):
             callback (function): If supplied, download will be asynchronous.
         """
         # Check if data is cached.
-        cached_data = self.gui.download_controller.get_cache_data(identifier)
+        cached_data = self.download_controller.get_cache_data(identifier)
         if cached_data is not None:
             return cached_data
 
@@ -384,17 +386,17 @@ class PluginHandler(QWidget):
 
     def debug(self, plugin_name, message):
         if self.plugin_is_enabled(plugin_name):
-            self.gui.log_message(plugin_name, message, logging.DEBUG)
+            self.platform.log_message(plugin_name, message, logging.DEBUG)
 
     def info(self, plugin_name, message):
         if self.plugin_is_enabled(plugin_name):
-            self.gui.log_message(plugin_name, message, logging.INFO)
+            self.platform.log_message(plugin_name, message, logging.INFO)
 
     def warning(self, plugin_name, message):
         if self.plugin_is_enabled(plugin_name):
-            self.gui.log_message(plugin_name, message, logging.WARNING)
+            self.platform.log_message(plugin_name, message, logging.WARNING)
 
     def error(self, plugin_name, message):
         if self.plugin_is_enabled(plugin_name):
-            self.gui.log_message(plugin_name, message, logging.ERROR)
+            self.platform.log_message(plugin_name, message, logging.ERROR)
 

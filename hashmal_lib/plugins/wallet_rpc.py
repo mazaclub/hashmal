@@ -152,7 +152,7 @@ class WalletRPC(BaseDock):
         self.augment('rpc_methods', known_methods, callback=self.on_methods_augmented, undo_callback=self.undo_methods_augmented)
 
     def add_cache_data(self, key, value):
-        return self.handler.gui.download_controller.add_cache_data(key, value)
+        return self.handler.download_controller.add_cache_data(key, value)
 
     def set_profile(self, profile):
         self.profile = profile

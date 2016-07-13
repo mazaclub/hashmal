@@ -193,4 +193,4 @@ class BaseDock(BasePluginUI, QDockWidget):
 
     def download_async(self, downloader, callback):
         """Execute a downloader.Downloader subclass in a separate thread and call callback with the results."""
-        self.handler.gui.download_controller.do_download(downloader, callback)
+        self.handler.download_controller.do_download(downloader, callback)

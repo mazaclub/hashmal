@@ -1,6 +1,8 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
+from txsc.script_compiler import CompilationFailedError
+
 from hashmal_lib.core.script import Script, get_asm_context, get_txscript_context
 from hashmal_lib.gui_utils import monospace_font, settings_color
 
@@ -60,22 +62,13 @@ class ScriptEdit(QTextEdit):
         script = None
         self.context = []
         if fmt == 'Hex' and len(text) % 2 == 0:
-            try:
-                script = Script(text.decode('hex'))
-            except Exception:
-                pass
+            script = Script(text.decode('hex'))
         elif fmt == 'ASM':
-            try:
-                self.context = get_asm_context(text)
-                script = Script.from_asm(text)
-            except Exception:
-                pass
+            self.context = get_asm_context(text)
+            script = Script.from_asm(text)
         elif fmt == 'TxScript':
-            try:
-                self.context = get_txscript_context(text)
-                script = Script.from_txscript(text)
-            except Exception:
-                pass
+            self.context = get_txscript_context(text)
+            script = Script.from_txscript(text)
         self.script = script
 
     def get_data(self, fmt=None):
@@ -159,6 +152,22 @@ class ScriptHighlighter(QSyntaxHighlighter):
             self.setFormat(idx, length, fmt)
         return
 
+class ScriptCompilationLog(QPlainTextEdit):
+    """Compilation log display for a script editor."""
+    def __init__(self, parent=None):
+        super(ScriptCompilationLog, self).__init__(parent)
+        self.setReadOnly(True)
+        self.hide()
+
+    def set_message(self, text):
+        """Set the displayed message."""
+        self.clear()
+        self.appendPlainText(text)
+        if text:
+            self.show()
+        else:
+            self.hide()
+
 class ScriptEditor(ScriptEdit):
     """Main script editor.
 
@@ -168,6 +177,13 @@ class ScriptEditor(ScriptEdit):
         super(ScriptEditor, self).__init__(gui)
         self.gui = gui
         self.highlighter = ScriptHighlighter(self.gui, self)
+        self.message_display = ScriptCompilationLog()
+
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0,0,0,0)
+        vbox.addStretch()
+        vbox.addWidget(self.message_display)
+        self.setLayout(vbox)
 
     def contextMenuEvent(self, e):
         menu = self.createStandardContextMenu()
@@ -190,3 +206,13 @@ class ScriptEditor(ScriptEdit):
     def asmText(self, value):
         self.setText(str(value))
 
+    def set_data(self, text, fmt):
+        try:
+            super(ScriptEditor, self).set_data(text, fmt)
+        except CompilationFailedError as e:
+            msg = '\n'.join([e.message, e.exception_message])
+            self.message_display.set_message(msg)
+        except Exception as e:
+            self.message_display.set_message(str(e))
+        else:
+            self.message_display.set_message('')

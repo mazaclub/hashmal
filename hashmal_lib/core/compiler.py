@@ -249,10 +249,20 @@ def asm_to_txscript(s):
     """Compile ASM format to TxScript."""
     return compile_source(s, 'hashmal-asm', 'hashmal-txscript')
 
+def prepare_txscript(s):
+    """Parse a TxScript string into a list of lines."""
+    if not isinstance(s, str):
+        raise TypeError('A string is required')
+    return [i + '\n' for i in s.split('\n')]
+
 def txscript_to_hex(s):
     """Compile TxScript to hex."""
+    if isinstance(s, str):
+        s = prepare_txscript(s)
     return compile_source(s, 'hashmal-txscript', 'btc')
 
 def txscript_to_asm(s):
     """Compile TxScript to ASM format."""
+    if isinstance(s, str):
+        s = prepare_txscript(s)
     return compile_source(s, 'hashmal-txscript', 'hashmal-asm')

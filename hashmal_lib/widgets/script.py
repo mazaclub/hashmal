@@ -1,15 +1,12 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-from hashmal_lib.core.script import Script, transform_human
-from hashmal_lib.gui_utils import monospace_font
+from txsc.script_compiler import CompilationFailedError
 
-def transform_human_script(text, main_window):
-    """Transform user input into something Script can read.
+from hashmal_lib.core.script import Script, get_asm_context, get_txscript_context
+from hashmal_lib.gui_utils import monospace_font, settings_color
 
-    Main window is needed for tool integration."""
-    variables = main_window.plugin_handler.get_plugin('Variables').ui.data
-    return transform_human(text, variables)
+known_script_formats = ('ASM', 'Hex', 'TxScript',)
 
 class ScriptEdit(QTextEdit):
     """Script editor.
@@ -19,7 +16,9 @@ class ScriptEdit(QTextEdit):
     """
     def __init__(self, parent=None):
         super(ScriptEdit, self).__init__(parent)
-        self.current_format = 'Human'
+        self.setTabStopWidth(40)
+        self.needs_compilation = False
+        self.current_format = 'ASM'
         self.script = Script()
         self.textChanged.connect(self.on_text_changed)
         self.setFont(monospace_font)
@@ -27,8 +26,24 @@ class ScriptEdit(QTextEdit):
         self.context = []
 
     def on_text_changed(self):
-        txt = str(self.toPlainText())
-        self.set_data(txt, self.current_format)
+        text = str(self.toPlainText())
+        if text:
+            # Get ASM context after every text change.
+            if self.current_format == 'ASM':
+                try:
+                    self.context = get_asm_context(text)
+                except Exception:
+                    pass
+            elif self.current_format == 'TxScript':
+                try:
+                    self.context = get_txscript_context(text)
+                except Exception:
+                    pass
+        self.needs_compilation = True
+
+    def compile_input(self):
+        text = str(self.toPlainText())
+        self.set_data(text, self.current_format)
 
     def copy_hex(self):
         txt = self.get_data('Hex')
@@ -45,24 +60,33 @@ class ScriptEdit(QTextEdit):
 
     def set_data(self, text, fmt):
         script = None
+        self.context = []
         if fmt == 'Hex' and len(text) % 2 == 0:
-            try:
-                script = Script(text.decode('hex'))
-            except Exception:
-                pass
-        elif fmt == 'Human':
-            txt, self.context = transform_human(text)
-            script = Script.from_human(txt)
+            script = Script(text.decode('hex'))
+        elif fmt == 'ASM':
+            self.context = get_asm_context(text)
+            script = Script.from_asm(text)
+        elif fmt == 'TxScript':
+            self.context = get_txscript_context(text)
+            script = Script.from_txscript(text)
         self.script = script
 
     def get_data(self, fmt=None):
+        if self.needs_compilation:
+            self.compile_input()
+            self.needs_compilation = False
+
         if fmt is None:
             fmt = self.current_format
         if not self.script: return ''
         if fmt == 'Hex':
             return self.script.get_hex()
-        elif fmt == 'Human':
-            return self.script.get_human()
+        elif fmt == 'ASM':
+            return self.script.get_asm()
+        # TODO: Inform user that TxScript is not a target language.
+        elif fmt == 'TxScript':
+            pass
+        return ''
 
     def event(self, e):
         if e.type() == QEvent.ToolTip:
@@ -108,11 +132,41 @@ class ScriptHighlighter(QSyntaxHighlighter):
                 length += 1 # account for '$' prefix
                 var_name = str(text[idx+1: idx+length]).strip()
                 if self.gui.plugin_handler.get_plugin('Variables').ui.get_key(var_name):
-                    fmt.setForeground( QColor(settings.value('color/variables', 'darkMagenta')) )
+                    fmt.setForeground(settings_color(settings, 'variables'))
             elif match_type == 'String literal':
-                fmt.setForeground( QColor(settings.value('color/strings', 'gray')) )
+                fmt.setForeground(settings_color(settings, 'strings'))
+            elif match_type == 'Hex string':
+                fmt.setForeground(settings_color(settings, 'hexstrings'))
+            elif match_type == 'Comment':
+                fmt.setForeground(settings_color(settings, 'comments'))
+            elif match_type == 'Type name':
+                fmt.setForeground(settings_color(settings, 'typenames'))
+            elif match_type == 'Number':
+                fmt.setForeground(settings_color(settings, 'numbers'))
+            elif match_type.startswith('Keyword'):
+                fmt.setForeground(settings_color(settings, 'keywords'))
+            elif match_type.startswith('Conditional'):
+                fmt.setForeground(settings_color(settings, 'conditionals'))
+            elif match_type.startswith('Boolean operator'):
+                fmt.setForeground(settings_color(settings, 'booleanoperators'))
             self.setFormat(idx, length, fmt)
         return
+
+class ScriptCompilationLog(QPlainTextEdit):
+    """Compilation log display for a script editor."""
+    def __init__(self, parent=None):
+        super(ScriptCompilationLog, self).__init__(parent)
+        self.setReadOnly(True)
+        self.hide()
+
+    def set_message(self, text):
+        """Set the displayed message."""
+        self.clear()
+        self.appendPlainText(text)
+        if text:
+            self.show()
+        else:
+            self.hide()
 
 class ScriptEditor(ScriptEdit):
     """Main script editor.
@@ -123,29 +177,42 @@ class ScriptEditor(ScriptEdit):
         super(ScriptEditor, self).__init__(gui)
         self.gui = gui
         self.highlighter = ScriptHighlighter(self.gui, self)
+        self.message_display = ScriptCompilationLog()
+
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0,0,0,0)
+        vbox.addStretch()
+        vbox.addWidget(self.message_display)
+        self.setLayout(vbox)
 
     def contextMenuEvent(self, e):
         menu = self.createStandardContextMenu()
         menu.addAction('Copy Hex', self.copy_hex)
         menu.exec_(e.globalPos())
 
-    def set_data(self, text, fmt):
-        script = None
-        if fmt == 'Hex' and len(text) % 2 == 0:
-            try:
-                script = Script(text.decode('hex'))
-            except Exception:
-                pass
-        elif fmt == 'Human':
-            txt, self.context = transform_human_script(text, self.gui)
-            script = Script.from_human(txt)
-        self.script = script
+    def rehighlight(self):
+        self.highlighter.rehighlight()
+
+    def insertFromMimeData(self, source):
+        """Rehighlight the script after pasting."""
+        super(ScriptEditor, self).insertFromMimeData(source)
+        self.rehighlight()
 
     @pyqtProperty(str)
-    def humanText(self):
-        return self.get_data(fmt='Human')
+    def asmText(self):
+        return self.get_data(fmt='ASM')
 
-    @humanText.setter
-    def humanText(self, value):
+    @asmText.setter
+    def asmText(self, value):
         self.setText(str(value))
 
+    def set_data(self, text, fmt):
+        try:
+            super(ScriptEditor, self).set_data(text, fmt)
+        except CompilationFailedError as e:
+            msg = '\n'.join([e.message, e.exception_message])
+            self.message_display.set_message(msg)
+        except Exception as e:
+            self.message_display.set_message(str(e))
+        else:
+            self.message_display.set_message('')

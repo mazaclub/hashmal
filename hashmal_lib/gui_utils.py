@@ -2,7 +2,7 @@ import decimal
 from decimal import Decimal
 
 from PyQt4 import QtGui
-from PyQt4.QtGui import QFont, QHBoxLayout, QFrame, QLineEdit, QHeaderView
+from PyQt4.QtGui import QColor, QFont, QHBoxLayout, QFrame, QLineEdit, QHeaderView
 from PyQt4 import QtCore
 
 from bitcoin.core import b2x, lx, b2lx
@@ -21,6 +21,39 @@ monospace_font.setPointSize(9)
 monospace_font.setStyleHint(QFont.TypeWriter)
 
 script_file_filter = 'Coinscripts (*.coinscript);;Text files (*.txt);;All files (*.*)'
+
+default_colors = {
+    'booleanoperators': 'green',
+    'comments': 'gray',
+    'conditionals': 'green',
+    'hexstrings': 'crimson',
+    'keywords': 'saddlebrown',
+    'numbers': 'maroon',
+    'strings': 'royalblue',
+    'typenames': 'saddlebrown',
+    'variables': 'goldenrod',
+}
+
+def get_default_color(color_key):
+    """Get the default color for color_key."""
+    return default_colors.get(color_key)
+
+def get_default_colors():
+    """Get the default colors for all color keys."""
+    return default_colors.items()
+
+def settings_color(settings, color_key):
+    """Get the value (or default value) of color_key in settings.
+
+    Args:
+        settings (QSettings): A QSettings object to retrieve the value from.
+        color_key (str): The QSettings key for a color.
+
+    """
+    args = ['color/%s' % color_key]
+    if color_key in default_colors.keys():
+        args.append(default_colors[color_key])
+    return QColor(settings.value(*args))
 
 def get_label_for_attr(name):
     """Get a display-appropriate label for an attribute name."""
@@ -128,7 +161,7 @@ class FieldInfo(object):
             if role == RawRole:
                 data = s.get_hex()
             else:
-                data = s.get_human()
+                data = s.get_asm()
         # Hashes are presented as hex-encoded little-endian strings.
         elif self.fmt == 'hash':
             data = b2lx(value)
@@ -146,7 +179,7 @@ class FieldInfo(object):
         value = None
         method = getattr(qvariant, self.qvariant_method)
         if self.fmt == 'script':
-            value = Script.from_human(str(method()))
+            value = Script.from_asm(str(method()))
         # Switch endianness and decode hex.
         elif self.fmt == 'hash':
             value = lx(str(method()))

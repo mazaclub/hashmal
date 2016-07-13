@@ -3,3 +3,5 @@
 *.coinscript
 *.conf
 Hashmal*.egg-info
+parser.out
+parsetab.py

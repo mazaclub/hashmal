@@ -13,4 +13,8 @@ QLabel[hasError=true], QTextEdit[hasError=true], QPlainTextEdit[hasError=true] {
 QLineEdit[hasSuccess=true], QCheckBox[hasSuccess=true] {
   background: rgba(0, 255, 0, 25%);
 }
+
+ScriptCompilationLog {
+  background: rgba(250, 250, 110, 75%);
+}
 """

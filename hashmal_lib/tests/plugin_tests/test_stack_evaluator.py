@@ -24,14 +24,14 @@ class StackEvalTest(PluginTest):
         self.ui.block_time_edit.clear()
 
     def test_script_passed(self):
-        script_hex = Script.from_human('0x01').get_hex()
+        script_hex = Script.from_asm('0x01').get_hex()
         self.ui.tx_script.setPlainText(script_hex)
         QTest.mouseClick(self.ui.do_button, Qt.LeftButton)
 
         self.assertTrue(self.ui.script_passed.isChecked())
         self.assertFalse(self.ui.script_verified.isChecked())
 
-        script_hex = Script.from_human('0x00').get_hex()
+        script_hex = Script.from_asm('0x00').get_hex()
         self.ui.tx_script.setPlainText(script_hex)
         QTest.mouseClick(self.ui.do_button, Qt.LeftButton)
 
@@ -39,11 +39,10 @@ class StackEvalTest(PluginTest):
         self.assertFalse(self.ui.script_verified.isChecked())
 
     def test_basic_addition_script(self):
-        script_hex = Script.from_human('0x01 0x02 OP_ADD').get_hex()
+        script_hex = Script.from_asm('0x01 0x02 OP_ADD').get_hex()
         expected_steps = [
-            ('0', 'PUSHDATA', '0x01', '01 was pushed to the stack.'),
-            ('1', 'PUSHDATA', '0x01 0x02', '02 was pushed to the stack.'),
-            ('2', 'OP_ADD', '0x03', '3 (1 + 2) was pushed to the stack.'),
+            ('0', 'OP_2', 'OP_2', '02 was pushed to the stack.'),
+            ('1', 'OP_1ADD', 'OP_3', '02 += 1'),
         ]
 
         self.ui.tx_script.setPlainText(script_hex)
@@ -60,7 +59,7 @@ class StackEvalTest(PluginTest):
         self.assertFalse(self.ui.script_verified.isChecked())
 
     def test_verify_p2sh_script_with_valid_pubkey_script(self):
-        script_hex = Script.from_human('OP_HASH160 0x8febbed40483661de6958d957412f82deed8e2f7 OP_EQUAL').get_hex()
+        script_hex = Script.from_asm('OP_HASH160 0x8febbed40483661de6958d957412f82deed8e2f7 OP_EQUAL').get_hex()
         expected_steps = [
             # Push signature.
             ('0', 'PUSHDATA', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01', '3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 was pushed to the stack.'),
@@ -71,11 +70,11 @@ class StackEvalTest(PluginTest):
             # PUSHDATA of public key script.
             ('3', 'PUSHDATA', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 0x8febbed40483661de6958d957412f82deed8e2f7 0x8febbed40483661de6958d957412f82deed8e2f7', '8febbed40483661de6958d957412f82deed8e2f7 was pushed to the stack.'),
             # OP_EQUAL of public key script.
-            ('4', 'OP_EQUAL', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 0x01', '8febbed40483661de6958d957412f82deed8e2f7 == 8febbed40483661de6958d957412f82deed8e2f7, so 01 was pushed to the stack.'),
+            ('4', 'OP_EQUAL', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 OP_1', '8febbed40483661de6958d957412f82deed8e2f7 == 8febbed40483661de6958d957412f82deed8e2f7, so 01 was pushed to the stack.'),
             # P2SH validation. Push public key from redeem script.
             ('5', 'PUSHDATA', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 0x0338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebf', '0338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebf was pushed to the stack.'),
             # P2SH validation. OP_CHECKSIG from redeem script.
-            ('6', 'OP_CHECKSIG', '0x01', 'After CHECKSIG passed, 01 was pushed to the stack.'),
+            ('6', 'OP_CHECKSIG', 'OP_1', 'After CHECKSIG passed, 01 was pushed to the stack.'),
         ]
 
         self.ui.tx_edit.setPlainText(self.valid_p2sh_tx)
@@ -94,14 +93,14 @@ class StackEvalTest(PluginTest):
         self.assertTrue(self.ui.script_verified.isChecked())
 
     def test_verify_p2sh_script_with_invalid_pubkey_script(self):
-        script_hex = Script.from_human('0x00').get_hex()
+        script_hex = Script.from_asm('0x00').get_hex()
         expected_steps = [
             # Push signature.
             ('0', 'PUSHDATA', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01', '3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 was pushed to the stack.'),
             # Push redeem script.
             ('1', 'PUSHDATA', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 0x210338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebfac', '210338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebfac was pushed to the stack.'),
             # Push of public key script.
-            ('2', 'PUSHDATA', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 0x210338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebfac 0x00', '00 was pushed to the stack.'),
+            ('2', 'OP_0', '0x3046022100c66c9cdf4c43609586d15424c54707156e316d88b0a1534c9e6b0d4f311406310221009c0fe51dbc9c4ab7cc25d3fdbeccf6679fe6827f08edf2b4a9f16ee3eb0e438a01 0x210338e8034509af564c62644c07691942e0c056752008a173c89f60ab2a88ac2ebfac OP_0', '00 was pushed to the stack.'),
         ]
 
         self.ui.tx_edit.setPlainText(self.valid_p2sh_tx)

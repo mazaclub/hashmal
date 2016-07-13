@@ -2,6 +2,8 @@ import hashlib
 import sys
 from collections import namedtuple
 
+import hexs
+
 import bitcoin
 from bitcoin.core.script import *
 from bitcoin.core.scripteval import *
@@ -15,7 +17,7 @@ import opcodes
 
 def e(*args):
     """For hex-encoding things."""
-    return tuple([i.encode('hex') for i in args])
+    return tuple([hexs.format_hex(i.encode('hex')) for i in args])
 
 # Contains info about the tx's block, etc.
 # Mainly for opcodes like CHECKLOCKTIMEVERIFY.
@@ -224,8 +226,7 @@ class Stack(object):
 
                 elif fExec:
                     stack.append(sop_data)
-#                    continue
-                    yield (stack, sop, '%s was pushed to the stack.' % e(sop_data))
+                    yield (stack, sop, '%s was pushed to the stack.' % (e(sop_data) if sop_data else '00'))
                     continue
 
             elif fExec or (OP_IF <= sop <= OP_ENDIF):
@@ -579,7 +580,7 @@ def _UnaryOp(opcode, stack, err_raiser):
     if len(stack) < 1:
         err_raiser(MissingOpArgumentsError, opcode, stack, 1)
     bn = _CastToBigNum(stack[-1], err_raiser)
-    last2 = stack.pop()
+    last2 = stack.pop().encode('hex')
     last1 = ''
 
     if opcode == OP_1ADD:
@@ -700,4 +701,5 @@ def _BinOp(opcode, stack, err_raiser):
     stack.append(bitcoin.core._bignum.bn2vch(bn))
     return last
 
+set_script_engine(Stack)
 

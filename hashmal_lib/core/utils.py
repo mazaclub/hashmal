@@ -1,29 +1,17 @@
 from bitcoin.core.script import CScriptOp
+import hexs
 
 def format_hex_string(x, with_prefix=True):
     """Ensure hex-encoded value has an even length."""
-    x = x.replace('L', '')
     if not is_hex(x):
         return
-    # Add '0x' prefix
-    new_val = x
-    if not x.startswith('0x'):
-        if x.startswith('x'):
-            new_val = ''.join(['0', x])
-        else:
-            new_val = ''.join(['0x', x])
-    # Even-length string
-    if len(new_val) % 2 != 0:
-        new_val = ''.join([new_val[0:2], '0', new_val[2:]])
-    return new_val if with_prefix else new_val[2:]
+    new_val = hexs.format_hex(x)
+    if with_prefix:
+        new_val = '0x' + new_val
+    return new_val
 
 def is_hex(x):
-    try:
-        i = int(x, 16)
-        return True
-    except ValueError:
-        pass
-    return False
+    return hexs.is_hex(x)
 
 def push_script(x):
     """Return hex-encoded PUSH operation.

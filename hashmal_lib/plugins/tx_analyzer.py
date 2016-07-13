@@ -78,7 +78,7 @@ class InputsStatusModel(QAbstractTableModel):
         for i in tx.vin:
             hash_type = 0
             try:
-                s = Script(i.scriptSig).get_human().split()[-2]
+                s = Script(i.scriptSig).get_asm().split()[-2]
                 # Loose sanity check to ensure the data is long enough.
                 if len(s) >= 120:
                     hash_type = int(s[-2:], 16)

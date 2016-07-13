@@ -45,7 +45,7 @@ class TopLevelScriptItem(ScriptExecutionItem):
     """Tree View item for script execution steps."""
     def __init__(self, data, parent=None):
         super(TopLevelScriptItem, self).__init__(data, parent)
-        self.stack_data = Script(self.item_data[2]).get_human()
+        self.stack_data = Script(self.item_data[2]).get_asm()
         # Convert log data representations to human-readable ones.
         log_data = self.item_data[3].split()
         for i, word in enumerate(log_data):
@@ -161,7 +161,7 @@ class ScriptExecutionModel(QAbstractItemModel):
         for count, step in enumerate(execution.steps):
             step_item = TopLevelScriptItem((count, step.last_op, step.stack, step.log), parent)
             # Loop through stack items.
-            scr = Script(step.stack).get_human().split()
+            scr = Script(step.stack).get_asm().split()
             sub_level_item_data = []
             for i, data in enumerate(step.stack):
                 human = scr[i]
@@ -202,15 +202,15 @@ class StackWidget(QListWidget):
         self.script = Script()
 
     @pyqtProperty(str)
-    def human(self):
-        return self.script.get_human()
+    def asm(self):
+        return self.script.get_asm()
 
-    @human.setter
-    def human(self, value):
+    @asm.setter
+    def asm(self, value):
         self.clear()
         s = []
-        self.script = Script.from_human(str(value))
-        iterator = self.script.human_iter()
+        self.script = Script.from_asm(str(value))
+        iterator = self.script.asm_iter()
         while 1:
             try:
                 s.append(next(iterator))
@@ -250,7 +250,7 @@ class ScriptExecutionWidget(QWidget):
 
         self.mapper = QDataWidgetMapper()
         self.mapper.setModel(self.model)
-        self.mapper.addMapping(self.stack_list, 2, 'human')
+        self.mapper.addMapping(self.stack_list, 2, 'asm')
         self.mapper.addMapping(self.log_edit, 3)
 
         self.widgets_form = form = QFormLayout()

@@ -3,7 +3,8 @@ from PyQt4.QtCore import *
 import logging
 
 from hashmal_lib.core import chainparams
-from gui_utils import floated_buttons, Amount, monospace_font, Separator
+from gui_utils import floated_buttons, get_default_colors, settings_color, Amount, monospace_font, Separator
+from widgets.script import known_script_formats
 
 class ChainparamsComboBox(QComboBox):
     """ComboBox for selecting chainparams presets.
@@ -166,6 +167,8 @@ class SettingsDialog(QDialog):
 
     Handles loading/saving window layouts as well.
     """
+    # Signal emitted when editor color settings are changed.
+    colorsChanged = pyqtSignal()
     def __init__(self, main_window):
         super(SettingsDialog, self).__init__(main_window)
         self.gui = main_window
@@ -264,7 +267,7 @@ class SettingsDialog(QDialog):
         editor_font_combo.currentIndexChanged.connect(change_font_family)
         editor_font_size.valueChanged.connect(change_font_size)
 
-        reset_font_button = QPushButton('Reset to Default')
+        reset_font_button = QPushButton('Reset Font to Default')
         reset_font_button.clicked.connect(reset_font)
 
         font_form = QFormLayout()
@@ -274,12 +277,44 @@ class SettingsDialog(QDialog):
         font_group = self._create_section('Font', font_form)
 
 
-        vars_color = ColorButton('variables', QColor('darkMagenta'))
-        strs_color = ColorButton('strings', QColor('gray'))
+        vars_color = ColorButton('variables', self)
+        strs_color = ColorButton('strings', self)
+
+        bool_ops_color = ColorButton('booleanoperators', self)
+        comments_color = ColorButton('comments', self)
+        conditionals_color = ColorButton('conditionals', self)
+        keywords_color = ColorButton('keywords', self)
+        hex_strings_color = ColorButton('hexstrings', self)
+        numbers_color = ColorButton('numbers', self)
+        type_names_color = ColorButton('typenames', self)
+
+        color_buttons = [
+                vars_color, strs_color, bool_ops_color,
+                comments_color, conditionals_color, hex_strings_color,
+                keywords_color, numbers_color, type_names_color,
+        ]
+        def reset_colors():
+            """Reset colors to default values."""
+            for color_key, color_value in get_default_colors():
+                self.qt_settings.setValue('color/%s' % color_key, color_value)
+            for color_button in color_buttons:
+                color_button.load_color(update=True)
+            self.colorsChanged.emit()
+        reset_colors_button = QPushButton('Reset Colors to Default')
+        reset_colors_button.clicked.connect(reset_colors)
 
         colors_form = QFormLayout()
         colors_form.addRow('Variables:', floated_buttons([vars_color], True))
         colors_form.addRow('String literals:', floated_buttons([strs_color], True))
+
+        colors_form.addRow('Boolean operators (TxScript only):', floated_buttons([bool_ops_color], True))
+        colors_form.addRow('Comments (TxScript only):', floated_buttons([comments_color], True))
+        colors_form.addRow('Conditionals (TxScript only):', floated_buttons([conditionals_color], True))
+        colors_form.addRow('Hex Strings (TxScript only):', floated_buttons([hex_strings_color], True))
+        colors_form.addRow('Keywords (TxScript only):', floated_buttons([keywords_color], True))
+        colors_form.addRow('Numbers (TxScript only):', floated_buttons([numbers_color], True))
+        colors_form.addRow('Type names (TxScript only):', floated_buttons([type_names_color], True))
+        colors_form.addRow(floated_buttons([reset_colors_button]))
         colors_group = self._create_section('Colors', colors_form)
 
         form.addRow(font_group)
@@ -306,6 +341,26 @@ class SettingsDialog(QDialog):
         amnt_format.currentIndexChanged.connect(set_amount_format)
         amnt_format.setToolTip('Format that transaction amounts are shown in')
         amnt_format.setWhatsThis('Use this to change the format that coin amounts are shown in.')
+
+        # Default script format.
+
+        script_format = QComboBox()
+        script_format.addItems(known_script_formats)
+        current_format = self.config.get_option('default_script_format', 'ASM')
+
+        try:
+            script_format.setCurrentIndex(known_script_formats.index(current_format))
+        except ValueError:
+            script_format.setCurrentIndex(known_script_formats.index('ASM'))
+            self.warning('Invalid script format value: "%s". Defaulting to %s.' % (current_format, str(script_format.currentText())))
+
+        def set_script_format():
+            new_format = str(script_format.currentText())
+            self.config.set_option('default_script_format', new_format)
+
+        script_format.currentIndexChanged.connect(set_script_format)
+        script_format.setToolTip('Format that the script editor uses when Hashmal is started')
+        script_format.setWhatsThis('Use this to change the default script format.')
 
 
         self.data_retriever = data_retriever = QComboBox()
@@ -347,6 +402,7 @@ class SettingsDialog(QDialog):
 
 
         form.addRow('Amount format:', amnt_format)
+        form.addRow('Default script format:', script_format)
         form.addRow('Data retriever:', data_retriever)
         form.addRow('Log level:', self.log_level)
 
@@ -415,11 +471,18 @@ class SettingsDialog(QDialog):
 
 class ColorButton(QPushButton):
     """Represents a color visually."""
-    def __init__(self, name, default_color, parent=None):
+    def __init__(self, name, dialog, parent=None):
         super(ColorButton, self).__init__(parent)
         self.name = name
-        self.color = QColor(QSettings().value('color/' + name, default_color.name()))
+        self.dialog = dialog
+        self.load_color()
         self.clicked.connect(self.show_color_dialog)
+
+    def load_color(self, update=False):
+        """Load the value of this button's color key and optionally update."""
+        self.color = settings_color(QSettings(), self.name)
+        if update:
+            self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -430,3 +493,4 @@ class ColorButton(QPushButton):
         if not new_color.isValid(): return
         self.color = new_color
         QSettings().setValue('color/' + self.name, self.color.name())
+        self.dialog.colorsChanged.emit()

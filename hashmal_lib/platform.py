@@ -1,7 +1,7 @@
 import logging
 import time
 
-from hashmal_lib.core import chainparams
+from hashmal_lib.core import chainparams, compiler
 from config import Config
 from downloader import DownloadController
 from plugin_handler import PluginHandler
@@ -11,6 +11,9 @@ class HashmalPlatform(object):
     def __init__(self, main_window):
         # Whether unit tests are running.
         self.testing_mode = False
+
+        # Initialize the script compiler.
+        compiler.init_txsc()
 
         self.main_window = main_window
         self.config = self.main_window.config = Config()

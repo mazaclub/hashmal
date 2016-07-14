@@ -14,6 +14,15 @@ from txsc.script_compiler import ScriptCompiler
 import opcodes
 import utils
 
+compiler = None
+def init_txsc():
+    """Add Hashmal's languages to txsc."""
+    global compiler
+    txsc.config.add_language(HashmalASMLanguage())
+    txsc.config.add_language(HashmalHumanLanguage())
+
+    compiler = ScriptCompiler()
+
 def get_int(s):
     """Get the int value of a decimal or hex string."""
     for base in [10, 16]:
@@ -203,11 +212,6 @@ class HashmalHumanLanguage(Language):
     name = 'hashmal-txscript'
     source_visitor = HashmalHumanSourceVisitor
     supports_symbol_table = True
-
-txsc.config.add_language(HashmalASMLanguage())
-txsc.config.add_language(HashmalHumanLanguage())
-
-compiler = ScriptCompiler()
 
 def set_variables_dict(variables):
     """Set the variables that will be substituted during compilation."""

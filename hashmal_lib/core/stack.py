@@ -545,15 +545,15 @@ class Stack(object):
                     bn3 = _CastToBigNum(stack[-1], err_raiser)
                     bn2 = _CastToBigNum(stack[-2], err_raiser)
                     bn1 = _CastToBigNum(stack[-3], err_raiser)
-                    stack.pop()
-                    stack.pop()
-                    stack.pop()
+                    l3 = stack.pop()
+                    l2 = stack.pop()
+                    l1 = stack.pop()
                     v = (bn2 <= bn1) and (bn1 < bn3)
                     if v:
                         stack.append(b"\x01")
                     else:
                         stack.append(b"\x00")
-                    last = '%s (the result of %s <= %s < %s) was pushed to the stack.' % e(stack[-1], bn2, bn1, bn3)
+                    last = '%s (the result of %s <= %s < %s) was pushed to the stack.' % e(stack[-1], l2, l1, l3)
 
                 else:
                     err_raiser(EvalScriptError, 'unsupported opcode 0x%x' % sop)
